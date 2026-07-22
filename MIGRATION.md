@@ -1,11 +1,10 @@
-# Migrating from 0.x to 1.0
+# Migrating from Mikrofuzz 0.x to Krino 1.0
 
-v1.0 is a primitive-first redesign — a smaller API and new result shapes. Here's
-everything that breaks. `normalizeText` is unchanged.
+v1.0 renames the package from `@mmmike/mikrofuzz` to `krino` and redesigns the API primitive-first — a smaller surface and new result shapes.
+Here's everything that breaks.
+`normalizeText` is unchanged.
 
-## Renamed: `@mmmike/mikrofuzz` → `krino`
-
-Same 1.0 API, unscoped package. Update the dependency and the import:
+## Update the dependency and imports
 
 ```diff
 - pnpm add @mmmike/mikrofuzz
@@ -14,8 +13,6 @@ Same 1.0 API, unscoped package. Update the dependency and the import:
 - import { fuzzyMatch } from "@mmmike/mikrofuzz";
 + import { fuzzyMatch } from "krino";
 ```
-
-The 0.x to 1.0 changes below are unchanged.
 
 ## `fuzzyMatch` result
 
