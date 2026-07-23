@@ -2,7 +2,7 @@
 
 > Tiny, typed fuzzy matching
 
-- **~2.3 kB** gzip, zero dependencies, TS-first, ESM/CJS
+- **~2.5 kB** gzip, zero dependencies, TS-first, ESM/CJS
 - **0.14 ms** per query over 10k items, ~2 ms over 100k optimised for search-as-you-type
 - **Tops match-quality scorecard** across 13 tests
 - **Returns** `tier`, `ranges` and `score` on every match: easily rank, highlight and explain
@@ -147,7 +147,7 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 
 ### What to pick when
 
-**Pick Krino.** It tops the quality scorecard on both benchmark corpora, leads every speed table except pure-ascii (where only uFuzzy is decisively faster), and at ~2.3 kB only substring-only `fuzzy` and its parent `microfuzz` undercut it on size.
+**Pick Krino.** It tops the quality scorecard on both benchmark corpora, leads every speed table except pure-ascii (where only uFuzzy is decisively faster), and at ~2.5 kB only substring-only `fuzzy` and its parent `microfuzz` undercut it on size.
 Two workloads genuinely point elsewhere:
 
 - **Typos must still match** (user-typed queries over messy data): a transposition breaks the subsequence property, so no subsequence engine can represent it. Pick `Fuse.js` (Bitap) or `fast-fuzzy` (edit distance), at 4–5× the bundle, ~15–40 ms cold queries, and ~90–450-row result sets.

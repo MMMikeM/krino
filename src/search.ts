@@ -16,7 +16,19 @@ const sortByScore = <T>(a: FuzzyResult<T>, b: FuzzyResult<T>): number => a.score
 
 const toNullField = (): null => null;
 
-// Build the query-derived state once, reused across every field.
+// Shift ranges from trimmed-field space into the caller's raw string. Only
+// leading whitespace shifts offsets; matchField returns fresh Range tuples per
+// call, so mutating in place is safe.
+const shiftRanges = (ranges: [number, number][], lead: number): void => {
+	for (const r of ranges) {
+		r[0] += lead;
+		r[1] += lead;
+	}
+};
+
+// Build the query-derived state once, reused across every field. The raw query
+// is stored trimmed so the exact-case tiers treat padding as insignificant,
+// matching the normalized tiers (normalizeText trims).
 const prepareQuery = (query: string, normalizedQuery: string): MatchQuery => {
 	const queryMask = charMask(normalizedQuery);
 	const queryWords = splitWords(normalizedQuery);
@@ -25,7 +37,7 @@ const prepareQuery = (query: string, normalizedQuery: string): MatchQuery => {
 	// its construction entirely.
 	const needsPresenceGate = queryWords.length > 1 && !maskIsExact(queryMask);
 	return {
-		query,
+		query: query.trim(),
 		normalizedQuery,
 		queryWords,
 		queryMask,
@@ -47,9 +59,13 @@ export const fuzzyMatch = (
 	if (!normalizedQuery.length) return null;
 
 	const q = prepareQuery(query, normalizedQuery);
-	const normalizedField = normalizeText(text);
+	const field = text.trim();
+	const normalizedField = normalizeText(field);
 
-	return matchField(text, normalizedField, charMask(normalizedField), q, acronym);
+	const result = matchField(field, normalizedField, charMask(normalizedField), q, acronym);
+	const lead = text.length - text.trimStart().length;
+	if (result && lead) shiftRanges(result.ranges, lead);
+	return result;
 };
 
 // A preprocessed field: its cached normalized form plus its matching config.
@@ -58,8 +74,9 @@ export const fuzzyMatch = (
 // copied into every item × field object), and the per-field masks live in one
 // flat Int32Array alongside `unionMasks`.
 type PreparedField = {
-	field: string;
+	field: string; // trimmed raw — ranges are shifted back by `lead` per hit
 	normalizedField: string;
+	lead: number; // leading-whitespace units stripped from the raw field
 };
 
 /**
@@ -120,10 +137,11 @@ export function createFuzzySearch<T>(
 		const prepared: PreparedField[] = [];
 		let union = 0;
 		for (let f = 0; f < specCount; f++) {
-			const field = normalizedSpecs[f].text(item) || "";
+			const raw = normalizedSpecs[f].text(item) || "";
+			const field = raw.trim();
 			const normalizedField = normalizeText(field);
 			const mask = charMask(normalizedField);
-			prepared.push({ field, normalizedField });
+			prepared.push({ field, normalizedField, lead: raw.length - raw.trimStart().length });
 			fieldMasks[i * specCount + f] = mask;
 			union |= mask;
 		}
@@ -181,6 +199,7 @@ export function createFuzzySearch<T>(
 					// matchField returns a fresh object per call, so the atBest
 					// shift can mutate it instead of spreading a copy.
 					result.score += s.atBest;
+					if (p.lead) shiftRanges(result.ranges, p.lead);
 					bestScore = Math.min(bestScore, result.score);
 					(fields ??= prepared.map(toNullField))[f] = result;
 				}
