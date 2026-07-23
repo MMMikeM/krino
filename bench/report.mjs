@@ -56,9 +56,10 @@ const META = {
 	},
 };
 
-// "<lib> (all opts)" bench lines share the base lib's metadata.
+// "<lib> (all opts)" / "krino (acronym)" bench lines share the base lib's
+// metadata — strip any parenthesized variant suffix for the lookup.
 const metaFor = (name) =>
-	META[name] ?? META[name.replace(/ \(all opts\)$/, "")] ?? { gzipKB: null, deps: null, type: "?" };
+	META[name] ?? META[name.replace(/ \([^)]+\)$/, "")] ?? { gzipKB: null, deps: null, type: "?" };
 
 const raw = JSON.parse(readFileSync(new URL("./results.json", import.meta.url)));
 
@@ -112,7 +113,7 @@ const summarize = (byLib, corpus) => {
 			const valid =
 				corpus !== "mixed" ||
 				meta.features?.diacritics === "yes" ||
-				(meta.features?.diacritics === "opt-in" && / \(all opts\)$/.test(name));
+				(meta.features?.diacritics === "opt-in" && name.endsWith(" (all opts)"));
 			return {
 				name,
 				valid,
@@ -170,14 +171,14 @@ for (const [name, m] of Object.entries(META)) {
 
 for (const [corpusName, { sizes, libraries }] of Object.entries(corpora)) {
 	console.log(`\n#### ${corpusName} corpus\n`);
-	const isAccented = corpusName === "mixed";
-	const header = [
-		"Library",
-		...sizes.flatMap((s) => [fmtSize(s), `${fmtSize(s)} rel`]),
-		"Mean",
-		...(isAccented ? ["Pass"] : []),
-	];
-	const rows = libraries.map((l) => {
+	// Configurations that can't do the corpus's task are omitted, not flagged:
+	// a row that skips diacritic folding on the accented corpus is timing a
+	// different, easier job, and hits.test.ts already documents the failure
+	// (the accent probe). fast-fuzzy and fuzzy have no folding option at all.
+	const shown = libraries.filter((l) => l.valid);
+	const dropped = libraries.filter((l) => !l.valid).map((l) => l.name);
+	const header = ["Library", ...sizes.flatMap((s) => [fmtSize(s), `${fmtSize(s)} rel`]), "Mean"];
+	const rows = shown.map((l) => {
 		const nm = l.name === "krino" ? "**krino**" : l.name;
 		const perf = sizes
 			.flatMap((s) => {
@@ -188,24 +189,26 @@ for (const [corpusName, { sizes, libraries }] of Object.entries(corpora)) {
 			})
 			.join(" | ");
 		const mean = `${l.meanRelPct}% ± ${l.sdRelPct}`;
-		const pass = isAccented ? ` ${l.valid ? "✅" : "➖"} |` : "";
-		return `| ${nm} | ${perf} | ${mean} |${pass}`;
+		return `| ${nm} | ${perf} | ${mean} |`;
 	});
-	// Corpus-wide row: mean ± sd of per-query ms across ALL configurations at
-	// each size — one number for how hard this corpus is at that scale.
+	// Corpus-wide row: mean ± sd of per-query ms across the SHOWN configurations
+	// at each size — one number for how hard this corpus is at that scale.
 	const colMean = (size) => {
-		const vals = libraries.map((l) => l.perQueryMs[String(size)]).filter((v) => v != null);
+		const vals = shown.map((l) => l.perQueryMs[String(size)]).filter((v) => v != null);
 		const m = vals.reduce((a, b) => a + b, 0) / vals.length;
 		const sd = Math.sqrt(vals.reduce((s, v) => s + (v - m) ** 2, 0) / vals.length);
 		return `${fmtMs(m)} ± ${fmtMs(sd)} ms | —`;
 	};
-	rows.push(
-		`| *all libraries* | ${sizes.map(colMean).join(" | ")} | — |${isAccented ? " — |" : ""}`,
-	);
+	rows.push(`| *all libraries* | ${sizes.map(colMean).join(" | ")} | — |`);
 	console.log(`| ${header.join(" | ")} |`);
 	console.log(`|${header.map(() => "---").join("|")}|`);
 	console.log(rows.join("\n"));
+	if (dropped.length) {
+		console.log(
+			`\nOmitted (can't fold diacritics, so they'd be timing a different task): ${dropped.join(", ")}. The accent probe in hits.test.ts documents the failure.`,
+		);
+	}
 }
 console.log(
-	"\n(per size: per-query mean ms, then time relative to krino=100%; Mean = mean ± sd of a row's relative columns; Pass = folds diacritics, i.e. does the mixed corpus’s task; lower = faster)",
+	"\n(per size: per-query mean ms, then time relative to krino=100%; Mean = mean ± sd of a row's relative columns; lower = faster)",
 );

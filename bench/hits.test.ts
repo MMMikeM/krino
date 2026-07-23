@@ -7,9 +7,10 @@
  *   Pass column in docs/benchmarks.md),
  * - where the source item ranked in the library's ordering (`@1` = top hit,
  *   `✗` = matched things but not the item the query came from), and
- * - a per-query time (time-boxed mean of the raw search call — magnitude, not
+ * - a per-query time (time-boxed median of the raw search call — magnitude, not
  *   the rigorous vitest-bench numbers).
  */
+import { writeFileSync } from "node:fs";
 import uFuzzy from "@leeoniya/ufuzzy";
 import createMicrofuzz from "@nozbe/microfuzz";
 import { Searcher } from "fast-fuzzy";
@@ -41,21 +42,47 @@ const fmtMs = (ms: number): string => ms.toFixed(2);
 // Consumed by every timed call so the JIT can't dead-code-eliminate the work.
 let sink = 0;
 
-// Time-boxed mean of one call: warm up, then sample for ~50 ms.
-const timeQuery = (run: () => number): number => {
-	for (let i = 0; i < 3; i++) sink += run();
-	const start = performance.now();
-	let iterations = 0;
-	do {
+// Per-corpus scorecards + per-query tables for this process, written to
+// scorecard-run.json for the cross-run aggregator (scorecard.mjs) and the
+// docs table emitter (tables.mjs).
+type ScorecardRow = { library: string; mrr: number; indexMs: number; queryMs: number; totalMs: number };
+type QueryTable = {
+	kind: string;
+	query: string;
+	source: string | null;
+	cells: Record<string, { count: number; rank: number | null; queryMs: number; totalMs: number }>;
+};
+const scorecardOut: Record<string, { scorecard: ScorecardRow[]; tables: QueryTable[] }> = {};
+
+// Time-boxed MEDIAN of one call: warm up, then sample for ~100 ms and take the
+// middle sample. Median beats a longer mean here — scheduler/GC interruptions
+// only ever ADD time, so a mean averages the spikes in while the median rejects
+// them; five-second runs would mostly buy more-precisely-averaged noise.
+// Each iteration is timed individually so `reset` (untimed) can run between
+// samples — krino's prefix-narrowing cache fires on an identical repeated query
+// (startsWith is true for equality), so without a bust the loop would time the
+// survivor-rescan path while every other library pays a cold query. `reset`
+// issues a throwaway query no real query extends, forcing a full cold scan.
+const timeQuery = (run: () => number, reset?: () => void): number => {
+	for (let i = 0; i < 3; i++) {
+		reset?.();
 		sink += run();
-		iterations++;
-	} while (performance.now() - start < 50);
-	return (performance.now() - start) / iterations;
+	}
+	const budget = performance.now() + 100;
+	const samples: number[] = [];
+	while (performance.now() < budget) {
+		reset?.();
+		const t0 = performance.now();
+		sink += run();
+		samples.push(performance.now() - t0);
+	}
+	samples.sort((a, b) => a - b);
+	return samples[Math.floor(samples.length / 2)] ?? 0;
 };
 
 describe("bench validity: per-library match counts and source rank", () => {
 	for (const { name, build, specs } of CORPORA) {
-		// The per-cell timing loops (~50 ms × 11 libs × 9 queries) outgrow the
+		// The per-cell timing loops (~100 ms × 12 configs × 10 queries) outgrow the
 		// default 5 s test timeout.
 		it(`[${name}] every library matches the plain-word query`, { timeout: 30_000 }, () => {
 			const list = build(SIZE);
@@ -65,6 +92,7 @@ describe("bench validity: per-library match counts and source rank", () => {
 			const krinoAggressive = createFuzzySearch(list, [
 				{ text: (x: string) => x, strategy: "aggressive" },
 			]);
+			const krinoAcronym = createFuzzySearch(list, [{ text: (x: string) => x, acronym: true }]);
 			const microfuzz = createMicrofuzz(list);
 			const fastFuzzy = new Searcher(list);
 			const fuse = new Fuse(list, { ignoreLocation: true, threshold: 0.4 });
@@ -89,6 +117,7 @@ describe("bench validity: per-library match counts and source rank", () => {
 			const runners: Record<string, Runner> = {
 				krino: (q, src) => outcome(krino(q).map((r) => r.item), src),
 				"krino (aggressive)": (q, src) => outcome(krinoAggressive(q).map((r) => r.item), src),
+				"krino (acronym)": (q, src) => outcome(krinoAcronym(q).map((r) => r.item), src),
 				"@nozbe/microfuzz": (q, src) =>
 					outcome(
 						microfuzz(q)
@@ -111,6 +140,7 @@ describe("bench validity: per-library match counts and source rank", () => {
 			const timers: Record<string, (q: string) => number> = {
 				krino: (q) => krino(q).length,
 				"krino (aggressive)": (q) => krinoAggressive(q).length,
+				"krino (acronym)": (q) => krinoAcronym(q).length,
 				"@nozbe/microfuzz": (q) => microfuzz(q).length,
 				fuzzysort: (q) => fuzzysort.go(q, list).length,
 				"match-sorter": (q) => matchSorter(list, q).length,
@@ -122,53 +152,128 @@ describe("bench validity: per-library match counts and source rank", () => {
 				fuzzy: (q) => fuzzyFilter(q, list).length,
 			};
 
+			// Cache busts for searchers with cross-query state: a throwaway query
+			// no test query extends, so the next timed call is a full cold scan.
+			const CACHE_BUST = "zzzzzz";
+			const resets: Record<string, () => void> = {
+				krino: () => {
+					sink += krino(CACHE_BUST).length;
+				},
+				"krino (aggressive)": () => {
+					sink += krinoAggressive(CACHE_BUST).length;
+				},
+				"krino (acronym)": () => {
+					sink += krinoAcronym(CACHE_BUST).length;
+				},
+			};
+
+			// One-time index cost per configuration (0 for the libraries that keep
+			// no index — their preparation happens inside every query above).
+			// Ledger notes: microfuzz defers part of its preparation to the first
+			// search (its docs: "the first search takes ~7 ms"), so its index cell
+			// understates and the remainder lands on the first query. uFuzzy
+			// (latinize) counts latinizing the haystack — real preparation that
+			// normally hides as "no index".
+			// Consume a constructed object so creation can't be elided.
+			const consume = (o: object): number => o.constructor.name.length;
+			const indexers: Record<string, () => number> = {
+				krino: () => consume(createFuzzySearch(list)),
+				"krino (aggressive)": () =>
+					consume(createFuzzySearch(list, [{ text: (x: string) => x, strategy: "aggressive" }])),
+				"krino (acronym)": () => consume(createFuzzySearch(list, [{ text: (x: string) => x, acronym: true }])),
+				"@nozbe/microfuzz": () => consume(createMicrofuzz(list)),
+				"fast-fuzzy": () => consume(new Searcher(list)),
+				"fuse.js": () => consume(new Fuse(list, { ignoreLocation: true, threshold: 0.4 })),
+				"fuse.js (all opts)": () =>
+					consume(
+						new Fuse(list, {
+							ignoreLocation: true,
+							threshold: 0.4,
+							ignoreDiacritics: true,
+							includeMatches: true,
+							useExtendedSearch: true,
+						}),
+					),
+				"uFuzzy (latinize)": () => uFuzzy.latinize(list).length,
+			};
+			const indexMs: Record<string, number> = {};
+			for (const [lib, make] of Object.entries(indexers)) indexMs[lib] = timeQuery(make);
+
 			// One full warm pass over every lib × query before any timing —
 			// early cells otherwise pay the whole process's JIT warmup.
 			for (const warm of Object.values(timers)) {
 				for (const { query } of specs) sink += warm(query);
 			}
 
-			// Per-lib aggregates: reciprocal ranks (miss = 0) and match counts
-			// over the scored queries, time over every query.
-			const scores: Record<string, { rrs: number[]; counts: number[]; times: number[] }> = {};
+			// Per-lib aggregates: reciprocal ranks (miss = 0) over the scored
+			// queries, time over every query.
+			const scores: Record<string, { rrs: number[]; times: number[] }> = {};
 
+			const tables: QueryTable[] = [];
 			const rows = specs.map(({ query, kind, source }) => {
 				const row: Record<string, string> = { kind, query };
+				const cells: QueryTable["cells"] = {};
 				for (const [lib, run] of Object.entries(runners)) {
-					const ms = timeQuery(() => timers[lib](query));
+					const ms = timeQuery(() => timers[lib](query), resets[lib]);
 					const { count, rank } = run(query, source);
-					const s = (scores[lib] ??= { rrs: [], counts: [], times: [] });
+					const s = (scores[lib] ??= { rrs: [], times: [] });
 					s.times.push(ms);
 					if (source != null) {
-						s.rrs.push(rank ? 1 / rank : 0);
-						s.counts.push(count);
+						// MRR@10: a rank outside the top 10 is as invisible to a
+						// picker as a miss — both score 0.
+						s.rrs.push(rank && rank <= 10 ? 1 / rank : 0);
 					}
-					row[lib] = `${cell({ count, rank }, source)} ${fmtMs(ms)}ms`;
+					// query time against the prebuilt searcher / cold one-shot
+					// (query + one-time index) — equal for the no-index libs.
+					const total = ms + (indexMs[lib] ?? 0);
+					cells[lib] = {
+						count,
+						rank,
+						queryMs: Number(ms.toFixed(3)),
+						totalMs: Number(total.toFixed(3)),
+					};
+					row[lib] = `${cell({ count, rank }, source)} ${fmtMs(ms)}/${fmtMs(total)}ms`;
 				}
+				tables.push({ kind, query, source, cells });
 				return row;
 			});
 			console.table(rows);
 
-			// Scorecard: MRR (mean reciprocal rank — the principled "average
-			// rank": bounded, no imputation for misses, deep ranks self-dampen)
-			// beside its mandatory companion, median matches — MRR alone crowns
-			// whoever returns everything.
+			// Scorecard: MRR with a top-10 cutoff (mean of 1/rank; misses and
+			// ranks outside the top 10 score 0) vs mean ms. Result-set size is
+			// deliberately not scored — ranked UIs slice to the top N, so a
+			// large return costs a picker nothing; the per-query tables above
+			// keep the raw counts as the diagnostic (docs/benchmarks.md,
+			// "What counts as a match?").
 			const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length;
-			const median = (xs: number[]): number => {
-				const sorted = [...xs].sort((a, b) => a - b);
-				const mid = sorted.length / 2;
-				return sorted.length % 2 ? sorted[Math.floor(mid)] : (sorted[mid - 1] + sorted[mid]) / 2;
-			};
-			console.table(
-				Object.entries(scores)
-					.map(([library, s]) => ({
+			const scorecard = Object.entries(scores)
+				.map(([library, s]) => {
+					const queryMs = Number(mean(s.times).toFixed(3));
+					const index = Number((indexMs[library] ?? 0).toFixed(3));
+					return {
 						library,
-						MRR: mean(s.rrs).toFixed(2),
-						"median matches": Math.round(median(s.counts)),
-						"mean ms": `${mean(s.times).toFixed(2)}ms`,
-					}))
-					.sort((a, b) => Number(b.MRR) - Number(a.MRR)),
+						mrr: Number(mean(s.rrs).toFixed(2)),
+						indexMs: index,
+						queryMs,
+						totalMs: Number((index + queryMs).toFixed(3)),
+					};
+				})
+				.sort((a, b) => b.mrr - a.mrr);
+			console.table(
+				scorecard.map((r) => ({
+					library: r.library,
+					MRR: r.mrr.toFixed(2),
+					"index ms": r.indexMs ? r.indexMs.toFixed(2) : "—",
+					"query ms": r.queryMs.toFixed(2),
+					"total ms": r.totalMs.toFixed(2),
+				})),
 			);
+			// Machine-readable copy per corpus, consumed by scorecard.mjs (the
+			// cross-run aggregator) and tables.mjs (the docs table emitter).
+			// Same-process accumulation: the later corpus rewrites the file with
+			// both entries.
+			scorecardOut[name] = { scorecard, tables };
+			writeFileSync(new URL("./scorecard-run.json", import.meta.url), JSON.stringify(scorecardOut, null, "\t"));
 
 			// Every benched lib must find something for a plain corpus word —
 			// otherwise its speed numbers time a no-op.

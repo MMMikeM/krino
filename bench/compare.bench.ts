@@ -30,16 +30,46 @@ import { bench, describe } from "vitest";
 import { createFuzzySearch } from "krino";
 import { CORPORA } from "./corpus";
 
-// Bound the slow libs at 100k (Fuse/match-sorter run tens of ms per query) while
-// still collecting many samples for the fast ones.
-const BENCH_OPTS = { time: 300, iterations: 5, warmupTime: 100, warmupIterations: 1 };
+// Calibrated sampling: aim for ~300 ms of samples per cell, floored at 5
+// iterations and capped at 20 — fast cells stop at 20 samples instead of
+// burning 300 ms, slow cells (Fuse/fast-fuzzy at 100k) stop at 5. tinybench's
+// `time` and `iterations` are both floors, so the cap is implemented by probing
+// each cell once (the probe doubles as warmup) and pinning `iterations`.
+const TARGET_MS = 300;
+const calibrated = (fn: () => void): { time: number; iterations: number; warmupTime: number; warmupIterations: number } => {
+	const t0 = performance.now();
+	fn();
+	const oneShot = Math.max(performance.now() - t0, 0.001);
+	return {
+		time: 0,
+		iterations: Math.min(20, Math.max(5, Math.floor(TARGET_MS / oneShot))),
+		warmupTime: 0,
+		warmupIterations: 1,
+	};
+};
+const cbench = (name: string, fn: () => void): void => {
+	bench(name, fn, calibrated(fn));
+};
 
 // Every bench consumes its result into this sink so the JIT can't dead-code
 // eliminate result construction. Match-count VALIDITY lives in hits.test.ts.
 let sink = 0;
 
+// Scope to a subset of tables with BENCH=<token>[,<token>…] — a token matches a
+// corpus (`mixed`), a size (`100k`), or a table (`mixed-100k`). Unset = full
+// matrix (the publish ritual); scoped runs are the dev loop.
+//   BENCH=mixed-10k pnpm bench
+const BENCH_TOKENS = (process.env.BENCH ?? "").toLowerCase().split(",").filter(Boolean);
+const sizeLabel = (n: number): string => `${n / 1000}k`;
+const wants = (corpus: string, size: number): boolean =>
+	BENCH_TOKENS.length === 0 ||
+	BENCH_TOKENS.some((t) => t === corpus || t === sizeLabel(size) || t === `${corpus}-${sizeLabel(size)}`);
+
+// No 1k size: every library is sub-ms there (zero decision value) and its
+// sub-ms cells sit at timer granularity, so the column only measured jitter.
 for (const { name: corpusName, build, queries: QUERIES } of CORPORA)
-for (const size of [1000, 10000, 100000]) {
+for (const size of [10000, 100000]) {
+	if (!wants(corpusName, size)) continue;
 	const list = build(size);
 	const mikro = createFuzzySearch(list); // prebuilt index
 	const microfuzz = createMicrofuzz(list); // prebuilt index (the parent lib)
@@ -64,66 +94,66 @@ for (const size of [1000, 10000, 100000]) {
 	const OUT_OF_ORDER = 1;
 
 	describe(`[${corpusName}] query ${size} items × ${QUERIES.length} queries`, () => {
-		bench("krino", () => {
+		cbench("krino", () => {
 			for (const q of QUERIES) sink += mikro(q).length;
-		}, BENCH_OPTS);
-		bench("krino (all opts)", () => {
+		});
+		cbench("krino (acronym)", () => {
 			for (const q of QUERIES) sink += mikroAll(q).length;
-		}, BENCH_OPTS);
-		bench("@nozbe/microfuzz", () => {
+		});
+		cbench("@nozbe/microfuzz", () => {
 			for (const q of QUERIES) sink += microfuzz(q).length;
-		}, BENCH_OPTS);
-		bench("@nozbe/microfuzz (all opts)", () => {
+		});
+		cbench("@nozbe/microfuzz (all opts)", () => {
 			for (const q of QUERIES) sink += microfuzzAll(q).length;
-		}, BENCH_OPTS);
-		bench("fuzzy", () => {
+		});
+		cbench("fuzzy", () => {
 			for (const q of QUERIES) sink += fuzzyFilter(q, list).length;
-		}, BENCH_OPTS);
-		bench("fuzzy (all opts)", () => {
+		});
+		cbench("fuzzy (all opts)", () => {
 			for (const q of QUERIES) sink += fuzzyFilter(q, list, { pre: "<", post: ">" }).length;
-		}, BENCH_OPTS);
-		bench("fuzzysort", () => {
+		});
+		cbench("fuzzysort", () => {
 			for (const q of QUERIES) sink += fuzzysort.go(q, list).length;
-		}, BENCH_OPTS);
-		bench("match-sorter", () => {
+		});
+		cbench("match-sorter", () => {
 			for (const q of QUERIES) sink += matchSorter(list, q).length;
-		}, BENCH_OPTS);
-		bench("fast-fuzzy", () => {
+		});
+		cbench("fast-fuzzy", () => {
 			for (const q of QUERIES) sink += fastFuzzy.search(q).length;
-		}, BENCH_OPTS);
-		bench("fast-fuzzy (all opts)", () => {
+		});
+		cbench("fast-fuzzy (all opts)", () => {
 			for (const q of QUERIES) sink += fastFuzzyAll.search(q).length;
-		}, BENCH_OPTS);
-		bench("uFuzzy", () => {
+		});
+		cbench("uFuzzy", () => {
 			for (const q of QUERIES) sink += uf.search(list, q)[0]?.length ?? 0;
-		}, BENCH_OPTS);
-		bench("uFuzzy (all opts)", () => {
+		});
+		cbench("uFuzzy (all opts)", () => {
 			for (const q of QUERIES)
 				sink += uf.search(latinized, uFuzzy.latinize([q])[0], OUT_OF_ORDER)[0]?.length ?? 0;
-		}, BENCH_OPTS);
-		bench("fuse.js", () => {
+		});
+		cbench("fuse.js", () => {
 			for (const q of QUERIES) sink += fuse.search(q).length;
-		}, BENCH_OPTS);
-		bench("fuse.js (all opts)", () => {
+		});
+		cbench("fuse.js (all opts)", () => {
 			for (const q of QUERIES) sink += fuseAll.search(q).length;
-		}, BENCH_OPTS);
+		});
 	});
 
 	// Build cost barely differs between corpora — measure it once, on mixed.
 	if (corpusName === "mixed") {
 		describe(`build index (${size} items)`, () => {
-			bench("krino createFuzzySearch", () => {
+			cbench("krino createFuzzySearch", () => {
 				createFuzzySearch(list);
-			}, BENCH_OPTS);
-			bench("@nozbe/microfuzz", () => {
+			});
+			cbench("@nozbe/microfuzz", () => {
 				createMicrofuzz(list);
-			}, BENCH_OPTS);
-			bench("fast-fuzzy new Searcher", () => {
+			});
+			cbench("fast-fuzzy new Searcher", () => {
 				new Searcher(list);
-			}, BENCH_OPTS);
-			bench("fuse.js new Fuse", () => {
+			});
+			cbench("fuse.js new Fuse", () => {
 				new Fuse(list, { ignoreLocation: true, threshold: 0.4 });
-			}, BENCH_OPTS);
+			});
 		});
 	}
 }

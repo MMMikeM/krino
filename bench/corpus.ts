@@ -1,6 +1,9 @@
 /**
- * Shared bench corpora + queries. Real-ish names from faker (person / company /
- * place), seeded for reproducibility. Two variants:
+ * Shared bench corpora + queries, loaded from the committed corpus-*.json
+ * snapshots (regenerate deliberately via corpus-gen.test.ts — every rank/MRR
+ * table derives from these sequences). Freezing the data keeps bench processes
+ * fast (no faker generation per run) and immune to faker changing generator
+ * output between versions. Two variants:
  * - `ascii` — en locale only, effectively no diacritics.
  * - `mixed` — mostly en with every 7th item from fr/pl generators, landing at
  *   ~5% of items carrying a diacritic (a realistic international dataset;
@@ -12,54 +15,18 @@
  * ranks. Used by the speed benches (compare.bench.ts), the gate-funnel
  * diagnostics (funnel.test.ts), and the match-count checks (hits.test.ts).
  */
-import { faker, fakerFR, fakerPL } from "@faker-js/faker";
+import asciiJson from "./corpus-ascii.json";
+import mixedJson from "./corpus-mixed.json";
 
-const SEED = 20240607;
-
-const seedAll = (): void => {
-	faker.seed(SEED);
-	fakerFR.seed(SEED);
-	fakerPL.seed(SEED);
-};
-
-const ASCII_GENERATORS: Array<() => string> = [
-	() => faker.commerce.productName(),
-	() => faker.company.name(),
-	() => faker.person.fullName(),
-	() => `${faker.location.city()}, ${faker.location.country()}`,
-];
-
-const ACCENTED_GENERATORS: Array<() => string> = [
-	() => fakerFR.person.fullName(),
-	() => fakerPL.company.name(),
-	() => fakerPL.person.fullName(),
-];
-
-// Reseed before every build so corpora are nested (1k ⊂ 10k ⊂ 100k) and the
-// queries below (derived from a 2k sample) hit at every size.
-const buildWith =
-	(generators: Array<() => string>) =>
+// The snapshots hold the full 100k sequence; generation was a single reseed
+// followed by sequential appends, so a prefix slice equals a smaller build
+// (1k ⊂ 10k ⊂ 100k) and the queries derived from a 2k sample hit at any size.
+const slicer =
+	(data: string[]) =>
 	(n: number): string[] => {
-		seedAll();
-		const out: string[] = [];
-		for (let i = 0; i < n; i++) out.push(generators[i % generators.length]());
-		return out;
+		if (n > data.length) throw new Error(`corpus snapshot has ${data.length} items; asked for ${n}`);
+		return data.slice(0, n);
 	};
-
-// Every 7th item comes from a fr/pl generator (~33% accented) and the rest
-// from the en set (~0%), landing the corpus at ~5% diacritic density.
-const buildMixed = (n: number): string[] => {
-	seedAll();
-	const out: string[] = [];
-	for (let i = 0; i < n; i++) {
-		out.push(
-			i % 7 === 0
-				? ACCENTED_GENERATORS[(i / 7) % ACCENTED_GENERATORS.length]()
-				: ASCII_GENERATORS[i % ASCII_GENERATORS.length](),
-		);
-	}
-	return out;
-};
 
 const wordsOf = (s: string): string[] => s.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 const everyOther = (w: string): string => [...w].filter((_, k) => k % 2 === 0).join("");
@@ -75,6 +42,7 @@ export type QuerySpec = {
 		| "scatter-light"
 		| "scatter-medium"
 		| "scatter-heavy"
+		| "acronym"
 		| "accent-stripped"
 		| "miss";
 	// The corpus item the query was derived from — rank checks look for it.
@@ -123,6 +91,21 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 			break;
 		}
 	}
+	// Acronym probe: the initials of the first sample item with 3+ words (e.g.
+	// "Rath, Streich and Witting" -> "rsaw"). krino's opt-in acronym tier and
+	// match-sorter's ACRONYM ranking target initials deliberately; subsequence
+	// engines can only hit them as scattered chains.
+	const acronymItem = sample.find((item) => wordsOf(item).length >= 3);
+	if (acronymItem) {
+		specs.push({
+			query: wordsOf(acronymItem)
+				.map((w) => w[0])
+				.join("")
+				.toLowerCase(),
+			kind: "acronym",
+			source: acronymItem,
+		});
+	}
 	const isAccentedWord = (w: string): boolean => w.length >= 4 && stripAccents(w) !== w;
 	const accentedItem = sample.find((item) => wordsOf(item).some(isAccentedWord));
 	if (accentedItem) {
@@ -150,6 +133,6 @@ const makeCorpus = (name: Corpus["name"], build: (n: number) => string[]): Corpu
 };
 
 export const CORPORA: Corpus[] = [
-	makeCorpus("ascii", buildWith(ASCII_GENERATORS)),
-	makeCorpus("mixed", buildMixed),
+	makeCorpus("ascii", slicer(asciiJson as string[])),
+	makeCorpus("mixed", slicer(mixedJson as string[])),
 ];
