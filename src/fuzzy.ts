@@ -91,7 +91,7 @@ const scoreConsecutiveLetters = (
 ): [number, HighlightRanges] | null => {
 	let matched = 0;
 	for (const [start, end] of chunks) matched += end - start + 1;
-	const span = (chunks[chunks.length - 1] as Chunk)[1] - (chunks[0] as Chunk)[0] + 1;
+	const span = chunks[chunks.length - 1][1] - chunks[0][0] + 1;
 	if (matched / span < DENSITY_FLOOR) return null;
 
 	let score = CHUNK_SCORES.BASE;
@@ -133,7 +133,12 @@ export const smartFuzzyMatch = (
 			if (normalizedField.slice(idx, idx + minChunkLen) === minQueryChunk) {
 				chunkStart = idx;
 			} else {
-				chunkEnd++;
+				// Resume the scan after the rejected occurrence. `indexOf`
+				// returned the first occurrence at or past the cursor, so
+				// nothing between the cursor and `idx` can match; advancing
+				// one char at a time instead re-finds the same occurrence
+				// per step and turns a far-away reject into O(gap²).
+				chunkEnd = idx;
 				continue;
 			}
 		}
