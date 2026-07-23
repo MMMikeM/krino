@@ -95,7 +95,7 @@ results.filter((r) => r.fields[0]?.tier !== "fuzzy"); // same, categorically
 
 | Library                                                     | Per-field | Ranges | Diacritics | ESM | Multi-word | Typos | Tier |
 |-------------------------------------------------------------|:---------:|:------:|:----------:|:---:|:----------:|:-----:|:----:|
-| **krino**                                                   |    🟢     |   🟢   |     🟢     | 🟢  |     🟢     |   ➖   |  🟢  |
+| **Krino**                                                   |    🟢     |   🟢   |     🟢     | 🟢  |     🟢     |   ➖   |  🟢  |
 | [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz)      |    🟢     |   🟢   |     🟢     |  ➖  |     🟢     |   ➖   |  ➖   |
 | [fast-fuzzy](https://github.com/EthanRutherford/fast-fuzzy) |    🟢     |   ⚪    |     ➖      | 🟢  |     ➖      |  🟢   |  ➖   |
 | [Fuse.js](https://www.fusejs.io/)                           |    🟢     |   ⚪    |     ⚪      | 🟢  |     ⚪      |  🟢   |  ➖   |
@@ -117,28 +117,28 @@ Krino is the only library that by default:
 
 It was originally written for matching in-memory lists on the client, but it has proven to be a competitive option for serverside work.
 
-At the sizes krino targets — hundreds to a few thousand items — every non-typo library here answers a query in **well under a millisecond**, so raw speed rarely decides. What differs is **what you get back**. Each cell above is verified against the library's current source.
+At the sizes Krino targets — hundreds to a few thousand items — every non-typo library here answers a query in **well under a millisecond**, so raw speed rarely decides. What differs is **what you get back**. Each cell above is verified against the library's current source.
 
 ### Results, in short
 
 Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md) — per-query match/rank tables, two-corpus speed tables, and how the benches verify matching before timing it.
 
-- **Match quality** (10,000 items; every query derived from a real corpus item): krino returns the smallest result set of the subsequence libraries and ranks the source item **first on every structured query** (word, two words, prefix).
-  A one-char slip still matches (source in the top 10); at two dropped chars `smart` returns nothing where the parent returns 135 junk chains — that refusal is krino's deliberate change to microfuzz's matcher.
+- **Match quality** (10,000 items; every query derived from a real corpus item): Krino returns the smallest result set of the subsequence libraries and ranks the source item **first on every structured query** (word, two words, prefix).
+  A one-char slip still matches (source in the top 10); at two dropped chars `smart` returns nothing where the parent returns 135 junk chains — that refusal is Krino's deliberate change to microfuzz's matcher.
   The typo engines return up to ~450 candidates for a single true hit; uFuzzy's defaults silently return 0 on accent-stripped and gapped queries.
 - **Speed** (per-query mean): ~0.1–0.3 ms at 10k and ~2–5 ms at 100k (anything below 10k is universally sub-millisecond) — ~4–5× faster than its parent microfuzz on ascii and ~10× on the mixed corpus.
-  On accented data krino now leads every configuration outright, including uFuzzy with folding enabled; on pure-ascii corpora uFuzzy keeps a ~1.5× lead at 100k.
+  On accented data Krino now leads every configuration outright, including uFuzzy with folding enabled; on pure-ascii corpora uFuzzy keeps a ~1.5× lead at 100k.
   A prefix-narrowing cache makes typing decay toward sub-millisecond keystrokes (15 keystrokes over 100k items: ~28 ms total); a 100k list swap costs a one-time ~31 ms build.
   Benches consume every result (no dead-code elimination), verify match counts per query, and run on two seeded corpora (ascii, and mixed with ~5% diacritics).
 
 ### What to pick when
 
 - **Typos must still match** (user-typed queries over messy data) — `Fuse.js` (Bitap) or `fast-fuzzy` (edit-distance), at a bundle and ergonomics cost.
-- **100k+ pure-ascii items, raw speed above everything** — `uFuzzy`; ~1.5× faster than krino there, but no tier, and its diacritics/multi-word are opt-in. On accented data, krino now measures fastest outright.
-- **Rank, highlight, and explain matches** (palettes, pickers, autocomplete) — krino: `tier` + `ranges` + per-field config, ~2.3 kB.
+- **100k+ pure-ascii items, raw speed above everything** — `uFuzzy`; ~1.5× faster than Krino there, but no tier, and its diacritics/multi-word are opt-in. On accented data, Krino now measures fastest outright.
+- **Rank, highlight, and explain matches** (palettes, pickers, autocomplete) — Krino: `tier` + `ranges` + per-field config, ~2.3 kB.
 - **Sorting utility with tiered ranking, no highlights needed** — `match-sorter`; no ranges, no multi-word.
 - **Smallest possible, plain substring is enough** — `fuzzy` (~0.8 kB, 2016-era).
-- **Already on `@nozbe/microfuzz`** — krino is its rebuild: same subsequence approach plus tier, ESM, and it's faster.
+- **Already on `@nozbe/microfuzz`** — Krino is its rebuild: same subsequence approach plus tier, ESM, and it's faster.
 
 Partial/opt-in details:
 

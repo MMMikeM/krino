@@ -1,6 +1,6 @@
 # Migrating from Mikrofuzz 0.x to Krino 1.0
 
-v1.0 renames the package from `@mmmike/mikrofuzz` to `krino` and redesigns the API primitive-first — a smaller surface and new result shapes.
+v1.0 renames the package from `@mmmike/mikrofuzz` to `Krino` and redesigns the API primitive-first — a smaller surface and new result shapes.
 Here's everything that breaks.
 `normalizeText` is unchanged.
 
@@ -55,7 +55,6 @@ of field specs.
 + createFuzzySearch(list, [{ text: (x) => x, strategy: "off" }]);
 ```
 
-> **v2 note:** `strategy: "aggressive"` (the mode that reproduced the 0.x/microfuzz matcher) was removed in 2.0; `smart` is the supported fuzzy mode. Pin krino 1.x if you need it.
 
 ## Result shape
 

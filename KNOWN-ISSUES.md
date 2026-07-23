@@ -1,6 +1,6 @@
 # Known issues & feature requests
 
-Found while integrating krino into a blog search (short curated fields
+Found while integrating Krino into a blog search (short curated fields
 searched fuzzily, a multi-KB body-vocabulary field searched contains-only).
 
 > **Status (v1.0.0):** all six bugs below are **fixed**, and feature requests

@@ -3,12 +3,12 @@
 ## 2.0.0 (unreleased)
 
 - **Breaking:** removed `strategy: "aggressive"` — `Strategy` is now `"off" | "smart"`.
-  The mode existed to reproduce `@nozbe/microfuzz`'s any-subsequence matcher; krino's `smart` chunking (word-boundary or 3+ char runs) is the library's point, and one opinionated mode beats two overlapping ones.
-  If you need any-subsequence matching, stay on microfuzz or pin krino 1.x.
+  The mode existed to reproduce `@nozbe/microfuzz`'s any-subsequence matcher; Krino's `smart` chunking (word-boundary or 3+ char runs) is the library's point, and one opinionated mode beats two overlapping ones.
+  If you need any-subsequence matching, stay on microfuzz or pin Krino 1.x.
 
-## Renamed to `krino`
+## Renamed to `Krino`
 
-`@mmmike/mikrofuzz` is now **`krino`** (unscoped), same 1.0 API. The old package is deprecated in favour of `krino`; update the import from `@mmmike/mikrofuzz` to `krino`.
+`@mmmike/mikrofuzz` is now **`Krino`** (unscoped), same 1.0 API. The old package is deprecated in favour of `Krino`; update the import from `@mmmike/mikrofuzz` to `Krino`.
 
 ## 1.0.0
 

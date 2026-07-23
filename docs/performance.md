@@ -2,12 +2,12 @@
 
 **Status:** mixed — the index analysis is exploration (not on the roadmap); the
 pre-filter sections marked DONE are shipped. Recorded so we don't re-derive it.
-Started as the analysis behind "should krino index its corpus?"
+Started as the analysis behind "should Krino index its corpus?"
 
 ## The question: a trie index?
 
 On an early **combinatorial** benchmark corpus (`ADJ × NOUN × SUFFIX`), `fast-fuzzy`
-benchmarked ~4× faster than krino *while doing typo-tolerant edit-distance matching*.
+benchmarked ~4× faster than Krino *while doing typo-tolerant edit-distance matching*.
 That looked paradoxical — edit distance is expensive per pair. The trick is
 structural, not algorithmic:
 
@@ -24,22 +24,22 @@ So fast-fuzzy is fast **because it indexes + prunes**, not because typos are che
 and that speed is **entirely corpus-dependent**. Its pruning only skips subtrees
 when candidates share prefixes. When the benchmark corpus was switched to seeded
 **faker** data (natural-language product / company / person / place names, far less
-shared-prefix structure), fast-fuzzy fell from ~4× faster than krino to **~4–9×
+shared-prefix structure), fast-fuzzy fell from ~4× faster than Krino to **~4–9×
 slower** — among the slowest in the set. The trie's whole advantage evaporated with
 the corpus shape. (For contrast, Fuse.js is also typo-tolerant and consistently the
 slowest here. "Typo-tolerant" says nothing about speed; the data structure and the
 corpus do.)
 
-krino, by comparison, does **zero corpus indexing**. `createFuzzySearch` caches
+Krino, by comparison, does **zero corpus indexing**. `createFuzzySearch` caches
 per-field normalization and word splits, but each query then linearly scans *every*
 item through the whole tier ladder (exact → prefix → boundary → multi-word →
 contains → acronym → fuzzy). O(N) full passes with a fat per-item constant and no
 pruning.
 
-## Why a prefix trie is a poor fit for krino specifically
+## Why a prefix trie is a poor fit for Krino specifically
 
-A trie accelerates **prefix** and **exact** lookups. Those are already krino's
-cheapest tiers (`startsWith`, `===`). krino's *expensive* tiers match **mid-string
+A trie accelerates **prefix** and **exact** lookups. Those are already Krino's
+cheapest tiers (`startsWith`, `===`). Krino's *expensive* tiers match **mid-string
 and out-of-order**:
 
 - `boundary` / `contains` — the query can sit anywhere in the field.
@@ -47,14 +47,14 @@ and out-of-order**:
 - `fuzzy` — a subsequence chain scattered across the field.
 
 A prefix trie helps none of these. Worse, fast-fuzzy's pruning relies on a **single
-scalar threshold** to cut subtrees. krino has no such cutoff: it's a *tier ladder*
+scalar threshold** to cut subtrees. Krino has no such cutoff: it's a *tier ladder*
 that returns **every** item that matches at any tier, ranked — there's no "score
 below X, skip it" to prune on. So the exact mechanism that makes fast-fuzzy's trie
 pay off doesn't transfer.
 
 ## What would actually help (if we ever target scale)
 
-krino's README already punts on huge corpora ("for 100k+ prefer uFuzzy /
+Krino's README already punts on huge corpora ("for 100k+ prefer uFuzzy /
 fuzzysort"). If we ever wanted to compete there, the right structures are **not** a
 prefix trie:
 
@@ -69,7 +69,7 @@ prefix trie:
 
 ### Costs / tensions
 
-- **Bundle size.** krino is ~2.0 kB (post bitmask gate + dual ESM/CJS build). A
+- **Bundle size.** Krino is ~2.0 kB (post bitmask gate + dual ESM/CJS build). A
   real index could double that — directly against the "tiny" pitch.
 - **Build time + memory.** Index construction (currently ~1–6 ms for 2k–10k) and
   posting-list storage grow with the corpus. Only worth it when N is large.
@@ -77,8 +77,8 @@ prefix trie:
   cached entry point). The `fuzzyMatch` **primitive must stay stateless** — that's
   the whole point of the primitive-first design. An index that leaked into the
   primitive would break composition.
-- **Scope.** At 2k items krino is already <0.2 ms/query; at 10k, ~0.6 ms. Indexing
-  buys nothing until the corpus is much bigger than krino's stated target use
+- **Scope.** At 2k items Krino is already <0.2 ms/query; at 10k, ~0.6 ms. Indexing
+  buys nothing until the corpus is much bigger than Krino's stated target use
   (command palettes, pickers, autocomplete over lists you already hold).
 
 ## Cheaper wins
@@ -89,13 +89,13 @@ and the tiny bundle.
 ### Front-of-ladder pre-filter — DONE (per query type)
 
 Inspired by uFuzzy, whose speed comes from a single native regex that rejects
-non-candidates before any ranking work. krino now does the same at the **front** of
+non-candidates before any ranking work. Krino now does the same at the **front** of
 the tier ladder — one native regex that, on failure, skips the whole ladder — with
 the gate chosen by query type:
 
 - **Multi-word queries → order-independent presence gate** (`buildPresenceGate`,
   `^(?=[^]*a)(?=[^]*b)…`): asserts every distinct query char is present, in any
-  order. This is mandatory here — krino's multi-word tier matches words out of
+  order. This is mandatory here — Krino's multi-word tier matches words out of
   order, so uFuzzy's subsequence gate would wrongly reject `"foo bar"` against
   `"bar … foo"`. (Pinned by `bench/correctness.test.ts`.)
 - **Single-word queries → subsequence gate** (`buildFuzzyGate`, `a[^]*b[^]*c`): with
@@ -147,14 +147,14 @@ Measured, same corpus + queries, regex gates only → with bitmask in front:
 --disable-console-intercept`) show the mask alone cutting 55–100% of items per
 query and the two stages together cutting 90–100% before any ladder work.
 
-Post-mask standings (two-corpus bench, see below): krino leads its parent
+Post-mask standings (two-corpus bench, see below): Krino leads its parent
 `@nozbe/microfuzz` everywhere on the accented corpus (~2–4×); on ascii at 100k
 they converge, with microfuzz's `aggressive` config slightly ahead. Residual gap
-to uFuzzy (~2.5–4.5× at scale) is fundamental: krino's survivors run the full JS
+to uFuzzy (~2.5–4.5× at scale) is fundamental: Krino's survivors run the full JS
 tier ladder and build a `tier` + per-char `ranges` + score, and its multi-word
 gate is the weaker order-independent kind. The (all opts) bench rows pin this:
 uFuzzy with latinize + outOfOrder parity keeps essentially its whole lead —
-architecture, not skipped features. krino trades that speed for richer, safer
+architecture, not skipped features. Krino trades that speed for richer, safer
 semantics.
 
 ### fieldWords Set removal — DONE (with a stated trade)
@@ -164,7 +164,7 @@ The per-field `new Set(splitWords(field))` was build cost and permanent heap: on
 Measured wins: build 0.89 → 0.24 ms at 1k, 7.4 → 3.2 at 10k, 98 → 54 at 100k; and the 100k *query* time fell 13 → 3.4 ms — the Sets' heap was GC and cache pressure on every scan.
 
 **The trade:** multi-word membership went from an O(1) hash hit to an O(field-length) scan per query word.
-For krino's target fields (names, labels) the scan beats hashing — no hash, native memchr-style walk.
+For Krino's target fields (names, labels) the scan beats hashing — no hash, native memchr-style walk.
 For document-length fields (`strategy: "off"` body text, which the README supports) it is a theoretical regression that the short-string bench corpus never measures.
 Bounded in practice: the bitmask gate rejects most items before any tier runs, the scan stops at the first absent query word, and the tier only fires for multi-word queries that missed every earlier tier.
 **Revisit trigger:** a long-field corpus probe showing the multi-word tier dominating query time — the fix would be an opt-in per-field word index for long fields only, not a return of the always-on Set.
@@ -196,10 +196,10 @@ Lazy range allocation was considered alongside and deliberately skipped — rang
 
 ## Verdict
 
-**Defer.** A prefix trie is the wrong tool for krino's tier model. Genuine scaling
+**Defer.** A prefix trie is the wrong tool for Krino's tier model. Genuine scaling
 would come from an inverted-token + trigram index, but that fights the tiny/simple
-positioning and only pays off well past krino's target corpus size. Revisit only if
-krino deliberately expands to 100k+ corpora; until then, the cheaper scan-level wins
+positioning and only pays off well past Krino's target corpus size. Revisit only if
+Krino deliberately expands to 100k+ corpora; until then, the cheaper scan-level wins
 above are the better use of bytes.
 
 ## Benchmark caveat (resolved)
@@ -222,18 +222,18 @@ The bench harness grew several honesty mechanisms worth keeping:
   names/places — measured ~33% of items carry a diacritic; the en generators
   measured 0%, and faker's *French company names* also measured 0%, so density
   had to be designed, not assumed). Splitting exposed that diacritics cost
-  microfuzz, not krino: microfuzz ties krino on ascii at 100k but loses ~2× on
+  microfuzz, not Krino: microfuzz ties Krino on ascii at 100k but loses ~2× on
   accented.
 - **"(all opts)" rows.** Every library with opt-ins gets a second bench line
   with everything on (diacritic folding, multi-word, highlight output) except
-  typo modes — krino can't reciprocate those. Kills the "fast because it skips
+  typo modes — Krino can't reciprocate those. Kills the "fast because it skips
   work" ambiguity in both directions.
 - **Sink.** Every bench consumes its results (`sink += r.length`) so the JIT
   can't dead-code-eliminate the work being timed.
 - **Match-count + rank validation** (`bench/hits.test.ts`). Every query records
   the corpus item it was derived from; the test reports, per library, how many
   items matched and where that source item ranked (`21 @1`, `959 @315`, `✗`).
-  Caught the headline facts: krino v1's `aggressive` mode reproduced microfuzz
+  Caught the headline facts: Krino v1's `aggressive` mode reproduced microfuzz
   cell-for-cell (that mode *was* the parent's behaviour; `smart` is the change,
   and v2 removed the legacy mode);
   uFuzzy silently returns 0 on accent-stripped queries without `latinize`; typo
