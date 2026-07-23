@@ -1,7 +1,10 @@
 /**
  * The fuzzy fallback tier: assemble a query out of consecutive-letter chunks
  * found in the field, and score the assembly (fewer, cleaner chunks = lower =
- * better). Chunks must start at a word boundary or run 3+ characters.
+ * better). Chunks must start at a word boundary or run 3+ characters; the
+ * query's final 1-2 characters are exempt (they may complete a chunk mid-word,
+ * since a shorter-than-3 tail could never satisfy the run rule) and the
+ * density floor polices what that leniency can assemble.
  */
 
 import { isValidWordBoundary } from "./shared";
@@ -97,9 +100,12 @@ const scoreConsecutiveLetters = (
 	let score = CHUNK_SCORES.BASE;
 	for (const [start, end] of chunks) {
 		const chunkLen = end - start + 1;
-		const isStartOfWord = start === 0 || normalizedField[start - 1] === " ";
+		// Same boundary definition the matcher used to admit the chunk —
+		// a chunk admitted because a hyphen is a boundary must not then be
+		// priced as if it weren't.
+		const isStartOfWord = start === 0 || isValidWordBoundary(normalizedField[start - 1]);
 		const isEndOfWord =
-			end === normalizedField.length - 1 || normalizedField[end + 1] === " ";
+			end === normalizedField.length - 1 || isValidWordBoundary(normalizedField[end + 1]);
 		if (isStartOfWord && isEndOfWord) score += CHUNK_SCORES.WHOLE_WORD;
 		else if (isStartOfWord) score += CHUNK_SCORES.WORD_START;
 		else if (chunkLen >= 3) score += CHUNK_SCORES.LONG;

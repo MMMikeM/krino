@@ -48,6 +48,29 @@ describe("smart chunk scoring", () => {
 	});
 });
 
+describe("scorer honors the same word boundaries as the matcher", () => {
+	// The matcher admits chunks after any valid word boundary (hyphens, dots,
+	// quotes...); the scorer must credit them like space-delimited chunks, or
+	// punctuated corpora get systematically over-penalized for the exact
+	// chunks the matcher went out of its way to admit.
+	it("scores a chunk after a hyphen like one after a space", () => {
+		expect(fuzzyMatch("foo-bar", "fbar")?.score).toBeCloseTo(
+			fuzzyMatch("foo bar", "fbar")?.score as number,
+		);
+	});
+
+	it("scores a short boundary chunk as a word start, not scattered", () => {
+		const r = fuzzyMatch("foo-bar", "fba");
+		expect(r?.score).toBeCloseTo(2.8); // 2 + 0.4 (word-start "f") + 0.4 (word-start "ba")
+	});
+
+	it("credits whole-word chunks delimited by punctuation", () => {
+		expect(fuzzyMatch("bar-foo", "barf")?.score).toBeCloseTo(
+			fuzzyMatch("bar foo", "barf")?.score as number,
+		);
+	});
+});
+
 describe("fuzzy density floor", () => {
 	it("rejects sparse chains scattered across long text", () => {
 		// Word-start single-char chunks across ~25 chars: density 3/21 ≈ 0.14,
