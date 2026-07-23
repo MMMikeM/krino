@@ -165,8 +165,13 @@ describe("bench validity: per-library match counts and source rank", () => {
 			// search (its docs: "the first search takes ~7 ms"), so its cell is
 			// time-to-ready: build + first search, with one steady-state search
 			// subtracted below (index = build + first − second) so the cell
-			// isolates preparation. uFuzzy (latinize) counts latinizing the
-			// haystack — real preparation that normally hides as "no index".
+			// isolates preparation. fuzzysort also preps lazily: its first go()
+			// prepares every string target and caches them process-wide (measured
+			// ~87× a steady query at 10k), so its cell times an explicit
+			// prepare-all loop — the same work go() does lazily, but repeatable,
+			// where the one-shot lazy fill would be visible only once per process.
+			// uFuzzy (latinize) counts latinizing the haystack — real preparation
+			// that normally hides as "no index".
 			// Consume a constructed object so creation can't be elided.
 			const consume = (o: object): number => o.constructor.name.length;
 			const firstQuery = specs[0]?.query ?? "steel";
@@ -187,6 +192,11 @@ describe("bench validity: per-library match counts and source rank", () => {
 						}),
 					),
 				"uFuzzy (latinize)": () => uFuzzy.latinize(list).length,
+				fuzzysort: () => {
+					let n = 0;
+					for (const s of list) n += fuzzysort.prepare(s).target.length;
+					return n;
+				},
 			};
 			const indexMs: Record<string, number> = {};
 			for (const [lib, make] of Object.entries(indexers)) indexMs[lib] = timeQuery(make);
