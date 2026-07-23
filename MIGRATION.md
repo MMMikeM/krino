@@ -48,7 +48,7 @@ of field specs.
 + ]);
 ```
 
-The new `acronym`/`penalty` options live on the field spec; the 0.x `strategy` option is gone entirely in v2.
+The new `acronym`/`atBest` options live on the field spec; the 0.x `strategy` option is gone entirely in v2.
 `"aggressive"` (the mode that reproduced the 0.x/microfuzz matcher) was removed first; `"off"` followed once the fuzzy tier's density floor eliminated the long-text junk it existed to dodge.
 Filter by `tier` for literal-only matching; pin Krino 1.x if you need the old modes.
 
@@ -73,7 +73,7 @@ The parallel `matches` and `scores` arrays are replaced by one `fields` array of
 ## New in 1.0 (non-breaking)
 
 - `tier` on every match — a categorical name (`"exact"` … `"fuzzy"`) beside the score.
-- Per-field `penalty` (demote a field) and `acronym` (opt-in word-initials tier).
+- Per-field `atBest` (demote a field: its best possible hit ranks at that score) and `acronym` (opt-in word-initials tier).
 - `fuzzyMatch(text, query, { acronym })` options.
 - New exports: `SCORES` (tier constants), `splitWords`, `matchDensity`.
 - `getText` / `FieldSpec<T>` infer the item type — no cast needed.

@@ -21,13 +21,14 @@ describe("types", () => {
 		expect(r?.item.name ?? "Ada").toBe("Ada");
 	});
 
-	it("field-spec overload typechecks acronym/penalty", () => {
+	it("field-spec overload typechecks acronym/atBest", () => {
 		const users: User[] = [{ name: "United States", email: "us@x.com" }];
 		const fields: FieldSpec<User>[] = [
-			{ text: (u) => u.name, acronym: true, penalty: SCORES.CONTAINS },
+			{ text: (u) => u.name, acronym: true, atBest: SCORES.CONTAINS },
 			{ text: (u) => u.email },
 		];
-		const first: MatchResult | null | undefined = createFuzzySearch(users, fields)("us")[0]?.fields[0];
+		const first: MatchResult | null | undefined = createFuzzySearch(users, fields)("us")[0]
+			?.fields[0];
 		expect(first == null || typeof first.tier === "string").toBe(true);
 	});
 

@@ -2,7 +2,7 @@
 
 ## 2.0.0 (unreleased)
 
-- **Breaking:** the `strategy` option is gone entirely — `FieldSpec` is now `{ text, acronym?, penalty? }` and `MatchOptions` is `{ acronym? }`.
+- **Breaking:** the `strategy` option is gone entirely — `FieldSpec` is now `{ text, acronym?, atBest? }` and `MatchOptions` is `{ acronym? }`.
   - `"aggressive"` existed to reproduce `@nozbe/microfuzz`'s any-subsequence matcher; Krino's chunking (word-boundary or 3+ char runs) is the library's point, and one opinionated mode beats two overlapping ones. Stay on microfuzz or pin Krino 1.x if you need it.
   - `"off"` existed to dodge the long-text junk hazard, and the new **density floor** removes the hazard itself instead: the fuzzy tier rejects any chunk assembly covering less than 18% of its span (measured junk chains ≤ 0.143 density, sparsest genuine match 0.211). Junk rate over document-length text: 5–98% across measured lengths → **0%**, with label behaviour unchanged. Literal-only filtering stays a one-liner: drop results with `tier === "fuzzy"`.
 
@@ -39,7 +39,7 @@ See [MIGRATION.md](./MIGRATION.md) for a 0.x → 1.0 upgrade guide.
 
 - **`tier`** categorical match kind; **`Tier`** type.
 - **`fuzzyMatch` options** — per-call `strategy` and `acronym`.
-- **Per-field specs** with `strategy` / `acronym` / `penalty` (demote-only).
+- **Per-field specs** with `strategy` / `acronym` / `atBest` (demote-only; introduced as `penalty`, renamed before release).
 - **`splitWords`** exported; **`SCORES`** exported; **`matchDensity`** helper.
 - Generic inference — `getText` / `FieldSpec<T>` are typed to the item, no cast.
 

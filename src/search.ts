@@ -60,13 +60,13 @@ type PreparedField = {
 	normalizedField: string;
 	mask: number;
 	acronym: boolean;
-	penalty: number;
+	atBest: number;
 };
 
 const prepareField = (
 	text: string | null,
 	acronym: boolean,
-	penalty: number,
+	atBest: number,
 ): PreparedField => {
 	const field = text || "";
 	const normalizedField = normalizeText(field);
@@ -75,7 +75,7 @@ const prepareField = (
 		normalizedField,
 		mask: charMask(normalizedField),
 		acronym,
-		penalty,
+		atBest,
 	};
 };
 
@@ -95,7 +95,7 @@ const prepareField = (
  * // Multiple fields, per-field config (body never outranks title)
  * const search = createFuzzySearch(posts, [
  *   { text: (p) => p.title },
- *   { text: (p) => p.body, penalty: SCORES.CONTAINS },
+ *   { text: (p) => p.body, atBest: SCORES.CONTAINS },
  * ]);
  */
 export function createFuzzySearch(list: string[]): FuzzySearcher<string>;
@@ -124,7 +124,7 @@ export function createFuzzySearch<T>(
 	for (let i = 0; i < count; i++) {
 		const item = list[i] as T;
 		const prepared = specs.map((s) =>
-			prepareField(s.text(item), s.acronym ?? false, s.penalty ?? 0),
+			prepareField(s.text(item), s.acronym ?? false, s.atBest ?? 0),
 		);
 		preparedFields.push(prepared);
 		let union = 0;
@@ -172,7 +172,7 @@ export function createFuzzySearch<T>(
 				const p = prepared[f] as PreparedField;
 				const result = matchField(p.field, p.normalizedField, p.mask, q, p.acronym);
 				if (result) {
-					const effective = { ...result, score: result.score + p.penalty };
+					const effective = { ...result, score: result.score + p.atBest };
 					bestScore = Math.min(bestScore, effective.score);
 					(fields ??= prepared.map(() => null))[f] = effective;
 				}

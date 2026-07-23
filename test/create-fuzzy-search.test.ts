@@ -1,6 +1,6 @@
 /**
  * createFuzzySearch: string arrays, the getText overload, sort order, stability.
- * (Per-field specs + penalty live in fields.test.ts.)
+ * (Per-field specs + atBest live in fields.test.ts.)
  */
 import { describe, expect, it } from "vitest";
 import { createFuzzySearch } from "../src/index";
@@ -37,6 +37,7 @@ describe("getText overload", () => {
 	];
 
 	it("searches the extracted text; item is the original reference", () => {
+		createFuzzySearch(users, (u) => u.name)("john");
 		const results = createFuzzySearch(users, (u) => u.name)("john");
 		expect(results).toHaveLength(1);
 		expect(results[0]!.item).toBe(users[0]);

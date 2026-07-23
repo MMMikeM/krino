@@ -50,9 +50,10 @@ export type FieldSpec<T = unknown> = {
 	text: (item: T) => string | null;
 	/** Enable the acronym tier for this field (default: false). */
 	acronym?: boolean;
-	/** Added to this field's score; higher demotes it (default: 0, keep >= 0).
-	 *  e.g. `penalty: SCORES.CONTAINS` keeps this field below better tiers elsewhere. */
-	penalty?: number;
+	/** Shifts this field's scores so its best possible hit ranks at this value
+	 *  (default: 0, keep >= 0). e.g. `atBest: SCORES.CONTAINS` keeps this
+	 *  field below better tiers elsewhere. */
+	atBest?: number;
 };
 
 /**
