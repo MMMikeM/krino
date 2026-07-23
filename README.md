@@ -125,15 +125,15 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md) — per-
 - **Match quality** (10,000 items; every query derived from a real corpus item): Krino returns the smallest result set of the subsequence libraries and ranks the source item **first on every structured query** (word, two words, prefix).
   A one-char slip still matches (source in the top 10); at two dropped chars Krino returns nothing where the parent returns 135 junk chains — that refusal is Krino's deliberate change to microfuzz's matcher.
   The typo engines return up to ~450 candidates for a single true hit; uFuzzy's defaults silently return 0 on accent-stripped and gapped queries.
-- **Speed** (per-query mean): ~0.1–0.3 ms at 10k and ~2–5 ms at 100k (anything below 10k is universally sub-millisecond) — ~4–5× faster than its parent microfuzz on ascii and ~10× on the mixed corpus.
-  On accented data Krino now leads every configuration outright, including uFuzzy with folding enabled; on pure-ascii corpora uFuzzy keeps a ~1.5× lead at 100k.
+- **Speed** (per-query mean): ~0.2–0.4 ms at 10k and ~2–5 ms at 100k (anything below 10k is universally sub-millisecond) — ~4× faster than its parent microfuzz on ascii and ~6–8× on the mixed corpus.
+  On accented data Krino leads every configuration at 10k and ties uFuzzy's folding config at 100k; on pure-ascii corpora uFuzzy keeps a ~1.8× lead at scale.
   A prefix-narrowing cache makes typing decay toward sub-millisecond keystrokes (15 keystrokes over 100k items: ~28 ms total); a 100k list swap costs a one-time ~31 ms build.
   Benches consume every result (no dead-code elimination), verify match counts per query, and run on two seeded corpora (ascii, and mixed with ~5% diacritics).
 
 ### What to pick when
 
 - **Typos must still match** (user-typed queries over messy data) — `Fuse.js` (Bitap) or `fast-fuzzy` (edit-distance), at a bundle and ergonomics cost.
-- **100k+ pure-ascii items, raw speed above everything** — `uFuzzy`; ~1.5× faster than Krino there, but no tier, and its diacritics/multi-word are opt-in. On accented data, Krino now measures fastest outright.
+- **100k+ pure-ascii items, raw speed above everything** — `uFuzzy`; ~1.8× faster than Krino there, but no tier, and its diacritics/multi-word are opt-in. On accented data Krino leads at 10k and ties uFuzzy's folding config at 100k.
 - **Rank, highlight, and explain matches** (palettes, pickers, autocomplete) — Krino: `tier` + `ranges` + per-field config, ~2.3 kB.
 - **Sorting utility with tiered ranking, no highlights needed** — `match-sorter`; no ranges, no multi-word.
 - **Smallest possible, plain substring is enough** — `fuzzy` (~0.8 kB, 2016-era).

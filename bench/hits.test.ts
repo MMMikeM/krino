@@ -198,8 +198,48 @@ describe("bench validity: per-library match counts and source rank", () => {
 					return n;
 				},
 			};
-			const indexMs: Record<string, number> = {};
-			for (const [lib, make] of Object.entries(indexers)) indexMs[lib] = timeQuery(make);
+			// Builds are allocation-heavy, so sequential per-config windows pick
+			// up order-dependent GC debt: one configuration's garbage is
+			// collected inside the next one's timed window (observed as a
+			// spurious ~10% index gap between krino's two configs, whose builds
+			// are provably identical). Interleave the samples round-robin with a
+			// rotating start so GC pauses and process drift land evenly across
+			// configurations; median per config as usual.
+			const timeInterleaved = (fns: Record<string, () => number>): Record<string, number> => {
+				const entries = Object.entries(fns);
+				for (const [, fn] of entries) sink += fn();
+				const samples = new Map<string, number[]>(entries.map(([k]) => [k, []]));
+				const budget = performance.now() + 100 * entries.length;
+				let offset = 0;
+				while (performance.now() < budget) {
+					for (let i = 0; i < entries.length; i++) {
+						const [k, fn] = entries[(i + offset) % entries.length];
+						const t0 = performance.now();
+						sink += fn();
+						(samples.get(k) as number[]).push(performance.now() - t0);
+					}
+					offset++;
+				}
+				return Object.fromEntries(
+					entries.map(([k]) => {
+						const xs = (samples.get(k) as number[]).sort((a, b) => a - b);
+						return [k, xs[Math.floor(xs.length / 2)] ?? 0];
+					}),
+				);
+			};
+			const indexMs: Record<string, number> = timeInterleaved(indexers);
+			// The two krino configurations run byte-identical build code (the
+			// acronym flag is query-time only; verified interleaved head-to-head
+			// — equal mins and medians). Pool their cells so sub-resolution
+			// noise (±0.05 ms) can't invent a build-cost difference and flip
+			// the pareto frontier between them. The assertion catches any
+			// future divergence of the build paths.
+			{
+				const a = indexMs.krino;
+				const b = indexMs["krino (acronym)"];
+				expect(Math.abs(a - b) / Math.max(a, b), "krino config builds diverged").toBeLessThan(0.25);
+				indexMs.krino = indexMs["krino (acronym)"] = (a + b) / 2;
+			}
 			// index = build + first − second: subtract one steady-state search of
 			// the same query (on the long-lived searcher) so microfuzz's cell is
 			// preparation only, not preparation + one query.
