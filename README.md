@@ -1,26 +1,63 @@
 # Krino
 
-A tiny, typed fuzzy matcher. ~2.3 kB gzip, TS-first, dual ESM/CJS, zero deps. Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz)
+> Tiny, typed fuzzy matching
 
-What makes Krino different?
+- **~2.3 kB** gzip, zero dependencies, TS-first, ESM/CJS
+- **0.14 ms** per query over 10k items, ~2 ms over 100k optimised for search-as-you-type
+- **Tops match-quality scorecard** across 13 tests
+- **Returns** `tier`, `ranges` and `score` on every match: easily rank, highlight and explain
+- **Diacritics, multi-word, acronyms** built in
 
-1. **Tiny:** ~2.3 kB gzip, zero dependencies.
-2. **Informative:** returns the `ranges` it matched and a `tier` naming the kind of match ✖️ so you can rank, highlight, and explain a result without reverse-engineering a float.
-3. **Focused:** a fuzzy text matcher that handles diacritics and acronyms. Trades off handling typos (edit-distance and Bitap matching) for size and speed.
-
-For filtering a list you already have, command palettes, pickers, autocomplete, as fast and ergonomic as possible.
+Krino (Ancient Greek κρίνω, KREE-no, "to sift, separate"; the root of criterion, discern, and critic) is a fuzzy text matcher: it sifts a list and judges each candidate against a criterion.
+Less typo-tolerant than the edit-distance engines, in exchange for the size and speed.
+Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz), and [benchmarked](./docs/benchmarks.md) against it and six others.
 
 ## Install
 
 ```bash
-pnpm add krino
+npm i krino  # or pnpm add krino
 ```
 
 > **Coming from `@mmmike/mikrofuzz`?** See [MIGRATION.md](./MIGRATION.md).
 
-## Two entry points
+## Usage
 
-### `fuzzyMatch` — score one string
+### `createFuzzySearch`: search a collection
+
+```typescript
+import { createFuzzySearch, SCORES } from "krino";
+
+// array of strings
+const search = createFuzzySearch(["apple", "banana", "cherry"]);
+search("ban"); // [{ item: "banana", score: 0.5, fields: [...] }]
+
+// objects: a function extracts the text to search
+const byName = createFuzzySearch(users, (u) => u.name);
+byName("john");
+
+// multiple fields, per-field config
+const posts = [
+  { title: "Banana bread", body: "best baked goods" },
+  { title: "Release notes", body: "banana picker shipped" },
+];
+const byField = createFuzzySearch(posts, [
+  { text: (p) => p.title },
+  { text: (p) => p.body, atBest: SCORES.CONTAINS }, // body's best hit ranks like a bare contains
+]);
+byField("ban");
+// [
+//   { item: posts[0], score: 0.5, fields: [{ score: 0.5, tier: "prefix", ranges: [[0, 2]] }, null] },
+//   { item: posts[1], score: 2.5, fields: [null, { score: 2.5, tier: "prefix", ranges: [[0, 2]] }] },
+// ]
+// item score = the best field score; body scores are shifted by atBest (0.5 + 2 = 2.5),
+// so the title hit leads even though both are prefix matches.
+```
+
+Results are sorted best-first (stable), and preprocessing is cached; the index is built on the first call and reused by every query after.
+
+### `fuzzyMatch`: the primitive underneath
+
+Scores one string against a query; reach for it directly when there is no list, e.g. matching inside a document.
 
 ```typescript
 import { fuzzyMatch } from "krino";
@@ -32,29 +69,15 @@ fuzzyMatch("cherry", "xyz"); // null
 ```
 
 Options: `fuzzyMatch(text, query, { acronym? })`.
+`acronym: true` adds the initials tier (`rsaw` finds "Rath, Streich and Witting" at rank 1) for a sub-millisecond bump in query cost.
 
-### `createFuzzySearch` — search a collection
+## Where it fits
 
-```typescript
-import { createFuzzySearch, SCORES } from "krino";
-
-// array of strings
-const search = createFuzzySearch(["apple", "banana", "cherry"]);
-search("ban");
-// [{ item: "banana", score: 0.5, fields: [{ score: 0.5, tier: "prefix", ranges: [[0, 2]] }] }]
-
-// objects — a function extracts the text to search
-const byName = createFuzzySearch(users, (u) => u.name);
-byName("john");
-
-// multiple fields, per-field config
-const search = createFuzzySearch(posts, [
-  { text: (p) => p.title },
-  { text: (p) => p.body, penalty: SCORES.CONTAINS }, // body never outranks title
-]);
-```
-
-Results are sorted best-first (stable), and preprocessing is cached — build once, query many.
+- **Command palettes and pickers**: `tier` + `ranges` rank and highlight results without reverse-engineering a score.
+- **Search-as-you-type**: each keystroke rescans only the previous one's survivors, sub-millisecond by mid-word even over 100k items.
+- **Filter UIs that show every match**: the narrowest result sets of the subsequence engines; a structured query returns a median of 7 rows where Fuse.js ships ~90.
+- **Backend one-shot lookups**: build + query costs ~1.5 ms cold over 10k items, so indexing per request is fine.
+- **Finding a phrase inside a document**: `fuzzyMatch` scans 16,000 characters in 0.16 ms, and the density floor keeps absent words at exactly 0 false matches.
 
 ## Scoring
 
@@ -72,40 +95,36 @@ Lower is better. Each match reports a numeric `score` (for sorting) and a catego
 | 2     | `contains`         | contains query anywhere                    |
 | > 2   | `fuzzy`            | fuzzy chain (fewer chunks = better)        |
 
-Import `SCORES` for thresholds and penalties; or read `tier` directly:
+Import `SCORES` for thresholds and `atBest` values; or read `tier` directly:
 
 ```typescript
 results.filter((r) => r.score <= SCORES.CONTAINS); // drop fuzzy chains
 results.filter((r) => r.fields[0]?.tier !== "fuzzy"); // same, categorically
 ```
 
-> **Long text:** a fuzzy chain assembled from chunks scattered across a document is junk, and v1 produced them freely (a word *absent* from the text still "matched" 35% of the time by 512 chars, ~100% by 16k).
-> v2's fuzzy tier refuses any assembly covering less than 18% of its span — measured junk density never exceeds 0.143, the sparsest genuine match is 0.211 — which takes the junk rate to **0% at every measured length** with label behaviour unchanged ([the long-text table](./docs/benchmarks.md#matching-inside-long-text)).
-> Want literal-only matching anyway? Drop fuzzy results by tier: `results.filter((r) => r.fields[0]?.tier !== "fuzzy")`.
+`atBest` shifts `score` but never `tier`, so tier filters stay reliable on demoted fields (a body-field prefix hit can report `score: 2.5, tier: "prefix"`).
 
-> **Acronym semantics:** apostrophes are word-internal (`People's` → initial `p`, so `lpdr` matches `Lao People's Democratic Republic`), and stopwords are not skipped (`drc` won't acronym-match `Democratic Republic of the Congo` — it still surfaces via the fuzzy tier).
+> **Long text:** a fuzzy chain assembled from chunks scattered across a document is junk; unguarded, a word *absent* from the text still "matches" 35% of the time by 512 chars, ~100% by 16k.
+> The fuzzy tier refuses any assembly covering less than 18% of its span (measured junk density never exceeds 0.143, the sparsest genuine match is 0.211), which holds the junk rate at **0% at every measured length** with label behaviour unchanged ([the long-text table](./docs/benchmarks.md#matching-inside-long-text)).
+
+> **Acronym semantics:** apostrophes are word-internal: `People's` contributes one initial, `p`, so `lpdr` matches `Lao People's Democratic Republic`.
+> Stopwords count too: `Democratic Republic of the Congo` is `drotc`, and `drc` matches nothing (the density floor rejects so sparse a chain).
 
 ## The fuzzy tier
 
-There is no strategy knob — one opinionated fuzzy mode, always on: chunks must start at a word boundary or run 3+ characters, and the whole assembly must cover at least 18% of the span it stretches across (the density floor that keeps long text junk-free).
+Krino ships one opinionated fuzzy mode, always on, with no strategy knob: chunks must start at a word boundary or run 3+ characters (the query's last 1-2 characters are exempt, since a short tail could never satisfy the run rule), and the whole assembly must cover at least 18% of the span it stretches across (the density floor that keeps long text junk-free).
 Anything it refuses either matched a higher tier already or wasn't worth showing; filter `tier === "fuzzy"` out of the results if you want literal matches only.
 
 ## Comparison
 
-| Library                                                     | Per-field | Ranges | Diacritics | ESM | Multi-word | Typos | Tier |
-|-------------------------------------------------------------|:---------:|:------:|:----------:|:---:|:----------:|:-----:|:----:|
-| **Krino**                                                   |    🟢     |   🟢   |     🟢     | 🟢  |     🟢     |   ➖   |  🟢  |
-| [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz)      |    🟢     |   🟢   |     🟢     |  ➖  |     🟢     |   ➖   |  ➖   |
-| [fast-fuzzy](https://github.com/EthanRutherford/fast-fuzzy) |    🟢     |   ⚪    |     ➖      | 🟢  |     ➖      |  🟢   |  ➖   |
-| [Fuse.js](https://www.fusejs.io/)                           |    🟢     |   ⚪    |     ⚪      | 🟢  |     ⚪      |  🟢   |  ➖   |
-| [fuzzy](https://github.com/mattyork/fuzzy)                  |     ➖     |   ⚪    |     ➖      |  ➖  |     ➖      |   ➖   |  ➖   |
-| [fuzzysort](https://github.com/farzher/fuzzysort)           |    🟢     |   🟢   |     🟢     |  ➖  |     🟢     |   ➖   |  ➖   |
-| [match-sorter](https://github.com/kentcdodds/match-sorter)  |    🟢     |   ➖    |     🟢     |  ⚪  |     ➖      |   ➖   |  🟢  |
-| [uFuzzy](https://github.com/leeoniya/uFuzzy)                |     ➖     |   🟢   |     ⚪      |  ⚪  |     ⚪      |   ⚪   |  ➖   |
+Speed is not the constraint at any realistic size; a prebuilt Krino index answers a 100,000-item query in ~2 ms (0.14 ms at 10k), and `fuzzyMatch` over a 16,000-character document costs 0.16 ms.
+What separates these libraries is **match quality** and **what you get back**.
+Accuracy against per-query cost, indexes prebuilt (the mixed 10k scorecard from [docs/benchmarks.md](./docs/benchmarks.md)):
 
-🟢 built-in / on by default
-⚪ opt-in or partial
-➖ not supported
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/pareto-query-dark.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. query ms with indexes prebuilt, log scale, as a Pareto frontier. The frontier is entirely Krino: from Krino (0.53 at 0.14 ms) to Krino (acronym) (0.57 at 0.16 ms); every other configuration, including Fuse.js at 0.54 and 15 ms, is dominated." src="./docs/pareto-query-light.svg">
+</picture>
 
 Krino is the only library that by default:
 
@@ -114,46 +133,35 @@ Krino is the only library that by default:
 - matches multi-word
 - takes per-field config
 
-It was originally written for matching in-memory lists on the client, but it has proven to be a competitive option for serverside work.
-
-At the sizes Krino targets — hundreds to a few thousand items — every non-typo library here answers a query in **well under a millisecond**, so raw speed rarely decides. What differs is **what you get back**. Each cell above is verified against the library's current source.
+The full feature matrix, verified per cell against each library's current source, is in [docs/benchmarks.md](./docs/benchmarks.md#libraries).
+Originally written for matching in-memory lists on the client, Krino has proven to be a competitive option for serverside work.
 
 ### Results, in short
 
-Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md) — per-query match/rank tables, two-corpus speed tables, and how the benches verify matching before timing it.
+Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 
-- **Match quality** (10,000 items; every query derived from a real corpus item): Krino returns the smallest result set of the subsequence libraries and ranks the source item **first on every structured query** (word, two words — in order or reversed, prefix).
-  A one-char slip still matches (source in the top 10); at two dropped chars Krino returns nothing where the parent returns 135 junk chains — that refusal is Krino's deliberate change to microfuzz's matcher.
-  A transposed pair of characters (`geenric`) is the one typo shape subsequence matching cannot represent; only the edit-distance engines surface it, and that trade is priced into their scorecards.
-  The typo engines return up to ~450 candidates for a single true hit; uFuzzy's defaults silently return 0 on accent-stripped, gapped, and reversed-phrase queries.
-- **Speed** (per-query mean): ~0.2–0.6 ms at 10k and ~2–5 ms at 100k (anything below 10k is universally sub-millisecond) — ~4× faster than its parent microfuzz on ascii and ~6–8× on the mixed corpus.
-  On accented data Krino leads every configuration at 10k and ties uFuzzy's folding config at 100k; on pure-ascii corpora uFuzzy keeps a ~1.7× lead at scale.
-  A prefix-narrowing cache makes typing decay toward sub-millisecond keystrokes (15 keystrokes over 100k items: ~28 ms total); a 100k list swap costs a one-time ~18 ms build.
-  Benches consume every result (no dead-code elimination), verify match counts per query, and run on two seeded corpora (ascii, and mixed with ~5% diacritics).
+- **Match quality**: Krino returns the smallest result set of the subsequence libraries and ranks the source item **first on every structured query**; a one-char slip still matches, and at two dropped chars it returns nothing where its parent returns 135 junk chains.
+  Transpositions are the one typo shape subsequence matching cannot represent; only the edit-distance engines surface them, and that trade is priced into their scorecards.
+- **Speed** (per-query mean): ~0.2–0.6 ms at 10k and ~2–5 ms at 100k, ~4–8× faster than its parent microfuzz; uFuzzy keeps a ~1.7× lead on pure-ascii 100k+ corpora, while Krino leads accented data at 10k and ties there at 100k.
+  A prefix-narrowing cache makes typing decay toward sub-millisecond keystrokes.
 
 ### What to pick when
 
-- **Typos must still match** (user-typed queries over messy data) — `Fuse.js` (Bitap) or `fast-fuzzy` (edit-distance), at a bundle and ergonomics cost.
-- **100k+ pure-ascii items, raw speed above everything** — `uFuzzy`; ~1.7× faster than Krino there, but no tier, and its diacritics/multi-word are opt-in. On accented data Krino leads at 10k and ties uFuzzy's folding config at 100k.
-- **Rank, highlight, and explain matches** (palettes, pickers, autocomplete) — Krino: `tier` + `ranges` + per-field config, ~2.3 kB.
-- **Sorting utility with tiered ranking, no highlights needed** — `match-sorter`; no ranges, no multi-word.
-- **Smallest possible, plain substring is enough** — `fuzzy` (~0.8 kB, 2016-era).
-- **Already on `@nozbe/microfuzz`** — Krino is its rebuild: same subsequence approach plus tier, ESM, and it's faster.
+**Pick Krino.** It tops the quality scorecard on both benchmark corpora, leads every speed table except pure-ascii (where only uFuzzy is decisively faster), and at ~2.3 kB only substring-only `fuzzy` and its parent `microfuzz` undercut it on size.
+Two workloads genuinely point elsewhere:
 
-Partial/opt-in details:
+- **Typos must still match** (user-typed queries over messy data): a transposition breaks the subsequence property, so no subsequence engine can represent it. Pick `Fuse.js` (Bitap) or `fast-fuzzy` (edit distance), at 4–5× the bundle, ~15–40 ms cold queries, and ~90–450-row result sets.
+- **Pure-ascii corpora at 100k+, independent one-shot queries, bare index output is enough**: `uFuzzy` is ~1.7× faster per query there. The lead does not survive search-as-you-type: Krino's prefix cache decays keystrokes below uFuzzy's flat per-query cost by the end of a word, and longer phrases flip the session total. On accented data the lead disappears even per query, and uFuzzy's match quality scores a fraction of Krino's.
 
-- `uFuzzy` folds diacritics via `latinize()`, matches multi-word via `outOfOrder`, and tolerates one typo via `SingleError`
-- `Fuse` returns `ranges` via `includeMatches`, folds diacritics via `ignoreDiacritics`, and matches multi-word via token search
-- `fast-fuzzy`'s `ranges` are one span (`index`+`length`), not per-character, and its default normalization doesn't strip accents
-- `fuzzy`'s "ranges" are a pre-wrapped string, not numeric indices
-- ESM ⚪: `match-sorter` and `uFuzzy` ship an ESM build via the legacy `module` field only (no `exports` map) — bundlers pick it up, Node `import` falls back to CJS interop. 🟢 = dual ESM/CJS with a proper `exports` map.
+The rest of the field is dominated on these benchmarks; the full argument, per-library, is in [the recommendation](./docs/benchmarks.md#the-recommendation).
+(Already on `@nozbe/microfuzz`? Krino is its rebuild: same subsequence approach plus tier, ESM, and 4–8× faster. See [MIGRATION.md](./MIGRATION.md).)
 
 ## Building blocks
 
-- `normalizeText(str)` ✖️ lowercase, strip diacritics.
-- `splitWords(str)` ✖️ tokenize on any non-alphanumeric run (keeps `_`).
-- `matchDensity(ranges)` ✖️ matched characters ÷ inclusive span (a junk-chain discriminator).
-- `SCORES` ✖️ the tier constants.
+- `normalizeText(str)`: lowercase, strip diacritics.
+- `splitWords(str)`: tokenize on any non-alphanumeric run (keeps `_`).
+- `matchDensity(ranges)`: matched characters ÷ inclusive span (a junk-chain discriminator).
+- `SCORES`: the tier constants.
 
 ## Types
 
@@ -168,19 +176,15 @@ type MatchResult = { score: number; tier: Tier; ranges: Range[] };
 type FieldSpec<T> = {
   text: (item: T) => string | null;
   acronym?: boolean;     // default false
-  penalty?: number;      // added to this field's score; higher demotes it
+  atBest?: number;       // shifts this field's scores; its best possible hit ranks here
 };
 
 type FuzzyResult<T> = {
   item: T;
   score: number;                       // min effective score across fields
-  fields: Array<MatchResult | null>;   // one per field spec
+  fields: (MatchResult | null)[];      // one per field spec
 };
 ```
-
-## The name
-
-Krino, from Ancient Greek κρίνω (KREE-no), PIE `*krey-`, "to sift, separate." The same root as criterion, discern, and critic. A fuzzy matcher sifts a list and judges each candidate against a criterion.
 
 ## License
 

@@ -128,12 +128,15 @@ Primitive-first redesign — `fuzzyMatch` scores one string, `createFuzzySearch`
   per-field entry in `FuzzyResult.fields`.
 - **`tier`** / **`Tier`** — categorical match kind (`"exact"` … `"fuzzy"`), returned alongside
   the numeric `score`. Tier names map 1:1 to `SCORES` keys, plus `"fuzzy"`.
-- **`FuzzyResult`** — `{ item, score, fields: Array<MatchResult | null> }`. The old parallel
+- **`FuzzyResult`** — `{ item, score, fields: (MatchResult | null)[] }`. The old parallel
   `matches` + `scores` arrays are gone; one `fields` array replaces them.
-- **`FieldSpec`** (public) — one searchable field: `{ text, strategy?, acronym?, penalty? }`.
+- **`FieldSpec`** (public) — one searchable field: `{ text, strategy?, acronym?, atBest? }`.
   `text` is the extractor (`(item) => string | null`); replaces the old stringly `key`.
-- **`penalty`** — number added to a field's score; higher demotes it (lower is better).
-  Demote-only (kept ≥ 0). `penalty ⊂ rank` (rank deferred).
+- **`atBest`** — shifts every score from the field by this amount, so the field's best possible
+  hit (exact, 0) ranks at exactly this value; higher demotes (lower is better).
+  Demote-only (kept ≥ 0). Introduced as `penalty`, renamed pre-release: the value is the same
+  number, but the name states the intent (`atBest: SCORES.CONTAINS` = "this field's best hit
+  ranks like a bare contains") instead of the mechanism. `atBest ⊂ rank` (rank deferred).
 - **`acronym`** — opt-in tier matching word-initials; `acronymMatch` reads initials via the
   `wordRun` regex `/[\p{L}\p{N}_]+/u` (same word definition as `splitWords`).
 - **`SCORES`** (`src/scores.ts`) — exported tier constants; single source of truth.
@@ -143,7 +146,7 @@ Primitive-first redesign — `fuzzyMatch` scores one string, `createFuzzySearch`
   `queryWords`, `fuzzyGate`) built once per query.
 - **`buildFuzzyGate`** (`src/fuzzy.ts`) — the native subsequence regex gate for the fuzzy tier.
 - **`PreparedField`** (`src/search.ts`) — internal per-item cached field: `{field,
-  normalizedField, fieldWords, strategy, acronym, penalty}`.
+  normalizedField, fieldWords, strategy, acronym, atBest}`.
 - **`matchDensity`** (`src/density.ts`) — matched-chars ÷ inclusive span helper.
 - **`splitWords`** (`src/normalize.ts`, exported) — tokenizer on `/[^\p{L}\p{N}_]+/u`.
 
