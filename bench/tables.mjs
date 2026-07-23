@@ -12,7 +12,6 @@ const run = JSON.parse(readFileSync(new URL("./scorecard-run.json", import.meta.
 // match-sorter and fuzzy track the microfuzz row and are omitted there).
 const LABELS = [
 	["krino", "krino (smart)"],
-	["krino (aggressive)", "krino (aggressive)"],
 	["krino (acronym)", "krino (acronym)"],
 	["@nozbe/microfuzz", "@nozbe/microfuzz"],
 	["fast-fuzzy", "fast-fuzzy"],

@@ -82,16 +82,13 @@ const timeQuery = (run: () => number, reset?: () => void): number => {
 
 describe("bench validity: per-library match counts and source rank", () => {
 	for (const { name, build, specs } of CORPORA) {
-		// The per-cell timing loops (~100 ms × 12 configs × 10 queries) outgrow the
+		// The per-cell timing loops (~100 ms × 11 configs × 10 queries) outgrow the
 		// default 5 s test timeout.
 		it(`[${name}] every library matches the plain-word query`, { timeout: 30_000 }, () => {
 			const list = build(SIZE);
 			const uf = new uFuzzy();
 			const latinized = uFuzzy.latinize(list);
 			const krino = createFuzzySearch(list);
-			const krinoAggressive = createFuzzySearch(list, [
-				{ text: (x: string) => x, strategy: "aggressive" },
-			]);
 			const krinoAcronym = createFuzzySearch(list, [{ text: (x: string) => x, acronym: true }]);
 			const microfuzz = createMicrofuzz(list);
 			const fastFuzzy = new Searcher(list);
@@ -116,7 +113,6 @@ describe("bench validity: per-library match counts and source rank", () => {
 
 			const runners: Record<string, Runner> = {
 				krino: (q, src) => outcome(krino(q).map((r) => r.item), src),
-				"krino (aggressive)": (q, src) => outcome(krinoAggressive(q).map((r) => r.item), src),
 				"krino (acronym)": (q, src) => outcome(krinoAcronym(q).map((r) => r.item), src),
 				"@nozbe/microfuzz": (q, src) =>
 					outcome(
@@ -139,7 +135,6 @@ describe("bench validity: per-library match counts and source rank", () => {
 			// mirroring what the vitest benches time.
 			const timers: Record<string, (q: string) => number> = {
 				krino: (q) => krino(q).length,
-				"krino (aggressive)": (q) => krinoAggressive(q).length,
 				"krino (acronym)": (q) => krinoAcronym(q).length,
 				"@nozbe/microfuzz": (q) => microfuzz(q).length,
 				fuzzysort: (q) => fuzzysort.go(q, list).length,
@@ -159,9 +154,6 @@ describe("bench validity: per-library match counts and source rank", () => {
 				krino: () => {
 					sink += krino(CACHE_BUST).length;
 				},
-				"krino (aggressive)": () => {
-					sink += krinoAggressive(CACHE_BUST).length;
-				},
 				"krino (acronym)": () => {
 					sink += krinoAcronym(CACHE_BUST).length;
 				},
@@ -170,18 +162,18 @@ describe("bench validity: per-library match counts and source rank", () => {
 			// One-time index cost per configuration (0 for the libraries that keep
 			// no index — their preparation happens inside every query above).
 			// Ledger notes: microfuzz defers part of its preparation to the first
-			// search (its docs: "the first search takes ~7 ms"), so its index cell
-			// understates and the remainder lands on the first query. uFuzzy
-			// (latinize) counts latinizing the haystack — real preparation that
-			// normally hides as "no index".
+			// search (its docs: "the first search takes ~7 ms"), so its cell is
+			// time-to-ready: build + first search, with one steady-state search
+			// subtracted below (index = build + first − second) so the cell
+			// isolates preparation. uFuzzy (latinize) counts latinizing the
+			// haystack — real preparation that normally hides as "no index".
 			// Consume a constructed object so creation can't be elided.
 			const consume = (o: object): number => o.constructor.name.length;
+			const firstQuery = specs[0]?.query ?? "steel";
 			const indexers: Record<string, () => number> = {
 				krino: () => consume(createFuzzySearch(list)),
-				"krino (aggressive)": () =>
-					consume(createFuzzySearch(list, [{ text: (x: string) => x, strategy: "aggressive" }])),
 				"krino (acronym)": () => consume(createFuzzySearch(list, [{ text: (x: string) => x, acronym: true }])),
-				"@nozbe/microfuzz": () => consume(createMicrofuzz(list)),
+				"@nozbe/microfuzz": () => createMicrofuzz(list)(firstQuery).length,
 				"fast-fuzzy": () => consume(new Searcher(list)),
 				"fuse.js": () => consume(new Fuse(list, { ignoreLocation: true, threshold: 0.4 })),
 				"fuse.js (all opts)": () =>
@@ -198,6 +190,13 @@ describe("bench validity: per-library match counts and source rank", () => {
 			};
 			const indexMs: Record<string, number> = {};
 			for (const [lib, make] of Object.entries(indexers)) indexMs[lib] = timeQuery(make);
+			// index = build + first − second: subtract one steady-state search of
+			// the same query (on the long-lived searcher) so microfuzz's cell is
+			// preparation only, not preparation + one query.
+			indexMs["@nozbe/microfuzz"] = Math.max(
+				0,
+				(indexMs["@nozbe/microfuzz"] ?? 0) - timeQuery(() => microfuzz(firstQuery).length),
+			);
 
 			// One full warm pass over every lib × query before any timing —
 			// early cells otherwise pay the whole process's JIT warmup.
@@ -225,6 +224,11 @@ describe("bench validity: per-library match counts and source rank", () => {
 					}
 					// query time against the prebuilt searcher / cold one-shot
 					// (query + one-time index) — equal for the no-index libs.
+					// total ≈ the FIRST query from cold, but the addend is a
+					// steady-state query on purpose: every one-time cost —
+					// including microfuzz's lazy first-search slice — is priced
+					// into indexMs, so timing a literal first call here would
+					// double-count the preparation.
 					const total = ms + (indexMs[lib] ?? 0);
 					cells[lib] = {
 						count,
