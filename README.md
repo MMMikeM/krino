@@ -160,7 +160,6 @@ The rest of the field is dominated on these benchmarks; the full argument, per-l
 
 - `normalizeText(str)`: lowercase, strip diacritics.
 - `splitWords(str)`: tokenize on any non-alphanumeric run (keeps `_`).
-- `matchDensity(ranges)`: matched characters ÷ inclusive span (a junk-chain discriminator).
 - `SCORES`: the tier constants.
 
 ## Types

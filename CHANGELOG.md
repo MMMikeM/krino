@@ -40,7 +40,7 @@ See [MIGRATION.md](./MIGRATION.md) for a 0.x → 1.0 upgrade guide.
 - **`tier`** categorical match kind; **`Tier`** type.
 - **`fuzzyMatch` options** — per-call `strategy` and `acronym`.
 - **Per-field specs** with `strategy` / `acronym` / `atBest` (demote-only; introduced as `penalty`, renamed before release).
-- **`splitWords`** exported; **`SCORES`** exported; **`matchDensity`** helper.
+- **`splitWords`** exported; **`SCORES`** exported.
 - Generic inference — `getText` / `FieldSpec<T>` are typed to the item, no cast.
 
 ### Fixed (carried from the bug-fix pass)

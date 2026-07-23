@@ -23,7 +23,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 //   yes = built-in/default, "opt-in", "partial", no. `updated` = last npm publish.
 const META = {
 	krino: {
-		gzipKB: 2.0, deps: 0, type: "subsequence (tiered)", module: "esm", updated: null,
+		gzipKB: 2.5, deps: 0, type: "subsequence (tiered)", module: "esm", updated: null,
 		features: { ranges: "yes", tier: "yes", diacritics: "yes", multiWord: "yes", perField: "yes", typos: "no" },
 	},
 	"@nozbe/microfuzz": {

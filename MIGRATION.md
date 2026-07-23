@@ -75,5 +75,5 @@ The parallel `matches` and `scores` arrays are replaced by one `fields` array of
 - `tier` on every match — a categorical name (`"exact"` … `"fuzzy"`) beside the score.
 - Per-field `atBest` (demote a field: its best possible hit ranks at that score) and `acronym` (opt-in word-initials tier).
 - `fuzzyMatch(text, query, { acronym })` options.
-- New exports: `SCORES` (tier constants), `splitWords`, `matchDensity`.
+- New exports: `SCORES` (tier constants), `splitWords`.
 - `getText` / `FieldSpec<T>` infer the item type — no cast needed.

@@ -21,7 +21,7 @@ describe("normalizeText", () => {
 
 	it("does not touch punctuation", () => {
 		// If the punctuation-boundary bug is fixed by normalizing punctuation to
-		// spaces rather than by widening validWordBoundaries, update this pin.
+		// spaces rather than by widening boundaryChars, update this pin.
 		expect(normalizeText("a.b,c:d;e/f")).toBe("a.b,c:d;e/f");
 	});
 

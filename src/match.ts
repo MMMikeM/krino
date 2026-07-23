@@ -6,13 +6,13 @@
  * (opt-in) word-initials tier.
  */
 
-import { smartFuzzyMatch } from "./fuzzy";
+import { isBoundaryChar, wordChar } from "./boundaries";
+import { fuzzyChainMatch } from "./fuzzy";
 import { SCORES } from "./scores";
-import { isValidWordBoundary } from "./shared";
 import type { MatchResult, Range } from "./types";
 
 // Query-derived state, built once per query and reused across every field.
-export type MatchQuery = {
+export type PreparedQuery = {
 	query: string;
 	normalizedQuery: string;
 	queryWords: string[];
@@ -34,9 +34,6 @@ const sortByRangeStart = (a: Range, b: Range): number => a[0] - b[0];
 // end a run: "people's" is one word with initial "p", not "people" + "s" —
 // otherwise "Lao People's Democratic Republic" could never match "lpdr".
 const wordRun = /[\p{L}\p{N}_]+(?:['’][\p{L}\p{N}_]+)*/gu;
-
-// A single word character, per splitWords' tokenization.
-const wordChar = /[\p{L}\p{N}_]/u;
 
 // First occurrence of `word` in `haystack` that is a whole word — bounded on
 // both sides by a non-word character (or the string edge). Equivalent to
@@ -62,7 +59,7 @@ const wholeWordOccurrence = (haystack: string, word: string): number => {
 const boundaryOccurrence = (haystack: string, needle: string): number => {
 	let idx = haystack.indexOf(needle);
 	while (idx > -1) {
-		if (idx === 0 || isValidWordBoundary(haystack[idx - 1])) return idx;
+		if (idx === 0 || isBoundaryChar(haystack[idx - 1])) return idx;
 		idx = haystack.indexOf(needle, idx + 1);
 	}
 	return -1;
@@ -92,7 +89,7 @@ export const matchField = (
 	field: string,
 	normalizedField: string,
 	fieldMask: number,
-	q: MatchQuery,
+	q: PreparedQuery,
 	acronym: boolean,
 ): MatchResult | null => {
 	const { query, normalizedQuery, queryWords } = q;
@@ -175,6 +172,6 @@ export const matchField = (
 
 	// Fuzzy fallback — gate on the native subsequence test before the loop.
 	if (!q.fuzzyGate.test(normalizedField)) return null;
-	const fuzzy = smartFuzzyMatch(normalizedField, normalizedQuery);
+	const fuzzy = fuzzyChainMatch(normalizedField, normalizedQuery);
 	return fuzzy && { score: fuzzy[0], tier: "fuzzy", ranges: fuzzy[1] };
 };

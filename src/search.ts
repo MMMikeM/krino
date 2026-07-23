@@ -5,9 +5,10 @@
  *   built on the primitive. Second arg is a `getText` fn or an array of field specs.
  */
 
-import { buildFuzzyGate, buildPresenceGate, charMask, maskIsExact } from "./fuzzy";
-import { matchField, type MatchQuery } from "./match";
-import { normalizeText, splitWords } from "./normalize";
+import { buildFuzzyGate, buildPresenceGate, charMask, maskIsExact } from "./gates";
+import { matchField, type PreparedQuery } from "./match";
+import { splitWords } from "./boundaries";
+import { normalizeText } from "./normalize";
 import type { FieldSpec, FuzzyResult, FuzzySearcher, MatchOptions, MatchResult } from "./types";
 
 const { MAX_SAFE_INTEGER } = Number;
@@ -29,7 +30,7 @@ const shiftRanges = (ranges: [number, number][], lead: number): void => {
 // Build the query-derived state once, reused across every field. The raw query
 // is stored trimmed so the exact-case tiers treat padding as insignificant,
 // matching the normalized tiers (normalizeText trims).
-const prepareQuery = (query: string, normalizedQuery: string): MatchQuery => {
+const prepareQuery = (query: string, normalizedQuery: string): PreparedQuery => {
 	const queryMask = charMask(normalizedQuery);
 	const queryWords = splitWords(normalizedQuery);
 	// The presence gate only ever front-gates multi-word queries, and only when
@@ -116,12 +117,12 @@ export function createFuzzySearch<T>(
 
 	// Spec defaults resolved once; the per-item loop below runs count × specs
 	// times and shouldn't re-default options or capture per-item closures.
-	const normalizedSpecs = specs.map((s) => ({
+	const resolvedSpecs = specs.map((s) => ({
 		text: s.text,
 		acronym: s.acronym ?? false,
 		atBest: s.atBest ?? 0,
 	}));
-	const specCount = normalizedSpecs.length;
+	const specCount = resolvedSpecs.length;
 
 	const count = list.length;
 	const preparedFields: PreparedField[][] = [];
@@ -137,7 +138,7 @@ export function createFuzzySearch<T>(
 		const prepared: PreparedField[] = [];
 		let union = 0;
 		for (let f = 0; f < specCount; f++) {
-			const raw = normalizedSpecs[f].text(item) || "";
+			const raw = resolvedSpecs[f].text(item) || "";
 			const field = raw.trim();
 			const normalizedField = normalizeText(field);
 			const mask = charMask(normalizedField);
@@ -175,13 +176,13 @@ export function createFuzzySearch<T>(
 
 		const narrowed = cachedSurvivors !== null && normalizedQuery.startsWith(cachedQuery);
 		const source = narrowed ? cachedSurvivors : null;
-		const bound = narrowed ? cachedCount : count;
+		const scanCount = narrowed ? cachedCount : count;
 
 		const survivors = (spare ??= new Int32Array(count));
 		let survivorCount = 0;
 		const results: FuzzyResult<T>[] = [];
 
-		for (let k = 0; k < bound; k++) {
+		for (let k = 0; k < scanCount; k++) {
 			const i = source ? source[k] : k;
 			if ((queryMask & unionMasks[i]) !== queryMask) continue;
 			survivors[survivorCount++] = i;
@@ -193,7 +194,7 @@ export function createFuzzySearch<T>(
 
 			for (let f = 0; f < specCount; f++) {
 				const p = prepared[f];
-				const s = normalizedSpecs[f];
+				const s = resolvedSpecs[f];
 				const result = matchField(p.field, p.normalizedField, fieldMasks[maskBase + f], q, s.acronym);
 				if (result) {
 					// matchField returns a fresh object per call, so the atBest

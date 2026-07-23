@@ -1,9 +1,6 @@
 const diacritics = /[\u0300-\u036f]/g;
 const combiningMarks = /[\u0300-\u036f]/;
 const nonAscii = /[\u0080-\uffff]/;
-// Any run of non-alphanumerics (underscore excepted, so snake_case stays whole)
-// separates words. Keeps "build," and "build" the same token.
-const wordSeparators = /[^\p{L}\p{N}_]+/u;
 
 /**
  * Per-code-point case/diacritics fold, cached. The output always has the same
@@ -76,9 +73,3 @@ export const normalizeText = (str: string): string => {
 	for (const ch of s) out += foldChar(ch);
 	return out;
 };
-
-/**
- * Splits normalized text into words on any punctuation/whitespace run, so
- * multi-word matching tokenizes "build," and "build" identically.
- */
-export const splitWords = (text: string): string[] => text.split(wordSeparators).filter(Boolean);

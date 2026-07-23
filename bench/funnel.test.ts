@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { fuzzyMatch } from "krino";
-import { buildFuzzyGate, buildPresenceGate, charMask } from "../src/fuzzy";
+import { buildFuzzyGate, buildPresenceGate, charMask } from "../src/gates";
 import { normalizeText, splitWords } from "../src/normalize";
 import { CORPORA } from "./corpus";
 

@@ -7,68 +7,8 @@
  * density floor polices what that leniency can assemble.
  */
 
-import { isValidWordBoundary } from "./shared";
+import { isBoundaryChar } from "./boundaries";
 import type { HighlightRanges, Range } from "./types";
-
-const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-/**
- * A cheap native gate for the fuzzy tier: the query's characters, in order, with
- * anything between. Both fuzzy strategies require the query to be a subsequence
- * of the field, so a field that fails this test can never match — skip the
- * expensive hand-rolled matcher. Built once per query, tested per field.
- */
-export const buildFuzzyGate = (normalizedQuery: string): RegExp =>
-	new RegExp([...normalizedQuery].map(escapeRegex).join("[^]*"));
-
-const WORD_CHAR = /[\p{L}\p{N}_]/u;
-
-/**
- * A 32-bit character-class mask (fuzzysort-style O(1) pre-gate): bits 0–25 for
- * a–z, bits 26–29 for digits (bucketed), bits 30–31 for non-ASCII (bucketed).
- * Spaces and ASCII punctuation are skipped — separators must not be required of
- * the field. Query and field use the same function, so a bucket collision can
- * only cause a false pass (weaker filter), never a false reject. If
- * `(queryMask & fieldMask) !== queryMask`, some query character class is absent
- * from the field and no tier can match.
- */
-export const charMask = (normalized: string): number => {
-	let mask = 0;
-	for (let i = 0; i < normalized.length; i++) {
-		const c = normalized.charCodeAt(i);
-		if (c >= 97 && c <= 122) mask |= 1 << (c - 97);
-		else if (c >= 48 && c <= 57) mask |= 1 << (26 + (c & 3));
-		else if (c > 127) mask |= 1 << (30 + (c & 1));
-	}
-	return mask;
-};
-
-// True when the mask is an exact distinct-char presence check: bits 0–25 map
-// letters 1:1, so a mask without the lossy bucket bits (digits 26–29,
-// non-ASCII 30–31) proves char presence on its own and the presence-gate
-// regex could not reject anything further.
-export const maskIsExact = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
-
-/**
- * An order-independent presence gate: every distinct word-character of the query
- * must appear somewhere in the field (uFuzzy-style native pre-filter). A necessary
- * condition for *every* tier — exact / prefix / boundary / multi-word / contains /
- * acronym / fuzzy all require the query's letters to be present — so a field that
- * fails it can't match at any tier and can skip the whole ladder. Unlike the
- * subsequence `fuzzyGate` it stays valid for out-of-order multi-word matches, and
- * word separators are excluded so `"foo bar"` still gates a field that separates
- * the words differently (`"bar/foo"`). Built once per query, tested per field.
- */
-export const buildPresenceGate = (normalizedQuery: string): RegExp => {
-	const seen = new Set<string>();
-	let src = "^";
-	for (const ch of normalizedQuery) {
-		if (seen.has(ch) || !WORD_CHAR.test(ch)) continue;
-		seen.add(ch);
-		src += `(?=[^]*${escapeRegex(ch)})`;
-	}
-	return new RegExp(src);
-};
 
 // A consecutive run of matched characters. Same shape as a highlight Range,
 // named distinctly because it means "matched run", not "span to highlight".
@@ -90,11 +30,11 @@ const CHUNK_SCORES = {
 // sparse — measured max 0.143 across both bench corpora at every document
 // length — while the sparsest genuine match (initials scattered across a
 // four-word name) measures 0.211; 0.18 splits the gap with margin both ways
-// (docs/benchmarks.md "Matching inside long text"). This is what keeps `smart`
-// safe over document-length fields with no configuration.
+// (docs/benchmarks.md "Matching inside long text"). This is what keeps the
+// fuzzy tier safe over document-length fields with no configuration.
 const DENSITY_FLOOR = 0.18;
 
-const scoreConsecutiveLetters = (
+const scoreChunks = (
 	chunks: Chunk[],
 	normalizedField: string,
 ): [number, HighlightRanges] | null => {
@@ -109,9 +49,9 @@ const scoreConsecutiveLetters = (
 		// Same boundary definition the matcher used to admit the chunk —
 		// a chunk admitted because a hyphen is a boundary must not then be
 		// priced as if it weren't.
-		const isStartOfWord = start === 0 || isValidWordBoundary(normalizedField[start - 1]);
+		const isStartOfWord = start === 0 || isBoundaryChar(normalizedField[start - 1]);
 		const isEndOfWord =
-			end === normalizedField.length - 1 || isValidWordBoundary(normalizedField[end + 1]);
+			end === normalizedField.length - 1 || isBoundaryChar(normalizedField[end + 1]);
 		if (isStartOfWord && isEndOfWord) score += CHUNK_SCORES.WHOLE_WORD;
 		else if (isStartOfWord) score += CHUNK_SCORES.WORD_START;
 		else if (chunkLen >= 3) score += CHUNK_SCORES.LONG;
@@ -120,7 +60,7 @@ const scoreConsecutiveLetters = (
 	return [score, chunks];
 };
 
-export const smartFuzzyMatch = (
+export const fuzzyChainMatch = (
 	normalizedField: string,
 	normalizedQuery: string,
 ): [number, HighlightRanges] | null => {
@@ -135,7 +75,7 @@ export const smartFuzzyMatch = (
 		const idx = normalizedField.indexOf(queryChar, chunkEnd + 1);
 		if (idx === -1) break;
 
-		if (idx === 0 || isValidWordBoundary(normalizedField[idx - 1])) {
+		if (idx === 0 || isBoundaryChar(normalizedField[idx - 1])) {
 			chunkStart = idx;
 		} else {
 			const queryCharsLeft = normalizedQuery.length - queryIdx;
@@ -165,7 +105,7 @@ export const smartFuzzyMatch = (
 		chunks.push([chunkStart, chunkEnd]);
 
 		if (queryIdx === normalizedQuery.length) {
-			return scoreConsecutiveLetters(chunks, normalizedField);
+			return scoreChunks(chunks, normalizedField);
 		}
 	}
 	return null;

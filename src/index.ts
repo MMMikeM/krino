@@ -1,6 +1,5 @@
 /**
- * Fuzzy search library
- * Adapted from @nozbe/microfuzz with Vite SSR compatibility
+ * Krino — tiny, typed fuzzy matching. Inspired by @nozbe/microfuzz.
  *
  * Two entry points:
  * - `fuzzyMatch(text, query, options?)` — the primitive: score one string,
@@ -13,7 +12,7 @@
  */
 
 export { createFuzzySearch, fuzzyMatch } from "./search";
-export { normalizeText, splitWords } from "./normalize";
-export { matchDensity } from "./density";
+export { splitWords } from "./boundaries";
+export { normalizeText } from "./normalize";
 export { SCORES } from "./scores";
 export type * from "./types";
