@@ -5,33 +5,31 @@
  *   built on the primitive. Second arg is a `getText` fn or an array of field specs.
  */
 
-import { buildFuzzyGate, buildPresenceGate, charMask } from "./fuzzy";
+import { buildFuzzyGate, buildPresenceGate, charMask, maskIsExact } from "./fuzzy";
 import { matchField, type MatchQuery } from "./match";
 import { normalizeText, splitWords } from "./normalize";
-import type {
-	FieldSpec,
-	FuzzyResult,
-	FuzzySearcher,
-	MatchOptions,
-	MatchResult,
-} from "./types";
+import type { FieldSpec, FuzzyResult, FuzzySearcher, MatchOptions, MatchResult } from "./types";
 
 const { MAX_SAFE_INTEGER } = Number;
 
 const sortByScore = <T>(a: FuzzyResult<T>, b: FuzzyResult<T>): number => a.score - b.score;
 
+const toNullField = (): null => null;
+
 // Build the query-derived state once, reused across every field.
 const prepareQuery = (query: string, normalizedQuery: string): MatchQuery => {
 	const queryMask = charMask(normalizedQuery);
+	const queryWords = splitWords(normalizedQuery);
+	// The presence gate only ever front-gates multi-word queries, and only when
+	// the mask can't already prove exact char presence; everything else skips
+	// its construction entirely.
+	const needsPresenceGate = queryWords.length > 1 && !maskIsExact(queryMask);
 	return {
 		query,
 		normalizedQuery,
-		queryWords: splitWords(normalizedQuery),
+		queryWords,
 		queryMask,
-		// No digit/non-ASCII bucket bits (26+) means the mask is an exact
-		// distinct-char check, making the presence regex redundant.
-		presenceGateRedundant: (queryMask & ~0x3ffffff) === 0,
-		presenceGate: buildPresenceGate(normalizedQuery),
+		presenceGate: needsPresenceGate ? buildPresenceGate(normalizedQuery) : null,
 		fuzzyGate: buildFuzzyGate(normalizedQuery),
 	};
 };
@@ -55,28 +53,13 @@ export const fuzzyMatch = (
 };
 
 // A preprocessed field: its cached normalized form plus its matching config.
+// Per-item, per-field cached strings. Everything else that used to live here
+// was hoisted: `acronym`/`atBest` are per-spec constants (they were being
+// copied into every item × field object), and the per-field masks live in one
+// flat Int32Array alongside `unionMasks`.
 type PreparedField = {
 	field: string;
 	normalizedField: string;
-	mask: number;
-	acronym: boolean;
-	atBest: number;
-};
-
-const prepareField = (
-	text: string | null,
-	acronym: boolean,
-	atBest: number,
-): PreparedField => {
-	const field = text || "";
-	const normalizedField = normalizeText(field);
-	return {
-		field,
-		normalizedField,
-		mask: charMask(normalizedField),
-		acronym,
-		atBest,
-	};
 };
 
 /**
@@ -114,21 +97,37 @@ export function createFuzzySearch<T>(
 			? [{ text: extract }]
 			: extract;
 
+	// Spec defaults resolved once; the per-item loop below runs count × specs
+	// times and shouldn't re-default options or capture per-item closures.
+	const normalizedSpecs = specs.map((s) => ({
+		text: s.text,
+		acronym: s.acronym ?? false,
+		atBest: s.atBest ?? 0,
+	}));
+	const specCount = normalizedSpecs.length;
+
 	const count = list.length;
 	const preparedFields: PreparedField[][] = [];
 	// Per-item union of field masks in a typed array, so the reject scan reads 4
 	// bytes per item instead of chasing object properties. The union can only
 	// false-pass (some field may still miss a class); matchField's per-field mask
-	// check keeps multi-field correctness.
+	// check keeps multi-field correctness. The per-field masks sit in one flat
+	// Int32Array (item-major, `i * specCount + f`) rather than on the objects.
 	const unionMasks = new Int32Array(count);
+	const fieldMasks = new Int32Array(count * specCount);
 	for (let i = 0; i < count; i++) {
-		const item = list[i] as T;
-		const prepared = specs.map((s) =>
-			prepareField(s.text(item), s.acronym ?? false, s.atBest ?? 0),
-		);
-		preparedFields.push(prepared);
+		const item = list[i];
+		const prepared: PreparedField[] = [];
 		let union = 0;
-		for (const p of prepared) union |= p.mask;
+		for (let f = 0; f < specCount; f++) {
+			const field = normalizedSpecs[f].text(item) || "";
+			const normalizedField = normalizeText(field);
+			const mask = charMask(normalizedField);
+			prepared.push({ field, normalizedField });
+			fieldMasks[i * specCount + f] = mask;
+			union |= mask;
+		}
+		preparedFields.push(prepared);
 		unionMasks[i] = union;
 	}
 
@@ -140,8 +139,13 @@ export function createFuzzySearch<T>(
 	// can match "fox brown" via the multi-word tier while failing "fox brow"),
 	// but every tier requires the query's character classes, so all matches of
 	// the extended query lie inside the previous mask-pass set.
+	// The two survivor lists are double-buffered: `cachedSurvivors` holds the
+	// previous query's mask-pass set while `spare` receives the current one,
+	// then they swap. Reusing the pair keeps the query path allocation-free
+	// (a fresh 100k Int32Array costs ~65 µs of alloc + zeroing per keystroke).
 	let cachedQuery = "";
 	let cachedSurvivors: Int32Array | null = null;
+	let spare: Int32Array | null = null;
 	let cachedCount = 0;
 
 	return (query: string) => {
@@ -149,41 +153,46 @@ export function createFuzzySearch<T>(
 		if (!normalizedQuery.length) return [];
 
 		const q = prepareQuery(query, normalizedQuery);
-		const queryMask = q.queryMask;
+		const { queryMask } = q;
 
 		const narrowed = cachedSurvivors !== null && normalizedQuery.startsWith(cachedQuery);
 		const source = narrowed ? cachedSurvivors : null;
 		const bound = narrowed ? cachedCount : count;
 
-		const survivors = new Int32Array(bound);
+		const survivors = (spare ??= new Int32Array(count));
 		let survivorCount = 0;
-		const results: Array<FuzzyResult<T>> = [];
+		const results: FuzzyResult<T>[] = [];
 
 		for (let k = 0; k < bound; k++) {
-			const i = source ? (source[k] as number) : k;
-			if ((queryMask & (unionMasks[i] as number)) !== queryMask) continue;
+			const i = source ? source[k] : k;
+			if ((queryMask & unionMasks[i]) !== queryMask) continue;
 			survivors[survivorCount++] = i;
 
-			const prepared = preparedFields[i] as PreparedField[];
+			const prepared = preparedFields[i];
+			const maskBase = i * specCount;
 			let bestScore = MAX_SAFE_INTEGER;
-			let fields: Array<MatchResult | null> | null = null;
+			let fields: (MatchResult | null)[] | null = null;
 
-			for (let f = 0; f < prepared.length; f++) {
-				const p = prepared[f] as PreparedField;
-				const result = matchField(p.field, p.normalizedField, p.mask, q, p.acronym);
+			for (let f = 0; f < specCount; f++) {
+				const p = prepared[f];
+				const s = normalizedSpecs[f];
+				const result = matchField(p.field, p.normalizedField, fieldMasks[maskBase + f], q, s.acronym);
 				if (result) {
-					const effective = { ...result, score: result.score + p.atBest };
-					bestScore = Math.min(bestScore, effective.score);
-					(fields ??= prepared.map(() => null))[f] = effective;
+					// matchField returns a fresh object per call, so the atBest
+					// shift can mutate it instead of spreading a copy.
+					result.score += s.atBest;
+					bestScore = Math.min(bestScore, result.score);
+					(fields ??= prepared.map(toNullField))[f] = result;
 				}
 			}
 
 			if (fields) {
-				results.push({ item: list[i] as T, score: bestScore, fields });
+				results.push({ item: list[i], score: bestScore, fields });
 			}
 		}
 
 		cachedQuery = normalizedQuery;
+		spare = cachedSurvivors; // the retired previous list becomes the next scratch buffer
 		cachedSurvivors = survivors;
 		cachedCount = survivorCount;
 

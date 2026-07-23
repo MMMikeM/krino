@@ -18,12 +18,11 @@ export type MatchQuery = {
 	queryWords: string[];
 	// O(1) char-class mask pre-gate, valid for every tier (see charMask).
 	queryMask: number;
-	// When the query is pure a–z, the mask IS an exact distinct-char presence
-	// check, so the presence regex can't reject anything further — skip it.
-	presenceGateRedundant: boolean;
 	// Order-independent char-presence pre-filter, valid for every tier (see
-	// buildPresenceGate). Rejects non-candidates before the ladder runs.
-	presenceGate: RegExp;
+	// buildPresenceGate). Only built for multi-word queries whose mask can't
+	// already prove exact char presence (pure a–z queries: the mask IS that
+	// check); null whenever it could reject nothing further.
+	presenceGate: RegExp | null;
 	// Subsequence gate for the fuzzy tier (see buildFuzzyGate).
 	fuzzyGate: RegExp;
 };
@@ -108,18 +107,22 @@ export const matchField = (
 	// use the order-independent presence gate, since the multi-word tier matches
 	// words out of order and a subsequence gate would wrongly reject them — but
 	// when the mask already proved exact char presence, the regex is skipped.
-	const frontGate =
-		queryWords.length > 1 ? (q.presenceGateRedundant ? null : q.presenceGate) : q.fuzzyGate;
+	const frontGate = queryWords.length > 1 ? q.presenceGate : q.fuzzyGate;
 	if (frontGate && !frontGate.test(normalizedField)) return null;
 
-	if (field === query) return { score: SCORES.EXACT, tier: "exact", ranges: [[0, field.length - 1]] };
+	if (field === query)
+		return { score: SCORES.EXACT, tier: "exact", ranges: [[0, field.length - 1]] };
 
 	const queryLen = query.length;
 	const normalizedFieldLen = normalizedField.length;
 	const normalizedQueryLen = normalizedQuery.length;
 
 	if (normalizedField === normalizedQuery)
-		return { score: SCORES.NORMALIZED_EXACT, tier: "normalized-exact", ranges: [[0, normalizedFieldLen - 1]] };
+		return {
+			score: SCORES.NORMALIZED_EXACT,
+			tier: "normalized-exact",
+			ranges: [[0, normalizedFieldLen - 1]],
+		};
 	if (normalizedField.startsWith(normalizedQuery))
 		return { score: SCORES.PREFIX, tier: "prefix", ranges: [[0, normalizedQueryLen - 1]] };
 
@@ -149,7 +152,11 @@ export const matchField = (
 			ranges.push([i, i + w.length - 1]);
 		}
 		if (ranges.length === queryWords.length) {
-			return { score: SCORES.MULTI_WORD, tier: "multi-word", ranges: ranges.sort(sortByRangeStart) };
+			return {
+				score: SCORES.MULTI_WORD,
+				tier: "multi-word",
+				ranges: ranges.sort(sortByRangeStart),
+			};
 		}
 	}
 

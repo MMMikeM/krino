@@ -43,6 +43,12 @@ export const charMask = (normalized: string): number => {
 	return mask;
 };
 
+// True when the mask is an exact distinct-char presence check: bits 0–25 map
+// letters 1:1, so a mask without the lossy bucket bits (digits 26–29,
+// non-ASCII 30–31) proves char presence on its own and the presence-gate
+// regex could not reject anything further.
+export const maskIsExact = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
+
 /**
  * An order-independent presence gate: every distinct word-character of the query
  * must appear somewhere in the field (uFuzzy-style native pre-filter). A necessary

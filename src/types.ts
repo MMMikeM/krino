@@ -8,7 +8,6 @@ export type Range = [number, number];
  */
 export type HighlightRanges = Range[];
 
-
 /**
  * Which tier a match came from. Lower on this list is a weaker match; a `score`
  * greater than SCORES.CONTAINS is always tier "fuzzy".
@@ -50,9 +49,8 @@ export type FieldSpec<T = unknown> = {
 	text: (item: T) => string | null;
 	/** Enable the acronym tier for this field (default: false). */
 	acronym?: boolean;
-	/** Shifts this field's scores so its best possible hit ranks at this value
-	 *  (default: 0, keep >= 0). e.g. `atBest: SCORES.CONTAINS` keeps this
-	 *  field below better tiers elsewhere. */
+	/** Added to this field's score; higher demotes it (default: 0, keep >= 0).
+	 *  e.g. `atBest: SCORES.CONTAINS` keeps this field below better tiers elsewhere. */
 	atBest?: number;
 };
 
@@ -64,10 +62,10 @@ export type FuzzyResult<T> = {
 	/** Best (minimum) effective score across the item's fields. */
 	score: number;
 	/** Per-field match, null where that field didn't match. */
-	fields: Array<MatchResult | null>;
+	fields: (MatchResult | null)[];
 };
 
 /**
  * A prepared fuzzy search function.
  */
-export type FuzzySearcher<T> = (query: string) => Array<FuzzyResult<T>>;
+export type FuzzySearcher<T> = (query: string) => FuzzyResult<T>[];
