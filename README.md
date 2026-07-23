@@ -31,7 +31,7 @@ fuzzyMatch("Hello World", "wor");
 fuzzyMatch("cherry", "xyz"); // null
 ```
 
-Options: `fuzzyMatch(text, query, { strategy?, acronym? })`.
+Options: `fuzzyMatch(text, query, { acronym? })`.
 
 ### `createFuzzySearch` — search a collection
 
@@ -49,8 +49,8 @@ byName("john");
 
 // multiple fields, per-field config
 const search = createFuzzySearch(posts, [
-  { text: (p) => p.title, strategy: "smart" },
-  { text: (p) => p.body, strategy: "off", penalty: SCORES.CONTAINS }, // body never outranks title
+  { text: (p) => p.title },
+  { text: (p) => p.body, penalty: SCORES.CONTAINS }, // body never outranks title
 ]);
 ```
 
@@ -79,17 +79,16 @@ results.filter((r) => r.score <= SCORES.CONTAINS); // drop fuzzy chains
 results.filter((r) => r.fields[0]?.tier !== "fuzzy"); // same, categorically
 ```
 
-> **Long text:** fuzzy strategies assemble short queries out of scattered chunks, so over document-length text almost anything "matches".
-> Scope `smart` to short labels (titles, names); use `strategy: "off"` for long body text.
+> **Long text:** a fuzzy chain assembled from chunks scattered across a document is junk, and v1 produced them freely (a word *absent* from the text still "matched" 35% of the time by 512 chars, ~100% by 16k).
+> v2's fuzzy tier refuses any assembly covering less than 18% of its span — measured junk density never exceeds 0.143, the sparsest genuine match is 0.211 — which takes the junk rate to **0% at every measured length** with label behaviour unchanged ([the long-text table](./docs/benchmarks.md#matching-inside-long-text)).
+> Want literal-only matching anyway? Drop fuzzy results by tier: `results.filter((r) => r.fields[0]?.tier !== "fuzzy")`.
 
 > **Acronym semantics:** apostrophes are word-internal (`People's` → initial `p`, so `lpdr` matches `Lao People's Democratic Republic`), and stopwords are not skipped (`drc` won't acronym-match `Democratic Republic of the Congo` — it still surfaces via the fuzzy tier).
 
-## Strategies
+## The fuzzy tier
 
-| strategy          | matches                                              |
-|-------------------|------------------------------------------------------|
-| `smart` (default) | word boundaries or 3+ character chunks               |
-| `off`             | exact / prefix / boundary / contains only (no fuzzy) |
+There is no strategy knob — one opinionated fuzzy mode, always on: chunks must start at a word boundary or run 3+ characters, and the whole assembly must cover at least 18% of the span it stretches across (the density floor that keeps long text junk-free).
+Anything it refuses either matched a higher tier already or wasn't worth showing; filter `tier === "fuzzy"` out of the results if you want literal matches only.
 
 ## Comparison
 
@@ -124,7 +123,7 @@ At the sizes Krino targets — hundreds to a few thousand items — every non-ty
 Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md) — per-query match/rank tables, two-corpus speed tables, and how the benches verify matching before timing it.
 
 - **Match quality** (10,000 items; every query derived from a real corpus item): Krino returns the smallest result set of the subsequence libraries and ranks the source item **first on every structured query** (word, two words, prefix).
-  A one-char slip still matches (source in the top 10); at two dropped chars `smart` returns nothing where the parent returns 135 junk chains — that refusal is Krino's deliberate change to microfuzz's matcher.
+  A one-char slip still matches (source in the top 10); at two dropped chars Krino returns nothing where the parent returns 135 junk chains — that refusal is Krino's deliberate change to microfuzz's matcher.
   The typo engines return up to ~450 candidates for a single true hit; uFuzzy's defaults silently return 0 on accent-stripped and gapped queries.
 - **Speed** (per-query mean): ~0.1–0.3 ms at 10k and ~2–5 ms at 100k (anything below 10k is universally sub-millisecond) — ~4–5× faster than its parent microfuzz on ascii and ~10× on the mixed corpus.
   On accented data Krino now leads every configuration outright, including uFuzzy with folding enabled; on pure-ascii corpora uFuzzy keeps a ~1.5× lead at 100k.
@@ -160,7 +159,6 @@ Partial/opt-in details:
 
 ```typescript
 type Range = [number, number]; // [start, end] inclusive
-type Strategy = "off" | "smart";
 type Tier =
   | "exact" | "normalized-exact" | "prefix" | "boundary-exact"
   | "boundary" | "multi-word" | "acronym" | "contains" | "fuzzy";
@@ -169,7 +167,6 @@ type MatchResult = { score: number; tier: Tier; ranges: Range[] };
 
 type FieldSpec<T> = {
   text: (item: T) => string | null;
-  strategy?: Strategy;   // default "smart"
   acronym?: boolean;     // default false
   penalty?: number;      // added to this field's score; higher demotes it
 };

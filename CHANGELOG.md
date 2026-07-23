@@ -2,9 +2,9 @@
 
 ## 2.0.0 (unreleased)
 
-- **Breaking:** removed `strategy: "aggressive"` — `Strategy` is now `"off" | "smart"`.
-  The mode existed to reproduce `@nozbe/microfuzz`'s any-subsequence matcher; Krino's `smart` chunking (word-boundary or 3+ char runs) is the library's point, and one opinionated mode beats two overlapping ones.
-  If you need any-subsequence matching, stay on microfuzz or pin Krino 1.x.
+- **Breaking:** the `strategy` option is gone entirely — `FieldSpec` is now `{ text, acronym?, penalty? }` and `MatchOptions` is `{ acronym? }`.
+  - `"aggressive"` existed to reproduce `@nozbe/microfuzz`'s any-subsequence matcher; Krino's chunking (word-boundary or 3+ char runs) is the library's point, and one opinionated mode beats two overlapping ones. Stay on microfuzz or pin Krino 1.x if you need it.
+  - `"off"` existed to dodge the long-text junk hazard, and the new **density floor** removes the hazard itself instead: the fuzzy tier rejects any chunk assembly covering less than 18% of its span (measured junk chains ≤ 0.143 density, sparsest genuine match 0.211). Junk rate over document-length text: 5–98% across measured lengths → **0%**, with label behaviour unchanged. Literal-only filtering stays a one-liner: drop results with `tier === "fuzzy"`.
 
 ## Renamed to `Krino`
 

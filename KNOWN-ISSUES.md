@@ -108,14 +108,16 @@ raw `queryLen`.
 
 ## Hazard worth documenting (not a bug)
 
-**Smart fuzzy over long text matches nearly anything.** Chunks only need a
-word-boundary start or a 3-char run, so across a few thousand words a short
-query almost always assembles a chain: `"zebra"` matches any text containing
-`"zero"` and `"branch"`. In an 8-post blog index, `"banana"` matched all 8
-posts. The README should scope `smart` to short labels (titles,
-names, menu items) and point document-length text at `strategy: "off"`,
-which keeps the exact/prefix/boundary/multi-word/contains tiers and drops
-only the chain-assembly tier.
+**Fuzzy over long text matches nearly anything — fixed in v2 by the density
+floor.** Chunks only need a word-boundary start or a 3-char run, so across a
+few thousand words a short query almost always assembled a chain (measured:
+5% junk by 128 chars, ~98% by 16k). v2's fuzzy tier rejects any assembly
+covering less than 18% of its span (junk chains measured ≤ 0.143 density,
+sparsest genuine match 0.211), taking measured junk to 0% at every length.
+Residual exposure: adjacent-word assemblies like `"zebra"` over
+`"zero … branch"` (density 0.38) — structurally identical to wanted
+word-start matches (`"hewo"` → "hello world"), so no floor can separate
+them; they need luck to occur, and rank last when they do.
 
 Also worth documenting as a guarantee: results with equal scores keep
 collection order (`Array.prototype.sort` is stable), so callers can encode a

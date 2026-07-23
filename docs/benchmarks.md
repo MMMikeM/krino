@@ -91,7 +91,7 @@ Rank is the differentiator: Krino/microfuzz put the source first; fuzzysort and 
 | fuzzysort          |    2 |      36 |     0.17 |     5.56 |
 | uFuzzy             |    2 |      19 |     0.17 |     0.17 |
 
-A second plain-word probe from elsewhere in the corpus; same shape as the first: Krino ranks the source first with the smallest set (`smart` returns 19 where the typo engines return ~380).
+A second plain-word probe from elsewhere in the corpus; same shape as the first: Krino ranks the source first with the smallest set (19 rows where the typo engines return ~380).
 
 ### two words: `handcrafted wooden`
 
@@ -165,8 +165,8 @@ Where a library stops surfacing the source is its effective fuzzy limit.
 | uFuzzy             |    — |       0 |     0.17 |     0.17 |
 
 The gradient locates each engine's limit.
-Krino's `smart` handles the realistic case (one dropped char) with the smallest result set, then refuses outright at two gaps: its chunking demands word boundaries or 3+ char runs, and returning nothing beats returning 135 junk chains.
-microfuzz keeps matching at every level — the behaviour Krino inherited and then changed; `smart`'s refusal *is* the change (Krino v1 kept the parent's mode as `strategy: "aggressive"`; v2 removed it).
+Krino handles the realistic case (one dropped char) with the smallest result set, then refuses outright at two gaps: its chunking demands word boundaries or 3+ char runs, and returning nothing beats returning 135 junk chains.
+microfuzz keeps matching at every level — the behaviour Krino inherited and then changed; the refusal *is* the change (v1 kept the parent's mode as `strategy: "aggressive"`; v2 removed the strategy knob entirely).
 The typo engines degrade noisily — fast-fuzzy slides 73 → 140 → lost, Fuse.js falls 9 → 219 → lost, both with 2–4× the matches; fuzzysort accepts everything but ranks the source ~75th throughout.
 uFuzzy's default tolerates no intra-word gaps at all, 0 at every level.
 
@@ -183,7 +183,7 @@ uFuzzy's default tolerates no intra-word gaps at all, 0 at every level.
 | uFuzzy             |    — |       0 |     0.18 |     0.18 |
 
 `rsaw` is the initials of "Rath, Streich and Witting".
-Krino's opt-in acronym tier ranks the source **first** with a tight set of 8, while smart/microfuzz/fuzzysort land it second (the chain engines by matching 133 scattered subsequences, smart via single-char word-boundary chunks).
+Krino's opt-in acronym tier ranks the source **first** with a tight set of 8, while base Krino/microfuzz/fuzzysort land it second (the chain engines by matching 133 scattered subsequences, Krino via single-char word-boundary chunks).
 The typo engines lose the source entirely (✗); uFuzzy's defaults find nothing.
 Tier semantics: apostrophes are word-internal (`People's` contributes one initial, `p`), and stopwords are not skipped (`drc` won't acronym-match "Democratic Republic of the Congo"; it still surfaces via the fuzzy tier).
 
@@ -249,17 +249,17 @@ Result-set size is deliberately **not** a scorecard column: in a ranked UI any r
 The per-query tables above keep the raw counts for the two places size does matter: filter-style UIs that show every match, and telling whether an MRR came from a selective matcher or from ranking a huge candidate set.
 **Krino (acronym) tops both corpora outright** (0.62 mixed / 0.61 ascii): only a deliberate acronym tier ranks initials first, while Fuse.js *loses the source* on that query and lands at 0.57, arriving with ~90-row median lists (mean ~185) at ~13 ms where Krino's answer costs 0.14 ms.
 On structured queries Krino returns a median of **7** rows where Fuse ships ~90, indistinguishable to a picker, decisive for a filter.
-The same lens explains microfuzz edging Krino on raw MRR (0.58 vs 0.57 mixed, 0.56 vs 0.54 ascii): MRR can't see result-set size, and the parent's edge is the deep-typo probes, where smart returns nothing and microfuzz returns junk that happens to contain the source (0 vs 135 rows on `geerc`) — alongside 2–17× the rows everywhere else (36 vs 19 on `grady`, 133 vs 8 on `rsaw`).
+The same lens explains microfuzz edging Krino on raw MRR (0.58 vs 0.57 mixed, 0.56 vs 0.54 ascii): MRR can't see result-set size, and the parent's edge is the deep-typo probes, where Krino returns nothing and microfuzz returns junk that happens to contain the source (0 vs 135 rows on `geerc`) — alongside 2–17× the rows everywhere else (36 vs 19 on `grady`, 133 vs 8 on `rsaw`).
 That refusal is Krino's deliberate change to the parent's matcher, not a capability gap; see "the fuzzy limit" above.
 (Scorecard timing busts Krino's prefix cache between samples; an identical repeated query would otherwise time the survivor-rescan path while every other library pays a cold scan; see `timeQuery` in [`bench/hits.test.ts`](../bench/hits.test.ts).)
 
 The scorecard's cost columns are exactly what the charts draw, one per ledger.
 
-**Frontend ledger:** the index is built once at load, so keystrokes pay query only. Both charts draw the mixed 10k scorecard; on this ledger its frontier is *entirely Krino* (smart to acronym) and every other configuration, Fuse.js included, is dominated (on ascii, uFuzzy's raw speed would put it on the frontier, at a far lower MRR):
+**Frontend ledger:** the index is built once at load, so keystrokes pay query only. Both charts draw the mixed 10k scorecard; on this ledger its frontier is *entirely Krino* (base config to acronym) and every other configuration, Fuse.js included, is dominated (on ascii, uFuzzy's raw speed would put it on the frontier, at a far lower MRR):
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./pareto-query-dark.svg">
-  <img alt="Mixed-corpus accuracy (MRR) vs. query ms with indexes prebuilt, log scale, as a Pareto frontier. The frontier is entirely Krino: smart (0.57 at 0.14 ms) to acronym (0.62 at 0.16 ms); every other configuration, including Fuse.js at 0.57 and 13 ms, is dominated." src="./pareto-query-light.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. query ms with indexes prebuilt, log scale, as a Pareto frontier. The frontier is entirely Krino: base (0.57 at 0.14 ms) to acronym (0.62 at 0.16 ms); every other configuration, including Fuse.js at 0.57 and 13 ms, is dominated." src="./pareto-query-light.svg">
 </picture>
 
 **Backend one-shot ledger:** a cold search over fresh data pays index + query:
@@ -301,7 +301,7 @@ Krino first, then the rest by ascending bundle size.
 | fast-fuzzy       | ~11 kB  | 1    | typo-tolerant        |
 
 An "(all opts)" row in the corpus tables shares its base library's size, deps, and type.
-Krino's opt-in row is labelled **(acronym)** instead: `acronym: true` is its only opt-in beyond the `strategy` field, so the honest name is the specific one.
+Krino's opt-in row is labelled **(acronym)** instead: `acronym: true` is its only matching opt-in, so the honest name is the specific one.
 
 ### ascii corpus
 
@@ -374,3 +374,37 @@ Second, uFuzzy's flat ~2.5 ms still takes this short session's total (7.5 vs 9.1
 Third, microfuzz stays flat at ~28 ms: same subsequence approach, no cache; the decay *is* the cache.
 All rows assume a warm process: one-time costs — Krino's build, fuzzysort's lazy target prep — are paid at load, not on keystroke one; the Scorecard's index column carries them.
 Regenerate with `pnpm --filter=krino-bench exec vitest run session --disable-console-intercept` ([`bench/session.test.ts`](../bench/session.test.ts)).
+
+## Matching inside long text
+
+Everything above matches short labels in a list; the other workload is one large string — `fuzzyMatch` over a document — and it is where v1's fuzzy tier failed.
+Measured before the fix (the document is the mixed corpus joined with spaces and sliced to graded lengths; probes are 40 real corpus words verified absent from the largest slice — no substring anywhere — so any hit is the fuzzy tier assembling a junk chain):
+
+| doc chars | 64 | 128 | 256 | 512 | 1024 | 2048 | 4096 | 8192 | 16384 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| v1 junk rate | 0% | 5% | 13% | 35% | 63% | 80% | 85% | 85% | 98% |
+
+A smooth S-curve with no knee — 5% junk by two lines of text, one-in-three by 512 chars, near-total by 16k — and longer queries didn't escape it (50–100% junk in every query-length bucket from 4 to 13 characters at 4,096 chars).
+That killed both easy outs: an implicit length-based default would sit mid-slope, silently flipping semantics inside completely ordinary field sizes, and the old `strategy: "off"` escape hatch required users to know all of this before their search shipped junk.
+
+v2 attacks the chains themselves: the fuzzy tier rejects any assembly covering less than 18% of the span it stretches across (`DENSITY_FLOOR` in [`src/fuzzy.ts`](../src/fuzzy.ts)).
+The constant is measured, not guessed: 570 junk chains across both corpora at every length above max out at **0.143** density, while the sparsest genuine match — initials scattered across a four-word name — measures **0.211**; 0.18 splits the gap with margin both ways.
+With the floor in place:
+
+| doc chars | junk rate | present hits | miss ms |
+|----------:|----------:|-------------:|--------:|
+|        64 |        0% |          8/8 |   0.004 |
+|       128 |        0% |        15/15 |   0.004 |
+|       256 |        0% |        20/20 |   0.010 |
+|       512 |        0% |        20/20 |   0.020 |
+|      1024 |        0% |        20/20 |   0.036 |
+|      2048 |        0% |        20/20 |   0.039 |
+|      4096 |        0% |        20/20 |   0.054 |
+|      8192 |        0% |        20/20 |   0.082 |
+|     16384 |        0% |        20/20 |   0.160 |
+
+Zero junk at every length, while every genuinely present word still matches (a present word is a substring — `contains` needs no fuzzy assembly) and label-corpus behaviour is unchanged (same MRR, same ranks, slightly tighter sets: `rsaw` 8 → 7, ascii's `sgh` 55 → 31).
+Residual exposure is the adjacent-word assembly (`zebra` over "zero … branch", density 0.38) — structurally identical to wanted word-start matches like `hewo` → "hello world" (0.5), so no floor separates them; they need adjacency by luck, and they rank last when they occur.
+This is what let v2 delete the `strategy` option outright: `off` existed to dodge a hazard that no longer exists, and literal-only matching remains a one-line `tier` filter.
+[`bench/longtext.test.ts`](../bench/longtext.test.ts) keeps the after-table as a regression guard, asserting the junk rate is exactly zero at every length.
+Regenerate with `pnpm --filter=krino-bench exec vitest run longtext --disable-console-intercept`.

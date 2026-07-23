@@ -38,7 +38,7 @@ const METRICS = {
 		title: "Fuzzy search libraries: MRR vs query latency, index prebuilt",
 		desc:
 			"Scatter plot of eleven configurations of eight JavaScript fuzzy search libraries comparing MRR (accuracy) against query milliseconds with indexes prebuilt, on a log scale, on the mixed 10k corpus. " +
-			"The Pareto frontier is all krino: smart (0.57 MRR at 0.14 ms) to acronym (0.62 at 0.16 ms) — every other configuration, including Fuse.js, is dominated on this ledger.",
+			"The Pareto frontier is all Krino: base (0.57 MRR at 0.14 ms) to acronym (0.62 at 0.16 ms) — every other configuration, including Fuse.js, is dominated on this ledger.",
 	},
 	total: {
 		file: "pareto-total",
@@ -51,7 +51,7 @@ const METRICS = {
 		title: "Fuzzy search libraries: MRR vs total cost (index + one query)",
 		desc:
 			"Scatter plot of eleven configurations of eight JavaScript fuzzy search libraries comparing MRR (accuracy) against total milliseconds for one cold search (index build plus one query) on a log scale, on the mixed 10k corpus. " +
-			"The Pareto frontier runs uFuzzy, uFuzzy (latinize), krino (acronym) — krino (smart) is now edged off it by acronym, which is both cheaper and more accurate; fuzzysort's hidden prepare cache moves it off this frontier, and Fuse.js is dominated — krino (acronym) is more accurate and ~10× cheaper.",
+			"The Pareto frontier runs uFuzzy, uFuzzy (latinize), krino (acronym) — base Krino is now edged off it by acronym, which is both cheaper and more accurate; fuzzysort's hidden prepare cache moves it off this frontier, and Fuse.js is dominated — krino (acronym) is more accurate and ~10× cheaper.",
 	},
 };
 
