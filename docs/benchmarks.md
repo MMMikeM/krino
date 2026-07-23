@@ -14,22 +14,23 @@ Improvements to the benchmarks are welcome.
 ## Before matching: the index
 
 Every query number in this document times a **prebuilt** searcher, so the first question is what building one costs, and where each library hides its preparation.
-There are three ledgers: **eager** (krino and fast-fuzzy build their structures up front; Fuse.js nominally sits here too, but its trivial index defers the real work to query time), **lazy** (microfuzz defers part of its preparation to the first search — its own docs: "the first search takes ~7 ms, subsequent under 1.5 ms" — and fuzzysort quietly does the same, preparing every string target on the first `go()` and caching them process-wide, ~87× the cost of a steady query at 10k; the Scorecard prices both slices into the **index** column — microfuzz as build + first search − one steady search, fuzzysort as an explicit prepare-all pass — while the build table below times only eager work), and **none** (uFuzzy, match-sorter, and fuzzy genuinely keep no state; their preparation runs inside every single query below, and their first-call overhead is plain JIT warmup, which the harness's warm pass owes every library equally).
+There are three ledgers: **eager** (krino and fast-fuzzy build their structures up front; Fuse.js nominally sits here too, but its trivial index defers the real work to query time), **lazy** (microfuzz defers part of its preparation to the first search — its own docs: "the first search takes ~7 ms, subsequent under 1.5 ms" — and fuzzysort quietly does the same, preparing every string target on the first `go()` and caching them process-wide, ~87× the cost of a steady query at 10k; the Scorecard prices both slices into the **index** column — microfuzz as build + first search − one steady search, fuzzysort as an explicit prepare-all pass — and the build table below breaks out fuzzysort's prepare pass as its own column, while microfuzz's column stays eager-only), and **none** (uFuzzy, match-sorter, and fuzzy genuinely keep no state; their preparation runs inside every single query below, and their first-call overhead is plain JIT warmup, which the harness's warm pass owes every library equally).
 Same bill, three different places to pay it, which is why per-query numbers alone can't rank these libraries.
 
-| build |    krino | @nozbe/microfuzz | fast-fuzzy | Fuse.js |
-|-------|---------:|-----------------:|-----------:|--------:|
-| 10k   |  1.86 ms |         16.38 ms |   30.96 ms | 1.31 ms |
-| 100k  | 51.13 ms |        148.17 ms |  547.77 ms | 7.95 ms |
+| build |    krino | @nozbe/microfuzz | fast-fuzzy | Fuse.js | fuzzysort (lazy) |
+|-------|---------:|-----------------:|-----------:|--------:|-----------------:|
+| 10k   |  1.99 ms |          7.68 ms |   37.62 ms | 0.82 ms |          8.67 ms |
+| 100k  | 23.63 ms |         85.65 ms |  393.88 ms | 6.92 ms |         79.53 ms |
 
 Measured on the mixed corpus; build cost barely differs between corpora.
 One caveat on the cells themselves: they are vitest bench **means**, not medians.
 Building an index is allocation-heavy (per-item strings, objects, and arrays), and the harness runs builds back-to-back with no idle time, so the garbage collector fires *during* the timed iterations and its pauses land in the mean.
-The distortion grows with allocation rate and list size, and at 100k it is visible in the ratios: krino's 10k→100k step is 27× (1.86 → 51.13) where microfuzz's is 9× and Fuse's is 6× — nothing in krino's build is superlinear; measured standalone (best-of-N, GC quiet) its 100k build floors at ~13–20 ms, roughly 2–4× below its cell.
+The distortion is visible across runs, not just within one: krino's 100k cell has landed anywhere from ~24 to ~51 ms on the same machine depending on load, while its standalone floor (best-of-N, GC quiet) is ~13–20 ms.
 Relative rankings survive — every library runs under the same harness, and the allocation-heavy builds are penalized together — but read the absolute cells as harness-conditioned ceilings, not steady-state costs.
 Fuse.js's near-free build is the flip side of its slow queries: its "index" is trivial and the work is deferred to query time.
 fast-fuzzy's trie is the opposite trade: the heaviest build in the set buys its subtree pruning.
-krino prepares eagerly, so a 100k list swap costs ~51 ms once; keystrokes then ride the prefix cache — ~6 ms cold at the 3-char gate, sub-millisecond by the end of the word (see the session table at the bottom).
+fuzzysort's column is its lazy prepare-all pass — it has no constructor, and stock usage pays exactly that cost hidden inside the first `go()`.
+krino prepares eagerly, so a 100k list swap costs ~24 ms once (this run's cell; see the caveat above); keystrokes then ride the prefix cache — ~6 ms cold at the 3-char gate, sub-millisecond by the end of the word (see the session table at the bottom).
 On a frontend the index is paid once at load and amortized across every keystroke; for a backend one-shot search over fresh data, index + one query is the real cost; the Scorecard below reports **index**, **query**, and **total** separately so both readings stay available.
 
 ## What counts as a match?

@@ -154,6 +154,11 @@ for (const size of [10000, 100000]) {
 			cbench("fuse.js new Fuse", () => {
 				new Fuse(list, { ignoreLocation: true, threshold: 0.4 });
 			});
+			// fuzzysort has no constructor; this is the prepare-all pass its
+			// first go() runs lazily and caches process-wide (see hits.test.ts).
+			cbench("fuzzysort prepare (lazy)", () => {
+				for (const s of list) sink += fuzzysort.prepare(s).target.length;
+			});
 		});
 	}
 }
