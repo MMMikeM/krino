@@ -1,5 +1,6 @@
 /**
- * Regression tests for the issues catalogued in KNOWN-ISSUES.md.
+ * Regression tests for the issues catalogued in the v0.x KNOWN-ISSUES
+ * document (since folded into the CHANGELOG).
  *
  * All six bugs are now fixed; these assertions pin the corrected behaviour so
  * the fixes can't silently regress. (This file used to be an `it.fails` tracker
