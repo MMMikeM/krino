@@ -205,7 +205,9 @@ describe("bench validity: per-library match counts and source rank", () => {
 			// are provably identical). Interleave the samples round-robin with a
 			// rotating start so GC pauses and process drift land evenly across
 			// configurations; median per config as usual.
-			const timeInterleaved = (fns: Record<string, () => number>): Record<string, number> => {
+			const timeInterleaved = (
+				fns: Record<string, () => number>,
+			): { medians: Record<string, number>; mins: Record<string, number> } => {
 				const entries = Object.entries(fns);
 				for (const [, fn] of entries) sink += fn();
 				const samples = new Map<string, number[]>(entries.map(([k]) => [k, []]));
@@ -220,25 +222,29 @@ describe("bench validity: per-library match counts and source rank", () => {
 					}
 					offset++;
 				}
-				return Object.fromEntries(
-					entries.map(([k]) => {
-						const xs = (samples.get(k) as number[]).sort((a, b) => a - b);
-						return [k, xs[Math.floor(xs.length / 2)] ?? 0];
-					}),
-				);
+				const medians: Record<string, number> = {};
+				const mins: Record<string, number> = {};
+				for (const [k] of entries) {
+					const xs = (samples.get(k) as number[]).sort((a, b) => a - b);
+					medians[k] = xs[Math.floor(xs.length / 2)] ?? 0;
+					mins[k] = xs[0] ?? 0;
+				}
+				return { medians, mins };
 			};
-			const indexMs: Record<string, number> = timeInterleaved(indexers);
+			const { medians: indexMs, mins: indexMin } = timeInterleaved(indexers);
 			// The two krino configurations run byte-identical build code (the
 			// acronym flag is query-time only; verified interleaved head-to-head
 			// — equal mins and medians). Pool their cells so sub-resolution
 			// noise (±0.05 ms) can't invent a build-cost difference and flip
 			// the pareto frontier between them. The assertion catches any
-			// future divergence of the build paths.
+			// future divergence of the build paths — on the *minimum* sample:
+			// noise is one-sided, so the min is the stable noise-free floor,
+			// where medians under background load have flaked past 25%.
 			{
-				const a = indexMs.krino;
-				const b = indexMs["krino (acronym)"];
+				const a = indexMin.krino;
+				const b = indexMin["krino (acronym)"];
 				expect(Math.abs(a - b) / Math.max(a, b), "krino config builds diverged").toBeLessThan(0.25);
-				indexMs.krino = indexMs["krino (acronym)"] = (a + b) / 2;
+				indexMs.krino = indexMs["krino (acronym)"] = (indexMs.krino + indexMs["krino (acronym)"]) / 2;
 			}
 			// index = build + first − second: subtract one steady-state search of
 			// the same query (on the long-lived searcher) so microfuzz's cell is
@@ -298,7 +304,7 @@ describe("bench validity: per-library match counts and source rank", () => {
 			// deliberately not scored — ranked UIs slice to the top N, so a
 			// large return costs a picker nothing; the per-query tables above
 			// keep the raw counts as the diagnostic (docs/benchmarks.md,
-			// "What counts as a match?").
+			// "The corpus and the thirteen probes").
 			const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length;
 			const scorecard = Object.entries(scores)
 				.map(([library, s]) => {
