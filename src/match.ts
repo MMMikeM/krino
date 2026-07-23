@@ -36,6 +36,28 @@ const sortByRangeStart = (a: Range, b: Range): number => a[0] - b[0];
 // otherwise "Lao People's Democratic Republic" could never match "lpdr".
 const wordRun = /[\p{L}\p{N}_]+(?:['’][\p{L}\p{N}_]+)*/gu;
 
+// A single word character, per splitWords' tokenization.
+const wordChar = /[\p{L}\p{N}_]/u;
+
+// First occurrence of `word` in `haystack` that is a whole word — bounded on
+// both sides by a non-word character (or the string edge). Equivalent to
+// membership in splitWords(haystack), but also yields the position, so the
+// multi-word tier needs no precomputed word set.
+const wholeWordOccurrence = (haystack: string, word: string): number => {
+	let idx = haystack.indexOf(word);
+	while (idx > -1) {
+		const end = idx + word.length;
+		if (
+			(idx === 0 || !wordChar.test(haystack[idx - 1])) &&
+			(end === haystack.length || !wordChar.test(haystack[end]))
+		) {
+			return idx;
+		}
+		idx = haystack.indexOf(word, idx + 1);
+	}
+	return -1;
+};
+
 // First occurrence of `needle` that starts at the beginning or after a word
 // boundary. Walks past mid-word occurrences instead of stopping at the first.
 const boundaryOccurrence = (haystack: string, needle: string): number => {
@@ -70,7 +92,6 @@ const acronymMatch = (normalizedField: string, normalizedQuery: string): MatchRe
 export const matchField = (
 	field: string,
 	normalizedField: string,
-	fieldWords: Set<string>,
 	fieldMask: number,
 	q: MatchQuery,
 	strategy: Strategy,
@@ -121,17 +142,16 @@ export const matchField = (
 		};
 	}
 
-	if (queryWords.length > 1 && queryWords.every((w) => fieldWords.has(w))) {
-		return {
-			score: SCORES.MULTI_WORD,
-			tier: "multi-word",
-			ranges: queryWords
-				.map((w) => {
-					const i = boundaryOccurrence(normalizedField, w);
-					return [i, i + w.length - 1] as Range;
-				})
-				.sort(sortByRangeStart),
-		};
+	if (queryWords.length > 1) {
+		const ranges: Range[] = [];
+		for (const w of queryWords) {
+			const i = wholeWordOccurrence(normalizedField, w);
+			if (i === -1) break;
+			ranges.push([i, i + w.length - 1]);
+		}
+		if (ranges.length === queryWords.length) {
+			return { score: SCORES.MULTI_WORD, tier: "multi-word", ranges: ranges.sort(sortByRangeStart) };
+		}
 	}
 
 	const containsIdx = normalizedField.indexOf(normalizedQuery);

@@ -98,6 +98,46 @@ describe("sort stability", () => {
 	});
 });
 
+describe("prefix-narrowing cache", () => {
+	const collection = [
+		"the quick brown fox",
+		"quick silver",
+		"brown bread",
+		"fox trot",
+		"Señor García",
+		"unrelated zebra",
+	];
+
+	it("typing a query char by char matches a fresh searcher at every step", () => {
+		const typed = createFuzzySearch(collection);
+		for (const q of ["b", "br", "bro", "brow", "brown", "brown f", "brown fo", "brown fox"]) {
+			expect(typed(q)).toEqual(createFuzzySearch(collection)(q));
+		}
+	});
+
+	it("multi-word match reappears when a partial word completes", () => {
+		// "fox brow" matches nothing on "the quick brown fox" (no whole word
+		// "brow", no substring, no in-order subsequence) but "fox brown" matches
+		// via the multi-word tier — the narrowed rescan must not lose it.
+		const search = createFuzzySearch(collection);
+		expect(search("fox brow").map((r) => r.item)).toEqual([]);
+		expect(search("fox brown").map((r) => r.item)).toEqual(["the quick brown fox"]);
+	});
+
+	it("non-extension queries (backspace, replacement) fall back to a full scan", () => {
+		const search = createFuzzySearch(collection);
+		expect(search("quick brown")).toHaveLength(1);
+		expect(search("quick")).toHaveLength(2); // shorter than the cached query
+		expect(search("garcia")).toHaveLength(1); // unrelated replacement
+		expect(search("zebra")).toHaveLength(1);
+	});
+
+	it("repeating the same query returns identical results", () => {
+		const search = createFuzzySearch(collection);
+		expect(search("quick")).toEqual(search("quick"));
+	});
+});
+
 describe("unicode", () => {
 	it("diacritic-insensitive match", () => {
 		const r = createFuzzySearch(["Señor García"], (s) => s)("garcia")[0]!;

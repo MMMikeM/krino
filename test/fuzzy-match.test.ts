@@ -43,6 +43,16 @@ describe("tier ladder", () => {
 		]);
 	});
 
+	it("multi-word: words separated by non-boundary punctuation still get real ranges", () => {
+		const r = fuzzyMatch("foo@bar", "foo bar");
+		expect(r?.score).toBe(1.5);
+		expect(r?.tier).toBe("multi-word");
+		expect(r?.ranges).toEqual([
+			[0, 2],
+			[4, 6],
+		]);
+	});
+
 	it("fuzzy fallback: score > 2, tier 'fuzzy'", () => {
 		const r = fuzzyMatch("big cat", "bigcat");
 		expect(r?.score).toBeGreaterThan(2);

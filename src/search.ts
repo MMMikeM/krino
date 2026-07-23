@@ -51,16 +51,14 @@ export const fuzzyMatch = (
 
 	const q = prepareQuery(query, normalizedQuery);
 	const normalizedField = normalizeText(text);
-	const fieldWords = new Set(splitWords(normalizedField));
 
-	return matchField(text, normalizedField, fieldWords, charMask(normalizedField), q, strategy, acronym);
+	return matchField(text, normalizedField, charMask(normalizedField), q, strategy, acronym);
 };
 
 // A preprocessed field: its cached normalized form plus its matching config.
 type PreparedField = {
 	field: string;
 	normalizedField: string;
-	fieldWords: Set<string>;
 	mask: number;
 	strategy: Strategy;
 	acronym: boolean;
@@ -78,7 +76,6 @@ const prepareField = (
 	return {
 		field,
 		normalizedField,
-		fieldWords: new Set(splitWords(normalizedField)),
 		mask: charMask(normalizedField),
 		strategy,
 		acronym,
@@ -121,39 +118,78 @@ export function createFuzzySearch<T>(
 			? [{ text: extract }]
 			: extract;
 
-	const preprocessed = list.map((item) => {
+	const count = list.length;
+	const preparedFields: PreparedField[][] = [];
+	// Per-item union of field masks in a typed array, so the reject scan reads 4
+	// bytes per item instead of chasing object properties. The union can only
+	// false-pass (some field may still miss a class); matchField's per-field mask
+	// check keeps multi-field correctness.
+	const unionMasks = new Int32Array(count);
+	for (let i = 0; i < count; i++) {
+		const item = list[i] as T;
 		const prepared = specs.map((s) =>
 			prepareField(s.text(item), s.strategy ?? "smart", s.acronym ?? false, s.penalty ?? 0),
 		);
-		return [item, prepared] as const;
-	});
+		preparedFields.push(prepared);
+		let union = 0;
+		for (const p of prepared) union |= p.mask;
+		unionMasks[i] = union;
+	}
+
+	// Prefix-narrowing cache. When the new query extends the previous one (the
+	// common case while typing), only the previous mask-gate survivors need
+	// rescanning: extending a query only adds mask bits, so an item rejected by
+	// the shorter query's mask stays rejected. Survivors are the mask-pass set,
+	// NOT the match set — the match set is not monotone under extension (a field
+	// can match "fox brown" via the multi-word tier while failing "fox brow"),
+	// but every tier requires the query's character classes, so all matches of
+	// the extended query lie inside the previous mask-pass set.
+	let cachedQuery = "";
+	let cachedSurvivors: Int32Array | null = null;
+	let cachedCount = 0;
 
 	return (query: string) => {
 		const normalizedQuery = normalizeText(query);
 		if (!normalizedQuery.length) return [];
 
 		const q = prepareQuery(query, normalizedQuery);
+		const queryMask = q.queryMask;
+
+		const narrowed = cachedSurvivors !== null && normalizedQuery.startsWith(cachedQuery);
+		const source = narrowed ? cachedSurvivors : null;
+		const bound = narrowed ? cachedCount : count;
+
+		const survivors = new Int32Array(bound);
+		let survivorCount = 0;
 		const results: Array<FuzzyResult<T>> = [];
 
-		for (const [item, prepared] of preprocessed) {
-			let bestScore = MAX_SAFE_INTEGER;
-			const fields: Array<MatchResult | null> = [];
+		for (let k = 0; k < bound; k++) {
+			const i = source ? (source[k] as number) : k;
+			if ((queryMask & (unionMasks[i] as number)) !== queryMask) continue;
+			survivors[survivorCount++] = i;
 
-			for (const p of prepared) {
-				const result = matchField(p.field, p.normalizedField, p.fieldWords, p.mask, q, p.strategy, p.acronym);
+			const prepared = preparedFields[i] as PreparedField[];
+			let bestScore = MAX_SAFE_INTEGER;
+			let fields: Array<MatchResult | null> | null = null;
+
+			for (let f = 0; f < prepared.length; f++) {
+				const p = prepared[f] as PreparedField;
+				const result = matchField(p.field, p.normalizedField, p.mask, q, p.strategy, p.acronym);
 				if (result) {
 					const effective = { ...result, score: result.score + p.penalty };
 					bestScore = Math.min(bestScore, effective.score);
-					fields.push(effective);
-				} else {
-					fields.push(null);
+					(fields ??= prepared.map(() => null))[f] = effective;
 				}
 			}
 
-			if (bestScore < MAX_SAFE_INTEGER) {
-				results.push({ item, score: bestScore, fields });
+			if (fields) {
+				results.push({ item: list[i] as T, score: bestScore, fields });
 			}
 		}
+
+		cachedQuery = normalizedQuery;
+		cachedSurvivors = survivors;
+		cachedCount = survivorCount;
 
 		return results.sort(sortByScore);
 	};
