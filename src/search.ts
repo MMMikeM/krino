@@ -75,9 +75,8 @@ export const fuzzyMatch = (
 // copied into every item × field object), and the per-field masks live in one
 // flat Int32Array alongside `unionMasks`.
 type PreparedField = {
-	field: string; // trimmed raw — ranges are shifted back by `lead` per hit
+	field: string; // trimmed raw — ranges are shifted back per hit when a lead exists
 	normalizedField: string;
-	lead: number; // leading-whitespace units stripped from the raw field
 };
 
 /**
@@ -133,6 +132,10 @@ export function createFuzzySearch<T>(
 	// Int32Array (item-major, `i * specCount + f`) rather than on the objects.
 	const unionMasks = new Int32Array(count);
 	const fieldMasks = new Int32Array(count * specCount);
+	// Leading-whitespace shifts, allocated only if any field actually has one
+	// (real data virtually never does): a number slot on every PreparedField
+	// would cost ~8 B × count × specs for a value that is almost always 0.
+	let leads: Int32Array | null = null;
 	for (let i = 0; i < count; i++) {
 		const item = list[i];
 		const prepared: PreparedField[] = [];
@@ -142,7 +145,9 @@ export function createFuzzySearch<T>(
 			const field = raw.trim();
 			const normalizedField = normalizeText(field);
 			const mask = charMask(normalizedField);
-			prepared.push({ field, normalizedField, lead: raw.length - raw.trimStart().length });
+			const lead = raw.length - raw.trimStart().length;
+			if (lead) (leads ??= new Int32Array(count * specCount))[i * specCount + f] = lead;
+			prepared.push({ field, normalizedField });
 			fieldMasks[i * specCount + f] = mask;
 			union |= mask;
 		}
@@ -200,7 +205,10 @@ export function createFuzzySearch<T>(
 					// matchField returns a fresh object per call, so the atBest
 					// shift can mutate it instead of spreading a copy.
 					result.score += s.atBest;
-					if (p.lead) shiftRanges(result.ranges, p.lead);
+					if (leads !== null) {
+						const lead = leads[maskBase + f];
+						if (lead) shiftRanges(result.ranges, lead);
+					}
 					bestScore = Math.min(bestScore, result.score);
 					(fields ??= prepared.map(toNullField))[f] = result;
 				}

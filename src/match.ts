@@ -165,13 +165,17 @@ export const matchField = (
 			ranges: [[containsIdx, containsIdx + normalizedQueryLen - 1]],
 		};
 
-	if (acronym) {
+	// Initials never contain a separator, so a multi-word query can never
+	// acronym-match — skip the full-field initials scan for those.
+	if (acronym && queryWords.length === 1) {
 		const result = acronymMatch(normalizedField, normalizedQuery);
 		if (result) return result;
 	}
 
 	// Fuzzy fallback — gate on the native subsequence test before the loop.
-	if (!q.fuzzyGate.test(normalizedField)) return null;
+	// Single-word queries already passed fuzzyGate as the ladder's front gate;
+	// only multi-word queries (presence-gated up front) still owe this test.
+	if (queryWords.length > 1 && !q.fuzzyGate.test(normalizedField)) return null;
 	const fuzzy = fuzzyChainMatch(normalizedField, normalizedQuery);
 	return fuzzy && { score: fuzzy[0], tier: "fuzzy", ranges: fuzzy[1] };
 };
