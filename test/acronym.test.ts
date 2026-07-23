@@ -12,9 +12,10 @@ describe("acronym tier", () => {
 	});
 
 	it("ranks an acronym match above an incidental contains", () => {
-		const results = createFuzzySearch(["United States", "campus tour"], [
-			{ text: (s) => s, acronym: true },
-		])("us");
+		const results = createFuzzySearch(
+			["United States", "campus tour"],
+			[{ text: (s) => s, acronym: true }],
+		)("us");
 		expect(results.map((r) => r.item)).toEqual(["United States", "campus tour"]);
 		expect(results[0]!.score).toBe(SCORES.ACRONYM); // 1.8
 		expect(results[1]!.score).toBe(SCORES.CONTAINS); // 2 ("us" inside "campus")
@@ -28,7 +29,12 @@ describe("acronym tier", () => {
 			const result = fuzzyMatch("Lao People's Democratic Republic", "lpdr", { acronym: true });
 			expect(result?.tier).toBe("acronym");
 			// Ranges point at the four word-initial characters.
-			expect(result?.ranges).toEqual([[0, 0], [4, 4], [13, 13], [24, 24]]);
+			expect(result?.ranges).toEqual([
+				[0, 0],
+				[4, 4],
+				[13, 13],
+				[24, 24],
+			]);
 		});
 
 		it("matches the initialism across a typographic apostrophe", () => {
@@ -53,10 +59,11 @@ describe("acronym tier", () => {
 
 	it("does not skip stopwords (documented scope limit)", () => {
 		// Real-world "DRC" drops "of the"; krino's tier is contiguous initials
-		// only — locale stopword lists are deliberately out of scope. The query
-		// still surfaces via the fuzzy tier, just not as an acronym.
-		expect(
-			fuzzyMatch("Democratic Republic of the Congo", "drc", { acronym: true })?.tier,
-		).not.toBe("acronym");
+		// only — locale stopword lists are deliberately out of scope. The
+		// density floor rejects the sparse d/r/c chain too, so the query
+		// doesn't match at all.
+		expect(fuzzyMatch("Democratic Republic of the Congo", "drc", { acronym: true })?.tier).not.toBe(
+			"acronym",
+		);
 	});
 });
