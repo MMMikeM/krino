@@ -13,17 +13,17 @@ import { writeFileSync } from "node:fs";
 // Per-point label placement can differ per metric (positions move).
 const lab = (a, dy, dx = 0) => ({ a, dy, dx });
 const DATA = [
-	{ n: "krino (acronym)", mrr: 0.62, query: 0.16, total: 1.54, lab: { query: lab("start", -8), total: lab("start", -8) } },
-	{ n: "@nozbe/microfuzz", mrr: 0.58, query: 1.06, total: 5.46, lab: { query: lab("start", 4), total: lab("end", 4) } },
-	{ n: "krino", mrr: 0.57, query: 0.14, total: 1.52, lab: { query: lab("start", 16), total: lab("end", 16) } },
-	{ n: "Fuse.js", mrr: 0.57, query: 12.95, total: 13.67, lab: { query: lab("middle", -15), total: lab("middle", -15) } },
-	{ n: "Fuse.js (all opts)", mrr: 0.57, query: 14.74, total: 15.43, lab: { query: lab("middle", 20), total: lab("middle", 20) } },
-	{ n: "fuzzy", mrr: 0.46, query: 2.35, total: 2.35, lab: { query: lab("start", 4), total: lab("start", 4) } },
-	{ n: "fuzzysort", mrr: 0.39, query: 0.18, total: 5.70, lab: { query: lab("start", 4), total: lab("start", 4) } },
-	{ n: "match-sorter", mrr: 0.31, query: 2.79, total: 2.79, lab: { query: lab("start", 4), total: lab("start", 4) } },
-	{ n: "fast-fuzzy", mrr: 0.28, query: 6.47, total: 39.71, lab: { query: lab("start", 4), total: lab("end", 4) } },
-	{ n: "uFuzzy (latinize)", mrr: 0.26, query: 0.18, total: 0.75, lab: { query: lab("start", 4), total: lab("start", 4) } },
-	{ n: "uFuzzy", mrr: 0.22, query: 0.18, total: 0.18, lab: { query: lab("start", 4), total: lab("start", 4) } },
+	{ n: "krino (acronym)", mrr: 0.57, query: 0.16, total: 1.52, lab: { query: lab("start", -8), total: lab("start", -8) } },
+	{ n: "@nozbe/microfuzz", mrr: 0.54, query: 1.05, total: 5.45, lab: { query: lab("start", 4), total: lab("end", 4) } },
+	{ n: "Fuse.js", mrr: 0.54, query: 14.99, total: 15.72, lab: { query: lab("middle", -15), total: lab("middle", -15) } },
+	{ n: "Fuse.js (all opts)", mrr: 0.54, query: 15.35, total: 16.05, lab: { query: lab("middle", 20), total: lab("middle", 20) } },
+	{ n: "krino", mrr: 0.53, query: 0.14, total: 1.5, lab: { query: lab("start", 16), total: lab("end", 16) } },
+	{ n: "fuzzysort", mrr: 0.38, query: 0.18, total: 5.97, lab: { query: lab("start", 4), total: lab("start", 4) } },
+	{ n: "fuzzy", mrr: 0.36, query: 2.41, total: 2.41, lab: { query: lab("start", 4), total: lab("start", 4) } },
+	{ n: "match-sorter", mrr: 0.23, query: 2.85, total: 2.85, lab: { query: lab("start", -8), total: lab("start", -8) } },
+	{ n: "fast-fuzzy", mrr: 0.23, query: 6.68, total: 39.97, lab: { query: lab("start", 4), total: lab("end", 4) } },
+	{ n: "uFuzzy (latinize)", mrr: 0.19, query: 0.18, total: 0.74, lab: { query: lab("start", -8), total: lab("start", 4) } },
+	{ n: "uFuzzy", mrr: 0.17, query: 0.18, total: 0.18, lab: { query: lab("start", 10), total: lab("start", 4) } },
 ];
 
 const METRICS = {
@@ -33,12 +33,12 @@ const METRICS = {
 		X1: 25,
 		ticks: [0.1, 0.2, 0.5, 1, 2, 5, 10, 20],
 		heading: "Accuracy vs. query speed",
-		subtitle: "MRR (accuracy) vs. query ms — index prebuilt at load · log scale · mixed 10k corpus · 10 test queries",
-		axis: "query ms — index prebuilt, log scale (lower = faster) →",
+		subtitle: "MRR (accuracy) vs. query ms — index prebuilt at load · log scale · mixed 10k corpus · 13 test queries",
+		axis: "query ms — index prebuilt, log scale (lower = faster)",
 		title: "Fuzzy search libraries: MRR vs query latency, index prebuilt",
 		desc:
 			"Scatter plot of eleven configurations of eight JavaScript fuzzy search libraries comparing MRR (accuracy) against query milliseconds with indexes prebuilt, on a log scale, on the mixed 10k corpus. " +
-			"The Pareto frontier is all Krino: from krino (0.57 MRR at 0.14 ms) to krino (acronym) (0.62 at 0.16 ms) — every other configuration, including Fuse.js, is dominated on this ledger.",
+			"The Pareto frontier is all Krino: from krino (0.53 MRR at 0.14 ms) to krino (acronym) (0.57 at 0.16 ms) — every other configuration, including Fuse.js, is dominated on this ledger.",
 	},
 	total: {
 		file: "pareto-total",
@@ -46,12 +46,12 @@ const METRICS = {
 		X1: 60,
 		ticks: [0.2, 0.5, 1, 2, 5, 10, 20, 50],
 		heading: "Accuracy vs. total one-shot cost",
-		subtitle: "MRR (accuracy) vs. total ms (index + one query) · log scale · mixed 10k corpus · 10 test queries",
-		axis: "total ms — index + one query, log scale (lower = faster) →",
+		subtitle: "MRR (accuracy) vs. total ms (index + one query) · log scale · mixed 10k corpus · 13 test queries",
+		axis: "total ms — index + one query, log scale (lower = faster)",
 		title: "Fuzzy search libraries: MRR vs total cost (index + one query)",
 		desc:
 			"Scatter plot of eleven configurations of eight JavaScript fuzzy search libraries comparing MRR (accuracy) against total milliseconds for one cold search (index build plus one query) on a log scale, on the mixed 10k corpus. " +
-			"The Pareto frontier runs uFuzzy, uFuzzy (latinize), krino, krino (acronym) — the two krino configurations share one pooled build cost and differ only in query time; fuzzysort's hidden prepare cache moves it off this frontier, and Fuse.js is dominated — krino (acronym) is more accurate and ~9× cheaper.",
+			"The Pareto frontier runs uFuzzy, uFuzzy (latinize), krino, krino (acronym) — the two krino configurations share one pooled build cost and differ only in query time; fuzzysort's hidden prepare cache moves it off this frontier, and Fuse.js is dominated — krino (acronym) is more accurate and ~10× cheaper.",
 	},
 };
 
@@ -66,12 +66,12 @@ const DARK = {
 
 const W = 820, H = 524, ML = 66, MR = 30, MT = 62;
 const plotW = W - ML - MR, plotH = 372; // plot bottom fixed at y=434
-const Y0 = 0.2, Y1 = 0.68;
+const Y0 = 0.1, Y1 = 0.68;
 const lx = Math.log10;
 const Y = (mrr) => MT + ((Y1 - mrr) / (Y1 - Y0)) * plotH;
 const f = (v) => Number(v.toFixed(1));
 const DOT_R = 6.5;
-const yTicks = [0.2, 0.3, 0.4, 0.5, 0.6];
+const yTicks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6];
 const tnum = 'font-variant-numeric="tabular-nums"';
 
 // Non-dominated set: sweep by cost ascending, keep strict MRR improvements.

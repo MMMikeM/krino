@@ -122,18 +122,19 @@ At the sizes Krino targets — hundreds to a few thousand items — every non-ty
 
 Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md) — per-query match/rank tables, two-corpus speed tables, and how the benches verify matching before timing it.
 
-- **Match quality** (10,000 items; every query derived from a real corpus item): Krino returns the smallest result set of the subsequence libraries and ranks the source item **first on every structured query** (word, two words, prefix).
+- **Match quality** (10,000 items; every query derived from a real corpus item): Krino returns the smallest result set of the subsequence libraries and ranks the source item **first on every structured query** (word, two words — in order or reversed, prefix).
   A one-char slip still matches (source in the top 10); at two dropped chars Krino returns nothing where the parent returns 135 junk chains — that refusal is Krino's deliberate change to microfuzz's matcher.
-  The typo engines return up to ~450 candidates for a single true hit; uFuzzy's defaults silently return 0 on accent-stripped and gapped queries.
-- **Speed** (per-query mean): ~0.2–0.4 ms at 10k and ~2–5 ms at 100k (anything below 10k is universally sub-millisecond) — ~4× faster than its parent microfuzz on ascii and ~6–8× on the mixed corpus.
-  On accented data Krino leads every configuration at 10k and ties uFuzzy's folding config at 100k; on pure-ascii corpora uFuzzy keeps a ~1.8× lead at scale.
-  A prefix-narrowing cache makes typing decay toward sub-millisecond keystrokes (15 keystrokes over 100k items: ~28 ms total); a 100k list swap costs a one-time ~31 ms build.
+  A transposed pair of characters (`geenric`) is the one typo shape subsequence matching cannot represent; only the edit-distance engines surface it, and that trade is priced into their scorecards.
+  The typo engines return up to ~450 candidates for a single true hit; uFuzzy's defaults silently return 0 on accent-stripped, gapped, and reversed-phrase queries.
+- **Speed** (per-query mean): ~0.2–0.6 ms at 10k and ~2–5 ms at 100k (anything below 10k is universally sub-millisecond) — ~4× faster than its parent microfuzz on ascii and ~6–8× on the mixed corpus.
+  On accented data Krino leads every configuration at 10k and ties uFuzzy's folding config at 100k; on pure-ascii corpora uFuzzy keeps a ~1.7× lead at scale.
+  A prefix-narrowing cache makes typing decay toward sub-millisecond keystrokes (15 keystrokes over 100k items: ~28 ms total); a 100k list swap costs a one-time ~18 ms build.
   Benches consume every result (no dead-code elimination), verify match counts per query, and run on two seeded corpora (ascii, and mixed with ~5% diacritics).
 
 ### What to pick when
 
 - **Typos must still match** (user-typed queries over messy data) — `Fuse.js` (Bitap) or `fast-fuzzy` (edit-distance), at a bundle and ergonomics cost.
-- **100k+ pure-ascii items, raw speed above everything** — `uFuzzy`; ~1.8× faster than Krino there, but no tier, and its diacritics/multi-word are opt-in. On accented data Krino leads at 10k and ties uFuzzy's folding config at 100k.
+- **100k+ pure-ascii items, raw speed above everything** — `uFuzzy`; ~1.7× faster than Krino there, but no tier, and its diacritics/multi-word are opt-in. On accented data Krino leads at 10k and ties uFuzzy's folding config at 100k.
 - **Rank, highlight, and explain matches** (palettes, pickers, autocomplete) — Krino: `tier` + `ranges` + per-field config, ~2.3 kB.
 - **Sorting utility with tiered ranking, no highlights needed** — `match-sorter`; no ranges, no multi-word.
 - **Smallest possible, plain substring is enough** — `fuzzy` (~0.8 kB, 2016-era).
@@ -146,7 +147,6 @@ Partial/opt-in details:
 - `fast-fuzzy`'s `ranges` are one span (`index`+`length`), not per-character, and its default normalization doesn't strip accents
 - `fuzzy`'s "ranges" are a pre-wrapped string, not numeric indices
 - ESM ⚪: `match-sorter` and `uFuzzy` ship an ESM build via the legacy `module` field only (no `exports` map) — bundlers pick it up, Node `import` falls back to CJS interop. 🟢 = dual ESM/CJS with a proper `exports` map.
-
 
 ## Building blocks
 
