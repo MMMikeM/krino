@@ -44,7 +44,7 @@ it("frontend session: three successive queries at 100k", { timeout: 60_000 }, ()
 	const mixed = CORPORA.find((c) => c.name === "mixed");
 	if (!mixed) throw new Error("mixed corpus missing");
 	const list = mixed.build(SIZE);
-	// The surname probe ("grady", the doc's word-2 query), typed keystroke by
+	// The surname probe ("grady", the doc's short-word query), typed keystroke by
 	// keystroke from the 3-char UI gate: "gra" -> "grad" -> "grady" — the last
 	// step is the complete word.
 	const word = mixed.specs[1].query;

@@ -343,10 +343,12 @@ describe("bench validity: per-library match counts and source rank", () => {
 				const { count, rank } = runners.krino(query, source);
 				if (kind === "miss") {
 					expect(count, `krino matched garbage "${query}"`).toBe(0);
-				} else if (!kind.startsWith("scatter")) {
+				} else if (!kind.startsWith("scatter") && kind !== "transposition") {
 					// krino must surface the item each query was derived from.
-					// (scatter kinds exempt: they probe where smart chunking
-					// legitimately gives up — that limit is the measurement.)
+					// (scatter and transposition kinds exempt: scatter probes where
+					// smart chunking legitimately gives up, and a transposition
+					// breaks the subsequence property outright — those limits are
+					// the measurement.)
 					expect(rank, `krino lost source of "${query}" (${kind})`).not.toBeNull();
 				}
 			}

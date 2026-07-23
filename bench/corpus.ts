@@ -35,13 +35,16 @@ const stripAccents = (s: string): string => s.normalize("NFD").replace(/\p{M}+/g
 export type QuerySpec = {
 	query: string;
 	kind:
-		| "word"
-		| "word-2"
+		| "long-word"
+		| "short-word"
 		| "two-words"
+		| "two-words-reversed"
 		| "prefix"
+		| "infix"
 		| "scatter-light"
 		| "scatter-medium"
 		| "scatter-heavy"
+		| "transposition"
 		| "acronym"
 		| "accent-stripped"
 		| "miss";
@@ -49,23 +52,51 @@ export type QuerySpec = {
 	source: string | null;
 };
 
+// Swap the first adjacent pair of distinct characters at or after the middle.
+// Usually breaks the subsequence property (the swapped pair arrives out of
+// order), which is the point: transposition is edit-distance territory, not
+// subsequence territory.
+const transpose = (w: string): string => {
+	for (let k = Math.max(1, Math.floor(w.length / 2) - 1); k + 1 < w.length; k++) {
+		if (w[k] !== w[k + 1]) return w.slice(0, k) + w[k + 1] + w[k] + w.slice(k + 2);
+	}
+	return w;
+};
+
 // Queries derived from a fixed sample so they actually match: a real word, a
-// second word, a two-word phrase, a raw prefix, a scattered subsequence (fuzzy
-// tier), and one guaranteed miss (reject path). Corpora with accented items add
-// an accent-stripped word (diacritic-folding path).
+// second word, a two-word phrase (in order and reversed), a raw prefix, a
+// mid-word infix, a scattered subsequence (fuzzy tier), a transposition typo
+// (edit-distance path), and one guaranteed miss (reject path). Corpora with
+// accented items add an accent-stripped word (diacritic-folding path).
 const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 	const sample = build(2000);
 	const wordAt = (i: number): string => wordsOf(sample[i])[0] ?? "steel";
 	const specs: QuerySpec[] = [
-		{ query: wordAt(4).toLowerCase(), kind: "word", source: sample[4] },
-		{ query: wordAt(517).toLowerCase(), kind: "word-2", source: sample[517] },
+		{ query: wordAt(4).toLowerCase(), kind: "long-word", source: sample[4] },
+		{ query: wordAt(517).toLowerCase(), kind: "short-word", source: sample[517] },
 		{
 			query: wordsOf(sample[8]).slice(0, 2).join(" ").toLowerCase(),
 			kind: "two-words",
 			source: sample[8],
 		},
+		// Same two words, reversed: substring engines pass the in-order phrase
+		// for free; only genuinely tokenized matching survives the reversal.
+		{
+			query: wordsOf(sample[8]).slice(0, 2).reverse().join(" ").toLowerCase(),
+			kind: "two-words-reversed",
+			source: sample[8],
+		},
 		{ query: sample[42].slice(0, 5).toLowerCase(), kind: "prefix", source: sample[42] },
 	];
+	// Infix probe: an interior slice of a long word — never a prefix, so it
+	// separates contains-anywhere matching from start-anchored ranking.
+	for (let i = 900; i < sample.length; i++) {
+		const infixWord = wordsOf(sample[i])[0] ?? "";
+		if (infixWord.length >= 8) {
+			specs.push({ query: infixWord.slice(2, 7).toLowerCase(), kind: "infix", source: sample[i] });
+			break;
+		}
+	}
 	// Graded scatter probes, all from ONE ≥7-char source word: drop one middle
 	// char (light — a realistic sloppy keystroke), drop every third char
 	// (medium), keep only every other char (heavy — 1-char fragments, past any
@@ -87,6 +118,11 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 					source: sample[i],
 				},
 				{ query: everyOther(scatterWord).toLowerCase(), kind: "scatter-heavy", source: sample[i] },
+				// Fourth grade, different axis: same char count, two adjacent chars
+				// out of order. Deletions stay subsequences; a transposition does
+				// not, so this is where the edit-distance engines should win and
+				// the subsequence engines legitimately return nothing.
+				{ query: transpose(scatterWord).toLowerCase(), kind: "transposition", source: sample[i] },
 			);
 			break;
 		}
