@@ -13,17 +13,16 @@ import { writeFileSync } from "node:fs";
 // Per-point label placement can differ per metric (positions move).
 const lab = (a, dy, dx = 0) => ({ a, dy, dx });
 const DATA = [
-	{ n: "krino (acronym)", mrr: 0.62, query: 0.15, total: 1.83, lab: { query: lab("start", -8), total: lab("start", -8) } },
-	{ n: "krino (aggressive)", mrr: 0.58, query: 0.12, total: 1.72, lab: { query: lab("start", -8), total: lab("start", -8) } },
-	{ n: "@nozbe/microfuzz", mrr: 0.58, query: 0.96, total: 7.74, lab: { query: lab("start", 4), total: lab("end", 4) } },
-	{ n: "krino (smart)", mrr: 0.57, query: 0.13, total: 1.64, lab: { query: lab("start", 16), total: lab("end", 16) } },
-	{ n: "Fuse.js", mrr: 0.57, query: 13.55, total: 14.36, lab: { query: lab("middle", -15), total: lab("middle", -15) } },
-	{ n: "Fuse.js (all opts)", mrr: 0.57, query: 17.15, total: 17.96, lab: { query: lab("middle", 20), total: lab("middle", 20) } },
-	{ n: "fuzzy", mrr: 0.46, query: 2.43, total: 2.43, lab: { query: lab("start", 4), total: lab("start", 4) } },
+	{ n: "krino (acronym)", mrr: 0.62, query: 0.15, total: 1.59, lab: { query: lab("start", -8), total: lab("start", -8) } },
+	{ n: "@nozbe/microfuzz", mrr: 0.58, query: 1.02, total: 8.85, lab: { query: lab("start", 4), total: lab("end", 4) } },
+	{ n: "krino (smart)", mrr: 0.57, query: 0.12, total: 1.66, lab: { query: lab("start", 16), total: lab("end", 16) } },
+	{ n: "Fuse.js", mrr: 0.57, query: 13.99, total: 14.8, lab: { query: lab("middle", -15), total: lab("middle", -15) } },
+	{ n: "Fuse.js (all opts)", mrr: 0.57, query: 17.44, total: 18.24, lab: { query: lab("middle", 20), total: lab("middle", 20) } },
+	{ n: "fuzzy", mrr: 0.46, query: 2.42, total: 2.42, lab: { query: lab("start", 4), total: lab("start", 4) } },
 	{ n: "fuzzysort", mrr: 0.39, query: 0.16, total: 0.16, lab: { query: lab("start", 4), total: lab("start", 4) } },
-	{ n: "match-sorter", mrr: 0.31, query: 2.98, total: 2.98, lab: { query: lab("start", 4), total: lab("start", 4) } },
-	{ n: "fast-fuzzy", mrr: 0.28, query: 8.03, total: 48.99, lab: { query: lab("start", 4), total: lab("end", 4) } },
-	{ n: "uFuzzy (latinize)", mrr: 0.26, query: 0.18, total: 0.79, lab: { query: lab("start", 4), total: lab("start", 4) } },
+	{ n: "match-sorter", mrr: 0.31, query: 2.96, total: 2.96, lab: { query: lab("start", 4), total: lab("start", 4) } },
+	{ n: "fast-fuzzy", mrr: 0.28, query: 7.21, total: 45.94, lab: { query: lab("start", 4), total: lab("end", 4) } },
+	{ n: "uFuzzy (latinize)", mrr: 0.26, query: 0.19, total: 0.79, lab: { query: lab("start", 4), total: lab("start", 4) } },
 	{ n: "uFuzzy", mrr: 0.22, query: 0.19, total: 0.19, lab: { query: lab("start", 4), total: lab("start", 4) } },
 ];
 
@@ -38,8 +37,8 @@ const METRICS = {
 		axis: "query ms — index prebuilt, log scale (lower = faster) →",
 		title: "Fuzzy search libraries: MRR vs query latency, index prebuilt",
 		desc:
-			"Scatter plot of twelve configurations of eight JavaScript fuzzy search libraries comparing MRR (accuracy) against query milliseconds with indexes prebuilt, on a log scale, on the mixed 10k corpus. " +
-			"The Pareto frontier is all krino: aggressive (0.58 MRR at 0.12 ms) to acronym (0.62 at 0.15 ms) — every other configuration, including Fuse.js, is dominated on this ledger.",
+			"Scatter plot of eleven configurations of eight JavaScript fuzzy search libraries comparing MRR (accuracy) against query milliseconds with indexes prebuilt, on a log scale, on the mixed 10k corpus. " +
+			"The Pareto frontier is all krino: smart (0.57 MRR at 0.12 ms) to acronym (0.62 at 0.15 ms) — every other configuration, including Fuse.js, is dominated on this ledger.",
 	},
 	total: {
 		file: "pareto-total",
@@ -51,8 +50,8 @@ const METRICS = {
 		axis: "total ms — index + one query, log scale (lower = faster) →",
 		title: "Fuzzy search libraries: MRR vs total cost (index + one query)",
 		desc:
-			"Scatter plot of twelve configurations of eight JavaScript fuzzy search libraries comparing MRR (accuracy) against total milliseconds for one cold search (index build plus one query) on a log scale, on the mixed 10k corpus. " +
-			"The Pareto frontier runs fuzzysort, krino smart, krino aggressive, krino acronym; Fuse.js is dominated — krino (acronym) is more accurate and ~8× cheaper.",
+			"Scatter plot of eleven configurations of eight JavaScript fuzzy search libraries comparing MRR (accuracy) against total milliseconds for one cold search (index build plus one query) on a log scale, on the mixed 10k corpus. " +
+			"The Pareto frontier runs fuzzysort then krino (acronym), with krino (smart) within noise of it; Fuse.js is dominated — krino (acronym) is more accurate and ~9× cheaper.",
 	},
 };
 

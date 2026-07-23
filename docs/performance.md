@@ -233,8 +233,9 @@ The bench harness grew several honesty mechanisms worth keeping:
 - **Match-count + rank validation** (`bench/hits.test.ts`). Every query records
   the corpus item it was derived from; the test reports, per library, how many
   items matched and where that source item ranked (`21 @1`, `959 @315`, `✗`).
-  Caught the headline facts: krino `aggressive` reproduces microfuzz
-  cell-for-cell (that mode *is* the parent's behaviour; `smart` is the change);
+  Caught the headline facts: krino v1's `aggressive` mode reproduced microfuzz
+  cell-for-cell (that mode *was* the parent's behaviour; `smart` is the change,
+  and v2 removed the legacy mode);
   uFuzzy silently returns 0 on accent-stripped queries without `latinize`; typo
   engines rank well but return 3–10× the true hit count.
 - **Pass column + corpus-wide mean.** The accented perf table marks configs
