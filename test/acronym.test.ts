@@ -19,4 +19,44 @@ describe("acronym tier", () => {
 		expect(results[0]!.score).toBe(SCORES.ACRONYM); // 1.8
 		expect(results[1]!.score).toBe(SCORES.CONTAINS); // 2 ("us" inside "campus")
 	});
+
+	describe("apostrophes stay word-internal", () => {
+		// A possessive must not inject a phantom initial: "People's" is one
+		// word with initial "p", not "people" + "s". Otherwise the real-world
+		// initialism (Lao PDR) can never match its own name.
+		it("matches the initialism across an ASCII apostrophe", () => {
+			const result = fuzzyMatch("Lao People's Democratic Republic", "lpdr", { acronym: true });
+			expect(result?.tier).toBe("acronym");
+			// Ranges point at the four word-initial characters.
+			expect(result?.ranges).toEqual([[0, 0], [4, 4], [13, 13], [24, 24]]);
+		});
+
+		it("matches the initialism across a typographic apostrophe", () => {
+			// faker (and real text) emits U+2019 — both forms must behave alike.
+			expect(fuzzyMatch("Lao People’s Democratic Republic", "lpdr", { acronym: true })?.tier).toBe(
+				"acronym",
+			);
+		});
+
+		it("does not treat the possessive s as an initial", () => {
+			// Before the fix, initials were "l p s d r" and "lpsdr" matched.
+			expect(
+				fuzzyMatch("Lao People's Democratic Republic", "lpsdr", { acronym: true })?.tier,
+			).not.toBe("acronym");
+		});
+
+		it("matches a possessive company initialism", () => {
+			// Phantom "s" would land between "j" and "h" and break contiguity.
+			expect(fuzzyMatch("Ben & Jerry's Homemade", "bjh", { acronym: true })?.tier).toBe("acronym");
+		});
+	});
+
+	it("does not skip stopwords (documented scope limit)", () => {
+		// Real-world "DRC" drops "of the"; krino's tier is contiguous initials
+		// only — locale stopword lists are deliberately out of scope. The query
+		// still surfaces via the fuzzy tier, just not as an acronym.
+		expect(
+			fuzzyMatch("Democratic Republic of the Congo", "drc", { acronym: true })?.tier,
+		).not.toBe("acronym");
+	});
 });
