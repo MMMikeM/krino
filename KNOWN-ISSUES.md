@@ -112,7 +112,7 @@ raw `queryLen`.
 word-boundary start or a 3-char run, so across a few thousand words a short
 query almost always assembles a chain: `"zebra"` matches any text containing
 `"zero"` and `"branch"`. In an 8-post blog index, `"banana"` matched all 8
-posts. The README should scope `smart`/`aggressive` to short labels (titles,
+posts. The README should scope `smart` to short labels (titles,
 names, menu items) and point document-length text at `strategy: "off"`,
 which keeps the exact/prefix/boundary/multi-word/contains tiers and drops
 only the chain-assembly tier.

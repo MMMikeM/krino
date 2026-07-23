@@ -55,6 +55,8 @@ of field specs.
 + createFuzzySearch(list, [{ text: (x) => x, strategy: "off" }]);
 ```
 
+> **v2 note:** `strategy: "aggressive"` (the mode that reproduced the 0.x/microfuzz matcher) was removed in 2.0; `smart` is the supported fuzzy mode. Pin krino 1.x if you need it.
+
 ## Result shape
 
 The parallel `matches` and `scores` arrays are replaced by one `fields` array of

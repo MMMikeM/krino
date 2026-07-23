@@ -12,9 +12,8 @@ export type HighlightRanges = Range[];
  * Fuzzy match strategy (selects the fuzzy fallback tier):
  * - 'off': no fuzzy matching, only exact/prefix/boundary/contains
  * - 'smart': matches at word boundaries or 3+ char chunks (default)
- * - 'aggressive': classic fuzzy — matches any letters in order
  */
-export type Strategy = "off" | "smart" | "aggressive";
+export type Strategy = "off" | "smart";
 
 /**
  * Which tier a match came from. Lower on this list is a weaker match; a `score`

@@ -15,15 +15,7 @@ describe("strategy option", () => {
 		expect(fuzzyMatch("big cat", "big", { strategy: "off" })?.tier).toBe("prefix");
 	});
 
-	it("'aggressive' matches any subsequence", () => {
-		const r = fuzzyMatch("abcdef", "adf", { strategy: "aggressive" });
-		expect(r?.tier).toBe("fuzzy");
-		expect(r?.ranges).toEqual([
-			[0, 0],
-			[3, 3],
-			[5, 5],
-		]);
-		// smart rejects those short mid-word chunks
+	it("'smart' rejects short mid-word chunks", () => {
 		expect(fuzzyMatch("abcdef", "adf", { strategy: "smart" })).toBeNull();
 	});
 });

@@ -46,11 +46,3 @@ describe("smart chunk scoring", () => {
 		expect(fuzzyMatch("abcdef", "adf")).toBeNull();
 	});
 });
-
-describe("aggressive vs smart", () => {
-	it("aggressive scores fragmented subsequences higher (worse)", () => {
-		const clean = fuzzyMatch("big cat", "bigcat")!.score;
-		const fragmented = fuzzyMatch("abcdef", "adf", { strategy: "aggressive" })!.score;
-		expect(fragmented).toBeGreaterThan(clean);
-	});
-});

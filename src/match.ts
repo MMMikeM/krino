@@ -6,7 +6,7 @@
  * fallback; `acronym` enables the (opt-in) word-initials tier.
  */
 
-import { aggressiveFuzzyMatch, smartFuzzyMatch } from "./fuzzy";
+import { smartFuzzyMatch } from "./fuzzy";
 import { SCORES } from "./scores";
 import { isValidWordBoundary } from "./shared";
 import type { MatchResult, Range, Strategy } from "./types";
@@ -170,8 +170,6 @@ export const matchField = (
 	// Fuzzy fallback — gate on the native subsequence test before the loop.
 	if (strategy === "off") return null;
 	if (!q.fuzzyGate.test(normalizedField)) return null;
-	const fuzzy = strategy === "aggressive"
-		? aggressiveFuzzyMatch(normalizedField, normalizedQuery)
-		: smartFuzzyMatch(normalizedField, normalizedQuery);
+	const fuzzy = smartFuzzyMatch(normalizedField, normalizedQuery);
 	return fuzzy && { score: fuzzy[0], tier: "fuzzy", ranges: fuzzy[1] };
 };

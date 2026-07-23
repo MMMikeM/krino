@@ -1,8 +1,7 @@
 /**
  * The fuzzy fallback tier: assemble a query out of consecutive-letter chunks
  * found in the field, and score the assembly (fewer, cleaner chunks = lower =
- * better). `smart` only accepts chunks that start at a word boundary or run
- * 3+ characters; `aggressive` accepts any in-order subsequence.
+ * better). Chunks must start at a word boundary or run 3+ characters.
  */
 
 import { isValidWordBoundary } from "./shared";
@@ -93,36 +92,6 @@ const scoreConsecutiveLetters = (
 		else score += CHUNK_SCORES.SCATTERED;
 	}
 	return [score, chunks];
-};
-
-export const aggressiveFuzzyMatch = (
-	normalizedField: string,
-	normalizedQuery: string,
-): [number, HighlightRanges] | null => {
-	const normalizedFieldLen = normalizedField.length;
-	const normalizedQueryLen = normalizedQuery.length;
-	let queryIdx = 0;
-	let queryChar = normalizedQuery[queryIdx];
-	const chunks: Chunk[] = [];
-	let chunkStart = -1;
-	let chunkEnd = -2;
-
-	for (let fieldIdx = 0; fieldIdx < normalizedFieldLen; fieldIdx++) {
-		if (normalizedField[fieldIdx] === queryChar) {
-			if (fieldIdx !== chunkEnd + 1) {
-				if (chunkStart >= 0) chunks.push([chunkStart, chunkEnd]);
-				chunkStart = fieldIdx;
-			}
-			chunkEnd = fieldIdx;
-			queryIdx++;
-			if (queryIdx === normalizedQueryLen) {
-				chunks.push([chunkStart, chunkEnd]);
-				return scoreConsecutiveLetters(chunks, normalizedField);
-			}
-			queryChar = normalizedQuery[queryIdx];
-		}
-	}
-	return null;
 };
 
 export const smartFuzzyMatch = (

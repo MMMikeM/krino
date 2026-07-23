@@ -80,7 +80,7 @@ results.filter((r) => r.fields[0]?.tier !== "fuzzy"); // same, categorically
 ```
 
 > **Long text:** fuzzy strategies assemble short queries out of scattered chunks, so over document-length text almost anything "matches".
-> Scope `smart`/`aggressive` to short labels (titles, names); use `strategy: "off"` for long body text.
+> Scope `smart` to short labels (titles, names); use `strategy: "off"` for long body text.
 
 > **Acronym semantics:** apostrophes are word-internal (`People's` → initial `p`, so `lpdr` matches `Lao People's Democratic Republic`), and stopwords are not skipped (`drc` won't acronym-match `Democratic Republic of the Congo` — it still surfaces via the fuzzy tier).
 
@@ -89,7 +89,6 @@ results.filter((r) => r.fields[0]?.tier !== "fuzzy"); // same, categorically
 | strategy          | matches                                              |
 |-------------------|------------------------------------------------------|
 | `smart` (default) | word boundaries or 3+ character chunks               |
-| `aggressive`      | any letters in order                                 |
 | `off`             | exact / prefix / boundary / contains only (no fuzzy) |
 
 ## Comparison
@@ -125,7 +124,7 @@ At the sizes krino targets — hundreds to a few thousand items — every non-ty
 Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md) — per-query match/rank tables, two-corpus speed tables, and how the benches verify matching before timing it.
 
 - **Match quality** (10,000 items; every query derived from a real corpus item): krino returns the smallest result set of the subsequence libraries and ranks the source item **first on every structured query** (word, two words, prefix).
-  A one-char slip still matches (source in the top 10); at two dropped chars `smart` returns nothing rather than 135 junk chains, and `strategy: "aggressive"` reproduces microfuzz cell-for-cell — that mode *is* the parent's behaviour.
+  A one-char slip still matches (source in the top 10); at two dropped chars `smart` returns nothing where the parent returns 135 junk chains — that refusal is krino's deliberate change to microfuzz's matcher.
   The typo engines return up to ~450 candidates for a single true hit; uFuzzy's defaults silently return 0 on accent-stripped and gapped queries.
 - **Speed** (per-query mean): ~0.1–0.3 ms at 10k and ~2–5 ms at 100k (anything below 10k is universally sub-millisecond) — ~4–5× faster than its parent microfuzz on ascii and ~10× on the mixed corpus.
   On accented data krino now leads every configuration outright, including uFuzzy with folding enabled; on pure-ascii corpora uFuzzy keeps a ~1.5× lead at 100k.
@@ -161,7 +160,7 @@ Partial/opt-in details:
 
 ```typescript
 type Range = [number, number]; // [start, end] inclusive
-type Strategy = "off" | "smart" | "aggressive";
+type Strategy = "off" | "smart";
 type Tier =
   | "exact" | "normalized-exact" | "prefix" | "boundary-exact"
   | "boundary" | "multi-word" | "acronym" | "contains" | "fuzzy";
