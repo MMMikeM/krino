@@ -14,7 +14,6 @@ import type {
 	FuzzySearcher,
 	MatchOptions,
 	MatchResult,
-	Strategy,
 } from "./types";
 
 const { MAX_SAFE_INTEGER } = Number;
@@ -45,14 +44,14 @@ export const fuzzyMatch = (
 	query: string,
 	options: MatchOptions = {},
 ): MatchResult | null => {
-	const { strategy = "smart", acronym = false } = options;
+	const { acronym = false } = options;
 	const normalizedQuery = normalizeText(query);
 	if (!normalizedQuery.length) return null;
 
 	const q = prepareQuery(query, normalizedQuery);
 	const normalizedField = normalizeText(text);
 
-	return matchField(text, normalizedField, charMask(normalizedField), q, strategy, acronym);
+	return matchField(text, normalizedField, charMask(normalizedField), q, acronym);
 };
 
 // A preprocessed field: its cached normalized form plus its matching config.
@@ -60,14 +59,12 @@ type PreparedField = {
 	field: string;
 	normalizedField: string;
 	mask: number;
-	strategy: Strategy;
 	acronym: boolean;
 	penalty: number;
 };
 
 const prepareField = (
 	text: string | null,
-	strategy: Strategy,
 	acronym: boolean,
 	penalty: number,
 ): PreparedField => {
@@ -77,7 +74,6 @@ const prepareField = (
 		field,
 		normalizedField,
 		mask: charMask(normalizedField),
-		strategy,
 		acronym,
 		penalty,
 	};
@@ -98,8 +94,8 @@ const prepareField = (
  * @example
  * // Multiple fields, per-field config (body never outranks title)
  * const search = createFuzzySearch(posts, [
- *   { text: (p) => p.title, strategy: 'smart' },
- *   { text: (p) => p.body, strategy: 'off', penalty: SCORES.CONTAINS },
+ *   { text: (p) => p.title },
+ *   { text: (p) => p.body, penalty: SCORES.CONTAINS },
  * ]);
  */
 export function createFuzzySearch(list: string[]): FuzzySearcher<string>;
@@ -128,7 +124,7 @@ export function createFuzzySearch<T>(
 	for (let i = 0; i < count; i++) {
 		const item = list[i] as T;
 		const prepared = specs.map((s) =>
-			prepareField(s.text(item), s.strategy ?? "smart", s.acronym ?? false, s.penalty ?? 0),
+			prepareField(s.text(item), s.acronym ?? false, s.penalty ?? 0),
 		);
 		preparedFields.push(prepared);
 		let union = 0;
@@ -174,7 +170,7 @@ export function createFuzzySearch<T>(
 
 			for (let f = 0; f < prepared.length; f++) {
 				const p = prepared[f] as PreparedField;
-				const result = matchField(p.field, p.normalizedField, p.mask, q, p.strategy, p.acronym);
+				const result = matchField(p.field, p.normalizedField, p.mask, q, p.acronym);
 				if (result) {
 					const effective = { ...result, score: result.score + p.penalty };
 					bestScore = Math.min(bestScore, effective.score);

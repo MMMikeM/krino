@@ -76,10 +76,24 @@ const CHUNK_SCORES = {
 	SCATTERED: 1.6,
 } as const;
 
+// A fuzzy assembly must cover at least this share of the span it stretches
+// across (matched chars ÷ span). Junk chains assembled over long text are
+// sparse — measured max 0.143 across both bench corpora at every document
+// length — while the sparsest genuine match (initials scattered across a
+// four-word name) measures 0.211; 0.18 splits the gap with margin both ways
+// (docs/benchmarks.md "Matching inside long text"). This is what keeps `smart`
+// safe over document-length fields with no configuration.
+const DENSITY_FLOOR = 0.18;
+
 const scoreConsecutiveLetters = (
 	chunks: Chunk[],
 	normalizedField: string,
-): [number, HighlightRanges] => {
+): [number, HighlightRanges] | null => {
+	let matched = 0;
+	for (const [start, end] of chunks) matched += end - start + 1;
+	const span = (chunks[chunks.length - 1] as Chunk)[1] - (chunks[0] as Chunk)[0] + 1;
+	if (matched / span < DENSITY_FLOOR) return null;
+
 	let score = CHUNK_SCORES.BASE;
 	for (const [start, end] of chunks) {
 		const chunkLen = end - start + 1;

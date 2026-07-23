@@ -21,18 +21,18 @@ describe("types", () => {
 		expect(r?.item.name ?? "Ada").toBe("Ada");
 	});
 
-	it("field-spec overload typechecks strategy/acronym/penalty", () => {
+	it("field-spec overload typechecks acronym/penalty", () => {
 		const users: User[] = [{ name: "United States", email: "us@x.com" }];
 		const fields: FieldSpec<User>[] = [
-			{ text: (u) => u.name, strategy: "smart", acronym: true, penalty: SCORES.CONTAINS },
-			{ text: (u) => u.email, strategy: "off" },
+			{ text: (u) => u.name, acronym: true, penalty: SCORES.CONTAINS },
+			{ text: (u) => u.email },
 		];
 		const first: MatchResult | null | undefined = createFuzzySearch(users, fields)("us")[0]?.fields[0];
 		expect(first == null || typeof first.tier === "string").toBe(true);
 	});
 
 	it("primitive returns MatchResult", () => {
-		const m: MatchResult | null = fuzzyMatch("banana", "ban", { strategy: "smart" });
+		const m: MatchResult | null = fuzzyMatch("banana", "ban", { acronym: false });
 		expect(m?.tier).toBe("prefix");
 	});
 });

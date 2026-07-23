@@ -2,14 +2,14 @@
  * The tier ladder: rank one field string against a query, trying each tier in
  * order (exact → normalized-exact → prefix → boundary-contains → multi-word →
  * contains-anywhere → acronym → fuzzy fallback) and returning the first match as
- * { score, tier, ranges }. Lower score = better. `strategy` selects the fuzzy
- * fallback; `acronym` enables the (opt-in) word-initials tier.
+ * { score, tier, ranges }. Lower score = better. `acronym` enables the
+ * (opt-in) word-initials tier.
  */
 
 import { smartFuzzyMatch } from "./fuzzy";
 import { SCORES } from "./scores";
 import { isValidWordBoundary } from "./shared";
-import type { MatchResult, Range, Strategy } from "./types";
+import type { MatchResult, Range } from "./types";
 
 // Query-derived state, built once per query and reused across every field.
 export type MatchQuery = {
@@ -94,7 +94,6 @@ export const matchField = (
 	normalizedField: string,
 	fieldMask: number,
 	q: MatchQuery,
-	strategy: Strategy,
 	acronym: boolean,
 ): MatchResult | null => {
 	const { query, normalizedQuery, queryWords } = q;
@@ -168,7 +167,6 @@ export const matchField = (
 	}
 
 	// Fuzzy fallback — gate on the native subsequence test before the loop.
-	if (strategy === "off") return null;
 	if (!q.fuzzyGate.test(normalizedField)) return null;
 	const fuzzy = smartFuzzyMatch(normalizedField, normalizedQuery);
 	return fuzzy && { score: fuzzy[0], tier: "fuzzy", ranges: fuzzy[1] };

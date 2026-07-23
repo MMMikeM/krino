@@ -1,28 +1,22 @@
 /**
- * fuzzyMatch options: strategy and acronym.
+ * fuzzyMatch options: acronym.
  */
 import { describe, expect, it } from "vitest";
 import { fuzzyMatch } from "../src/index";
 
-describe("strategy option", () => {
-	it("defaults to smart", () => {
+describe("fuzzy fallback", () => {
+	it("assembles compact chunk matches", () => {
 		expect(fuzzyMatch("big cat", "bigcat")?.tier).toBe("fuzzy");
 	});
 
-	it("'off' disables the fuzzy fallback", () => {
-		expect(fuzzyMatch("big cat", "bigcat", { strategy: "off" })).toBeNull();
-		// non-fuzzy tiers still work
-		expect(fuzzyMatch("big cat", "big", { strategy: "off" })?.tier).toBe("prefix");
-	});
-
-	it("'smart' rejects short mid-word chunks", () => {
-		expect(fuzzyMatch("abcdef", "adf", { strategy: "smart" })).toBeNull();
+	it("rejects short mid-word chunks", () => {
+		expect(fuzzyMatch("abcdef", "adf")).toBeNull();
 	});
 });
 
 describe("acronym option", () => {
-	it("is off by default (fuzzy still matches, but not as acronym)", () => {
-		expect(fuzzyMatch("United States", "us", { strategy: "off" })).toBeNull();
+	it("is off by default (initials fall to the fuzzy tier, not acronym)", () => {
+		expect(fuzzyMatch("United States", "us")?.tier).toBe("fuzzy");
 	});
 
 	it("matches word initials when enabled", () => {

@@ -1,6 +1,6 @@
 /**
- * Per-field search: an array of field specs with independent strategy / acronym /
- * penalty, plus the FuzzyResult invariants (fields alignment, score = min).
+ * Per-field search: an array of field specs with independent acronym / penalty,
+ * plus the FuzzyResult invariants (fields alignment, score = min).
  */
 import { describe, expect, it } from "vitest";
 import { createFuzzySearch, SCORES } from "../src/index";
@@ -8,14 +8,14 @@ import { createFuzzySearch, SCORES } from "../src/index";
 type Post = { title: string; body: string; tags?: string[] };
 
 describe("field specs", () => {
-	it("matches each field with its own strategy", () => {
+	it("scores each field independently", () => {
 		const posts: Post[] = [{ title: "Event Loop", body: "the javascript runtime model" }];
 		const r = createFuzzySearch(posts, [
-			{ text: (p) => p.title, strategy: "smart" },
-			{ text: (p) => p.body, strategy: "off" },
+			{ text: (p) => p.title },
+			{ text: (p) => p.body },
 		])("loop")[0]!;
 		expect(r.fields[0]).toEqual({ score: 1, tier: "boundary", ranges: [[6, 9]] });
-		expect(r.fields[1]).toBeNull();
+		expect(r.fields[1]).toBeNull(); // "loop" is no compact chunk assembly of the body
 		expect(r.score).toBe(1);
 	});
 
@@ -57,10 +57,10 @@ describe("field specs", () => {
 		const items = [{ name: "United States", note: "United States" }];
 		const r = createFuzzySearch(items, [
 			{ text: (i) => i.name, acronym: true },
-			{ text: (i) => i.note, strategy: "off", acronym: false },
+			{ text: (i) => i.note, acronym: false },
 		])("us")[0]!;
 		expect(r.fields[0]?.tier).toBe("acronym");
-		expect(r.fields[1]).toBeNull();
+		expect(r.fields[1]?.tier).toBe("fuzzy"); // same text, acronym off → falls to the fuzzy tier
 	});
 });
 

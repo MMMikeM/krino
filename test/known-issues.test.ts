@@ -61,7 +61,7 @@ describe("bug 6: highlight width uses the normalized query length", () => {
 describe("hazard (documentation, not a bug): smart fuzzy over long text", () => {
 	// Still true after the fixes: chunks only need a word-boundary start or a
 	// 3-char run, so short queries assemble junk chains over long vocabulary.
-	// Scope smart to short labels; use strategy: 'off' for documents.
+	// Scope smart to short labels; the density floor rejects sparse chains.
 	it("'zebra' still matches text containing only 'zero' and 'branch'", () => {
 		const result = fuzzyMatch("zero cost branch prediction and other stories", "zebra");
 		expect(result).not.toBeNull();

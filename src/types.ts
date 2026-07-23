@@ -8,12 +8,6 @@ export type Range = [number, number];
  */
 export type HighlightRanges = Range[];
 
-/**
- * Fuzzy match strategy (selects the fuzzy fallback tier):
- * - 'off': no fuzzy matching, only exact/prefix/boundary/contains
- * - 'smart': matches at word boundaries or 3+ char chunks (default)
- */
-export type Strategy = "off" | "smart";
 
 /**
  * Which tier a match came from. Lower on this list is a weaker match; a `score`
@@ -44,8 +38,6 @@ export type MatchResult = {
  * Options for the fuzzyMatch primitive.
  */
 export type MatchOptions = {
-	/** Fuzzy fallback strategy (default: 'smart'). */
-	strategy?: Strategy;
 	/** Enable the acronym (word-initials) tier (default: false). */
 	acronym?: boolean;
 };
@@ -56,8 +48,6 @@ export type MatchOptions = {
 export type FieldSpec<T = unknown> = {
 	/** Extract this field's text from an item (null → this field is skipped). */
 	text: (item: T) => string | null;
-	/** Fuzzy strategy for this field (default: 'smart'). */
-	strategy?: Strategy;
 	/** Enable the acronym tier for this field (default: false). */
 	acronym?: boolean;
 	/** Added to this field's score; higher demotes it (default: 0, keep >= 0).

@@ -1,5 +1,6 @@
 /**
- * Fuzzy chunk scoring (the "fuzzy" tier), exercised through the primitive.
+ * Fuzzy chunk scoring and the density floor (the "fuzzy" tier), exercised
+ * through the primitive.
  * Fuzzy scores are runtime sums → toBeCloseTo.
  */
 import { describe, expect, it } from "vitest";
@@ -44,5 +45,26 @@ describe("smart chunk scoring", () => {
 
 	it("rejects short mid-word chunks", () => {
 		expect(fuzzyMatch("abcdef", "adf")).toBeNull();
+	});
+});
+
+describe("fuzzy density floor", () => {
+	it("rejects sparse chains scattered across long text", () => {
+		// Word-start single-char chunks across ~25 chars: density 3/21 ≈ 0.14,
+		// below the 0.18 floor — the junk-chain shape that plagued documents.
+		expect(fuzzyMatch("alpha xxxxxx beta xxxxxx cat", "abc")).toBeNull();
+	});
+
+	it("keeps compact word-start assemblies", () => {
+		// "hewo" over "hello world": density 4/8 = 0.5 — well above the floor.
+		expect(fuzzyMatch("hello world", "hewo")?.tier).toBe("fuzzy");
+		// Adjacent-word assembly at 0.38 (the documented zebra anecdote) stays:
+		// structurally identical to wanted word-start matches.
+		expect(fuzzyMatch("zero cost branch prediction", "zebra")?.tier).toBe("fuzzy");
+	});
+
+	it("keeps initials scattered across a multi-word name", () => {
+		// The sparsest genuine shape measured: 4/19 ≈ 0.21, just above the floor.
+		expect(fuzzyMatch("Rath, Streich and Witting", "rsaw")?.tier).toBe("fuzzy");
 	});
 });
