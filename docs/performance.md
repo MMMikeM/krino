@@ -157,12 +157,42 @@ uFuzzy with latinize + outOfOrder parity keeps essentially its whole lead —
 architecture, not skipped features. krino trades that speed for richer, safer
 semantics.
 
+### fieldWords Set removal — DONE (with a stated trade)
+
+The per-field `new Set(splitWords(field))` was build cost and permanent heap: one Set per field, alive for the searcher's lifetime.
+`wholeWordOccurrence` replaced it — an `indexOf` walk for an occurrence bounded by non-word characters on both sides, yielding membership *and* position in one pass (which also fixed a latent highlight bug: the old left-bounded range could underline into "catalog" for `"catalog cat"`).
+Measured wins: build 0.89 → 0.24 ms at 1k, 7.4 → 3.2 at 10k, 98 → 54 at 100k; and the 100k *query* time fell 13 → 3.4 ms — the Sets' heap was GC and cache pressure on every scan.
+
+**The trade:** multi-word membership went from an O(1) hash hit to an O(field-length) scan per query word.
+For krino's target fields (names, labels) the scan beats hashing — no hash, native memchr-style walk.
+For document-length fields (`strategy: "off"` body text, which the README supports) it is a theoretical regression that the short-string bench corpus never measures.
+Bounded in practice: the bitmask gate rejects most items before any tier runs, the scan stops at the first absent query word, and the tier only fires for multi-word queries that missed every earlier tier.
+**Revisit trigger:** a long-field corpus probe showing the multi-word tier dominating query time — the fix would be an opt-in per-field word index for long fields only, not a return of the always-on Set.
+
+### Typed-array union-mask scan — DONE
+
+The per-item union of field masks lives in one `Int32Array`; the reject scan reads 4 bytes per item in a flat walk instead of chasing object properties, and prepared-field objects are only dereferenced by survivors.
+The union can only false-pass on multi-field items (some individual field may still miss a class); `matchField`'s per-field mask check keeps multi-field correctness.
+Side effect worth keeping: run-to-run variance dropped sharply — the typed-array walk is much steadier than the object walk.
+
+### Prefix-narrowing survivor cache — DONE
+
+The searcher closure remembers the last normalized query and its mask-gate survivor indices; when the new query extends the previous one (the typing case), only those survivors are rescanned.
+Correctness rests on a monotonicity argument, documented in the code and pinned by a test: the cache stores the **mask-pass set**, never the match set.
+The match set is not monotone under query extension ("the quick brown fox" matches `fox brown` via the multi-word tier while failing `fox brow`); the mask gate is, because extending a query only adds mask bits, so every match of the extended query lies inside the previous mask-pass set.
+Backspace and replacement queries fall back to a full scan via the `startsWith` check; a repeated query is idempotent (also pinned by tests).
+
+Measured (100k items, min-of-N): typing 15 keystrokes 178.9 → 27.6 ms, per-keystroke cost decaying 6.1 → 0.5 ms as survivors narrow; nine independent mixed queries 83.5 → 13.2 ms; build ~100 → 19.2 ms cumulative with the earlier build work.
+Cost: ~0.1 kB gzip.
+Lazy range allocation was considered alongside and deliberately skipped — range building no longer registers as a bottleneck next to these numbers.
+
 ### Still on the table
 
-- **Hoist allocations out of the ladder** — reuse arrays, avoid rebuilding word
-  lists / regexes per item where the query (not the item) determines them.
 - **Short-circuit ordering** — cheapest, most-selective tiers first (already
   roughly the case).
+- **Long-field corpus probe** — the bench corpus is short strings only; a
+  document-length field bench would measure the Set-removal trade above and the
+  fuzzy-tier hazard on real body text.
 
 ## Verdict
 

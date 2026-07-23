@@ -1,10 +1,10 @@
 # Krino
 
-A tiny, typed fuzzy matcher. ~2.0 kB gzip, TS-first, dual ESM/CJS, zero deps. Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz)
+A tiny, typed fuzzy matcher. ~2.3 kB gzip, TS-first, dual ESM/CJS, zero deps. Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz)
 
 What makes Krino different?
 
-1. **Tiny:** ~2.0 kB gzip, zero dependencies.
+1. **Tiny:** ~2.3 kB gzip, zero dependencies.
 2. **Informative:** returns the `ranges` it matched and a `tier` naming the kind of match ✖️ so you can rank, highlight, and explain a result without reverse-engineering a float.
 3. **Focused:** a fuzzy text matcher that handles diacritics and acronyms. Trades off handling typos (edit-distance and Bitap matching) for size and speed.
 
@@ -82,6 +82,8 @@ results.filter((r) => r.fields[0]?.tier !== "fuzzy"); // same, categorically
 > **Long text:** fuzzy strategies assemble short queries out of scattered chunks, so over document-length text almost anything "matches".
 > Scope `smart`/`aggressive` to short labels (titles, names); use `strategy: "off"` for long body text.
 
+> **Acronym semantics:** apostrophes are word-internal (`People's` → initial `p`, so `lpdr` matches `Lao People's Democratic Republic`), and stopwords are not skipped (`drc` won't acronym-match `Democratic Republic of the Congo` — it still surfaces via the fuzzy tier).
+
 ## Strategies
 
 | strategy          | matches                                              |
@@ -125,15 +127,16 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md) — per-
 - **Match quality** (10,000 items; every query derived from a real corpus item): krino returns the smallest result set of the subsequence libraries and ranks the source item **first on every structured query** (word, two words, prefix).
   A one-char slip still matches (source in the top 10); at two dropped chars `smart` returns nothing rather than 135 junk chains, and `strategy: "aggressive"` reproduces microfuzz cell-for-cell — that mode *is* the parent's behaviour.
   The typo engines return up to ~450 candidates for a single true hit; uFuzzy's defaults silently return 0 on accent-stripped and gapped queries.
-- **Speed** (per-query mean): ~0.06 ms at 1k, ~0.5 ms at 10k, ~12 ms at 100k — 1.6–2.8× faster than its parent microfuzz on the mixed corpus.
-  uFuzzy and fuzzysort stay 2–4× faster while returning no tier; typo engines run 10–40× slower.
+- **Speed** (per-query mean): ~0.1–0.3 ms at 10k and ~2–5 ms at 100k (anything below 10k is universally sub-millisecond) — ~4–5× faster than its parent microfuzz on ascii and ~10× on the mixed corpus.
+  On accented data krino now leads every configuration outright, including uFuzzy with folding enabled; on pure-ascii corpora uFuzzy keeps a ~1.5× lead at 100k.
+  A prefix-narrowing cache makes typing decay toward sub-millisecond keystrokes (15 keystrokes over 100k items: ~28 ms total); a 100k list swap costs a one-time ~31 ms build.
   Benches consume every result (no dead-code elimination), verify match counts per query, and run on two seeded corpora (ascii, and mixed with ~5% diacritics).
 
 ### What to pick when
 
 - **Typos must still match** (user-typed queries over messy data) — `Fuse.js` (Bitap) or `fast-fuzzy` (edit-distance), at a bundle and ergonomics cost.
-- **100k+ items, raw speed above fuzziness** — `uFuzzy` or `fuzzysort`; fastest here, but neither reports a tier, and uFuzzy's diacritics/multi-word are opt-in.
-- **Rank, highlight, and explain matches** (palettes, pickers, autocomplete) — krino: `tier` + `ranges` + per-field config, ~2.0 kB.
+- **100k+ pure-ascii items, raw speed above everything** — `uFuzzy`; ~1.5× faster than krino there, but no tier, and its diacritics/multi-word are opt-in. On accented data, krino now measures fastest outright.
+- **Rank, highlight, and explain matches** (palettes, pickers, autocomplete) — krino: `tier` + `ranges` + per-field config, ~2.3 kB.
 - **Sorting utility with tiered ranking, no highlights needed** — `match-sorter`; no ranges, no multi-word.
 - **Smallest possible, plain substring is enough** — `fuzzy` (~0.8 kB, 2016-era).
 - **Already on `@nozbe/microfuzz`** — krino is its rebuild: same subsequence approach plus tier, ESM, and it's faster.
