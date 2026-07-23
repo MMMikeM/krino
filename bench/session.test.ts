@@ -65,7 +65,7 @@ it("frontend session: three successive queries at 100k", { timeout: 60_000 }, ()
 	// stateful: true wires the typing-cache state (reset replays the previous
 	// prefix); stateless libraries just run cold every sample.
 	const libs: Array<{ name: string; run: (q: string) => number; stateful?: boolean }> = [
-		{ name: "krino (smart)", run: (q) => krino(q).length, stateful: true },
+		{ name: "krino", run: (q) => krino(q).length, stateful: true },
 		{ name: "@nozbe/microfuzz", run: (q) => microfuzz(q).length },
 		{ name: "fuzzysort", run: (q) => fuzzysort.go(q, list).length },
 		{ name: "uFuzzy (latinize)", run: (q) => uf.search(latinized, uFuzzy.latinize([q])[0])[0]?.length ?? 0 },
