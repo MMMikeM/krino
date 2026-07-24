@@ -10,7 +10,8 @@ export type HighlightRanges = Range[];
 
 /**
  * Which tier a match came from. Lower on this list is a weaker match; a `score`
- * greater than SCORES.CONTAINS is always tier "fuzzy".
+ * greater than SCORES.CONTAINS is a fuzzy chain or a deep transposition rescue
+ * (a rescued contains is 2.9) — the tier tells them apart.
  */
 export type Tier =
 	| "exact"
