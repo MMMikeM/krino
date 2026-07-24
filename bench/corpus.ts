@@ -102,9 +102,24 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 	// (medium), keep only every other char (heavy — 1-char fragments, past any
 	// sane fuzzy threshold). Where a library stops surfacing the source is its
 	// effective fuzzy limit.
+	// The word must be near-unique in the 10k corpus (≤ 2 items contain it):
+	// faker template words ("Generic", "Ergonomic") appear in ~80 items, every
+	// engine that matches the word ties across the whole block, and the source's
+	// rank inside that tie block is stable-sort corpus order — noise, not
+	// ranking. A near-unique source makes rank mean rank on all four typo
+	// probes derived from this word.
+	const corpus10k = build(10_000).map((item) => item.toLowerCase());
+	const isNearUnique = (word: string): boolean => {
+		const needle = word.toLowerCase();
+		let holders = 0;
+		for (const item of corpus10k) {
+			if (item.includes(needle) && wordsOf(item).includes(needle) && ++holders > 2) return false;
+		}
+		return true;
+	};
 	for (let i = 1300; i < sample.length; i++) {
 		const scatterWord = wordsOf(sample[i])[0] ?? "";
-		if (scatterWord.length >= 7) {
+		if (scatterWord.length >= 7 && isNearUnique(scatterWord)) {
 			const mid = Math.floor(scatterWord.length / 2);
 			specs.push(
 				{
