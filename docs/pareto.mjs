@@ -13,17 +13,17 @@ import { writeFileSync } from "node:fs";
 // Per-point label placement can differ per metric (positions move).
 const lab = (a, dy, dx = 0) => ({ a, dy, dx });
 const DATA = [
-	{ n: "krino (acronym)", mrr: 0.57, query: 0.16, total: 1.52, lab: { query: lab("start", -8), total: lab("start", -8) } },
-	{ n: "@nozbe/microfuzz", mrr: 0.54, query: 1.05, total: 5.45, lab: { query: lab("start", 4), total: lab("end", 4) } },
-	{ n: "Fuse.js", mrr: 0.54, query: 14.99, total: 15.72, lab: { query: lab("middle", -15), total: lab("middle", -15) } },
-	{ n: "Fuse.js (all opts)", mrr: 0.54, query: 15.35, total: 16.05, lab: { query: lab("middle", 20), total: lab("middle", 20) } },
-	{ n: "krino", mrr: 0.53, query: 0.14, total: 1.5, lab: { query: lab("start", 16), total: lab("end", 16) } },
-	{ n: "fuzzysort", mrr: 0.38, query: 0.18, total: 5.97, lab: { query: lab("start", 4), total: lab("start", 4) } },
-	{ n: "fuzzy", mrr: 0.36, query: 2.41, total: 2.41, lab: { query: lab("start", 4), total: lab("start", 4) } },
-	{ n: "match-sorter", mrr: 0.23, query: 2.85, total: 2.85, lab: { query: lab("start", -8), total: lab("start", -8) } },
-	{ n: "fast-fuzzy", mrr: 0.23, query: 6.68, total: 39.97, lab: { query: lab("start", 4), total: lab("end", 4) } },
-	{ n: "uFuzzy (latinize)", mrr: 0.19, query: 0.18, total: 0.74, lab: { query: lab("start", -8), total: lab("start", 4) } },
-	{ n: "uFuzzy", mrr: 0.17, query: 0.18, total: 0.18, lab: { query: lab("start", 10), total: lab("start", 4) } },
+	{ n: "krino (acronym)", mrr: 0.81, query: 0.09, total: 1.47, lab: { query: lab("start", -8), total: lab("start", -8) } },
+	{ n: "@nozbe/microfuzz", mrr: 0.68, query: 1.0, total: 5.35, lab: { query: lab("start", 4), total: lab("end", 4) } },
+	{ n: "Fuse.js", mrr: 0.71, query: 14.97, total: 15.68, lab: { query: lab("middle", -15), total: lab("middle", -15) } },
+	{ n: "Fuse.js (all opts)", mrr: 0.71, query: 15.04, total: 15.72, lab: { query: lab("middle", 20), total: lab("middle", 20) } },
+	{ n: "krino", mrr: 0.77, query: 0.09, total: 1.46, lab: { query: lab("start", 16), total: lab("end", 16) } },
+	{ n: "fuzzysort", mrr: 0.63, query: 0.17, total: 5.5, lab: { query: lab("start", 4), total: lab("start", 4) } },
+	{ n: "fuzzy", mrr: 0.53, query: 2.31, total: 2.31, lab: { query: lab("start", 4), total: lab("start", 4) } },
+	{ n: "match-sorter", mrr: 0.48, query: 2.7, total: 2.7, lab: { query: lab("start", -8), total: lab("start", -8) } },
+	{ n: "fast-fuzzy", mrr: 0.48, query: 6.08, total: 38.3, lab: { query: lab("start", 4), total: lab("end", 4) } },
+	{ n: "uFuzzy (latinize)", mrr: 0.19, query: 0.17, total: 0.72, lab: { query: lab("start", -8), total: lab("start", 4) } },
+	{ n: "uFuzzy", mrr: 0.17, query: 0.17, total: 0.17, lab: { query: lab("start", 10), total: lab("start", 4) } },
 ];
 
 const METRICS = {
@@ -38,7 +38,7 @@ const METRICS = {
 		title: "Fuzzy search libraries: MRR vs query latency, index prebuilt",
 		desc:
 			"Scatter plot of eleven configurations of eight JavaScript fuzzy search libraries comparing MRR (accuracy) against query milliseconds with indexes prebuilt, on a log scale, on the mixed 10k corpus. " +
-			"The Pareto frontier is all Krino: from krino (0.53 MRR at 0.14 ms) to krino (acronym) (0.57 at 0.16 ms) — every other configuration, including Fuse.js, is dominated on this ledger.",
+			"The Pareto frontier is all Krino: from krino (0.77 MRR at 0.09 ms) to krino (acronym) (0.81 at 0.09 ms) — every other configuration, including Fuse.js, is dominated on this ledger.",
 	},
 	total: {
 		file: "pareto-total",
@@ -66,12 +66,12 @@ const DARK = {
 
 const W = 820, H = 524, ML = 66, MR = 30, MT = 62;
 const plotW = W - ML - MR, plotH = 372; // plot bottom fixed at y=434
-const Y0 = 0.1, Y1 = 0.68;
+const Y0 = 0.1, Y1 = 0.87;
 const lx = Math.log10;
 const Y = (mrr) => MT + ((Y1 - mrr) / (Y1 - Y0)) * plotH;
 const f = (v) => Number(v.toFixed(1));
 const DOT_R = 6.5;
-const yTicks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6];
+const yTicks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
 const tnum = 'font-variant-numeric="tabular-nums"';
 
 // Non-dominated set: sweep by cost ascending, keep strict MRR improvements.

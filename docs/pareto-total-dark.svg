@@ -19,11 +19,13 @@
     <line x1="657.2" y1="62" x2="657.2" y2="434" stroke="#2c2c2a"/>
     <line x1="768" y1="62" x2="768" y2="434" stroke="#2c2c2a"/>
     <line x1="66" y1="434" x2="790" y2="434" stroke="#2c2c2a"/>
-    <line x1="66" y1="369.9" x2="790" y2="369.9" stroke="#2c2c2a"/>
-    <line x1="66" y1="305.7" x2="790" y2="305.7" stroke="#2c2c2a"/>
-    <line x1="66" y1="241.6" x2="790" y2="241.6" stroke="#2c2c2a"/>
-    <line x1="66" y1="177.4" x2="790" y2="177.4" stroke="#2c2c2a"/>
-    <line x1="66" y1="113.3" x2="790" y2="113.3" stroke="#2c2c2a"/>
+    <line x1="66" y1="385.7" x2="790" y2="385.7" stroke="#2c2c2a"/>
+    <line x1="66" y1="337.4" x2="790" y2="337.4" stroke="#2c2c2a"/>
+    <line x1="66" y1="289.1" x2="790" y2="289.1" stroke="#2c2c2a"/>
+    <line x1="66" y1="240.8" x2="790" y2="240.8" stroke="#2c2c2a"/>
+    <line x1="66" y1="192.4" x2="790" y2="192.4" stroke="#2c2c2a"/>
+    <line x1="66" y1="144.1" x2="790" y2="144.1" stroke="#2c2c2a"/>
+    <line x1="66" y1="95.8" x2="790" y2="95.8" stroke="#2c2c2a"/>
   </g>
   <line x1="66" y1="434" x2="790" y2="434" stroke="#383835"/>
   <line x1="66" y1="62" x2="66" y2="434" stroke="#383835"/>
@@ -39,44 +41,46 @@
   </g>
   <g>
     <text x="54" y="438" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.1</text>
-    <text x="54" y="373.9" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.2</text>
-    <text x="54" y="309.7" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.3</text>
-    <text x="54" y="245.6" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.4</text>
-    <text x="54" y="181.4" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.5</text>
-    <text x="54" y="117.3" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.6</text>
+    <text x="54" y="389.7" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.2</text>
+    <text x="54" y="341.4" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.3</text>
+    <text x="54" y="293.1" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.4</text>
+    <text x="54" y="244.8" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.5</text>
+    <text x="54" y="196.4" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.6</text>
+    <text x="54" y="148.1" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.7</text>
+    <text x="54" y="99.8" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.8</text>
   </g>
   <text x="428" y="479" text-anchor="middle" fill="#c3c2b7" font-size="13">total ms — index + one query, log scale (lower = faster)</text>
   <text transform="translate(18,248) rotate(-90)" text-anchor="middle" fill="#c3c2b7" font-size="13">MRR — mean reciprocal rank (higher = more accurate) →</text>
-  <path d="M88 389.1 L258.9 376.3 L344.2 158.2 L345.8 132.6" fill="none" stroke="#199e70" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
+  <path d="M81.1 400.2 L255.5 390.5 L341 110.3 L341.8 91" fill="none" stroke="#199e70" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
   <g transform="translate(78,70)">
     <line x1="34" y1="24" x2="4" y2="4" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
     <text x="40" y="20" fill="#898781" font-size="12" font-style="italic">faster &amp; more accurate</text>
   </g>
   <g>
-    <circle cx="345.8" cy="132.6" r="6.5" fill="#3987e5" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="500.1" cy="151.8" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="628.1" cy="151.8" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="630.7" cy="151.8" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="344.2" cy="158.2" r="6.5" fill="#3987e5" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="511.2" cy="254.4" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="401.5" cy="267.2" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="421.8" cy="350.6" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="740.9" cy="350.6" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="258.9" cy="376.3" r="6.5" fill="#199e70" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="88" cy="389.1" r="6.5" fill="#199e70" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="341.8" cy="91" r="6.5" fill="#3987e5" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="341" cy="110.3" r="6.5" fill="#3987e5" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="627.8" cy="139.3" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="628.1" cy="139.3" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="497.9" cy="153.8" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="501.2" cy="177.9" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="396.4" cy="226.3" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="415.3" cy="250.4" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="735.8" cy="250.4" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="255.5" cy="390.5" r="6.5" fill="#199e70" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="81.1" cy="400.2" r="6.5" fill="#199e70" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
   </g>
   <g>
-    <text x="359.3" y="124.6" text-anchor="start" fill="#ffffff" font-size="12.5" font-weight="600">krino (acronym)</text>
-    <text x="628.1" y="136.8" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js</text>
-    <text x="486.6" y="155.8" text-anchor="end" fill="#898781" font-size="12.5">@nozbe/microfuzz</text>
-    <text x="630.7" y="171.8" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js (all opts)</text>
-    <text x="330.7" y="174.2" text-anchor="end" fill="#ffffff" font-size="12.5" font-weight="600">krino</text>
-    <text x="524.7" y="258.4" text-anchor="start" fill="#898781" font-size="12.5">fuzzysort</text>
-    <text x="415" y="271.2" text-anchor="start" fill="#898781" font-size="12.5">fuzzy</text>
-    <text x="435.3" y="342.6" text-anchor="start" fill="#898781" font-size="12.5">match-sorter</text>
-    <text x="727.4" y="354.6" text-anchor="end" fill="#898781" font-size="12.5">fast-fuzzy</text>
-    <text x="272.4" y="380.3" text-anchor="start" fill="#ffffff" font-size="12.5" font-weight="600">uFuzzy (latinize)</text>
-    <text x="101.5" y="393.1" text-anchor="start" fill="#ffffff" font-size="12.5" font-weight="600">uFuzzy</text>
+    <text x="355.3" y="83" text-anchor="start" fill="#ffffff" font-size="12.5" font-weight="600">krino (acronym)</text>
+    <text x="627.8" y="124.3" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js</text>
+    <text x="327.5" y="126.3" text-anchor="end" fill="#ffffff" font-size="12.5" font-weight="600">krino</text>
+    <text x="484.4" y="157.8" text-anchor="end" fill="#898781" font-size="12.5">@nozbe/microfuzz</text>
+    <text x="628.1" y="159.3" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js (all opts)</text>
+    <text x="514.7" y="181.9" text-anchor="start" fill="#898781" font-size="12.5">fuzzysort</text>
+    <text x="409.9" y="230.3" text-anchor="start" fill="#898781" font-size="12.5">fuzzy</text>
+    <text x="428.8" y="242.4" text-anchor="start" fill="#898781" font-size="12.5">match-sorter</text>
+    <text x="722.3" y="254.4" text-anchor="end" fill="#898781" font-size="12.5">fast-fuzzy</text>
+    <text x="269" y="394.5" text-anchor="start" fill="#ffffff" font-size="12.5" font-weight="600">uFuzzy (latinize)</text>
+    <text x="94.6" y="404.2" text-anchor="start" fill="#ffffff" font-size="12.5" font-weight="600">uFuzzy</text>
   </g>
   <g>
     <line x1="66" y1="508" x2="92" y2="508" stroke="#199e70" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
