@@ -13,3 +13,9 @@ export const SCORES = {
 	ACRONYM: 1.8,
 	CONTAINS: 2,
 } as const;
+
+// Added to the corrected query's score when the transposition rescue fires
+// (tier "transposed"). Sized so a rescued boundary hit (1 + 0.9) stays under a
+// true contains (2), and any rescue stays under the fuzzy band (> 2) — a typo
+// correction outranks junk chains but never a genuine tier hit at its level.
+export const TRANSPOSED_PENALTY = 0.9;

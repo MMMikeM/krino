@@ -21,7 +21,8 @@ export type Tier =
 	| "multi-word"
 	| "acronym"
 	| "contains"
-	| "fuzzy";
+	| "fuzzy"
+	| "transposed";
 
 /**
  * The result of matching one string against a query.

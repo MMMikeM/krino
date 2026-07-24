@@ -7,7 +7,7 @@
 
 import { wordChar } from "./boundaries";
 
-const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+export const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
  * A cheap native gate for the fuzzy tier: the query's characters, in order, with

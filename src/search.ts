@@ -5,9 +5,8 @@
  *   built on the primitive. Second arg is a `getText` fn or an array of field specs.
  */
 
-import { buildFuzzyGate, buildPresenceGate, charMask, maskIsExact } from "./gates";
-import { matchField, type PreparedQuery } from "./match";
-import { splitWords } from "./boundaries";
+import { charMask } from "./gates";
+import { matchField, prepareQuery } from "./match";
 import { normalizeText } from "./normalize";
 import type { FieldSpec, FuzzyResult, FuzzySearcher, MatchOptions, MatchResult } from "./types";
 
@@ -25,26 +24,6 @@ const shiftRanges = (ranges: [number, number][], lead: number): void => {
 		r[0] += lead;
 		r[1] += lead;
 	}
-};
-
-// Build the query-derived state once, reused across every field. The raw query
-// is stored trimmed so the exact-case tiers treat padding as insignificant,
-// matching the normalized tiers (normalizeText trims).
-const prepareQuery = (query: string, normalizedQuery: string): PreparedQuery => {
-	const queryMask = charMask(normalizedQuery);
-	const queryWords = splitWords(normalizedQuery);
-	// The presence gate only ever front-gates multi-word queries, and only when
-	// the mask can't already prove exact char presence; everything else skips
-	// its construction entirely.
-	const needsPresenceGate = queryWords.length > 1 && !maskIsExact(queryMask);
-	return {
-		query: query.trim(),
-		normalizedQuery,
-		queryWords,
-		queryMask,
-		presenceGate: needsPresenceGate ? buildPresenceGate(normalizedQuery) : null,
-		fuzzyGate: buildFuzzyGate(normalizedQuery),
-	};
 };
 
 /**

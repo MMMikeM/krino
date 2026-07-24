@@ -6,9 +6,10 @@
  * (opt-in) word-initials tier.
  */
 
-import { isBoundaryChar, wordChar } from "./boundaries";
+import { isBoundaryChar, splitWords, wordChar } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
-import { SCORES } from "./scores";
+import { buildFuzzyGate, buildPresenceGate, charMask, escapeRegex, maskIsExact } from "./gates";
+import { SCORES, TRANSPOSED_PENALTY } from "./scores";
 import type { MatchResult, Range } from "./types";
 
 // Query-derived state, built once per query and reused across every field.
@@ -25,6 +26,34 @@ export type PreparedQuery = {
 	presenceGate: RegExp | null;
 	// Subsequence gate for the fuzzy tier (see buildFuzzyGate).
 	fuzzyGate: RegExp;
+	// Lazily-built adjacent-swap variants for the transposition rescue, keyed
+	// by swap index; null until the first rescue attempt needs one.
+	variants: Map<number, PreparedQuery> | null;
+	// One alternation regex over every distinct swap variant (the rescue's
+	// per-field pre-gate); undefined = not built yet, null = query has no
+	// viable variants. See transposeRescue.
+	rescueGate?: RegExp | null;
+};
+
+// Build the query-derived state once, reused across every field. The raw query
+// is stored trimmed so the exact-case tiers treat padding as insignificant,
+// matching the normalized tiers (normalizeText trims).
+export const prepareQuery = (query: string, normalizedQuery: string): PreparedQuery => {
+	const queryMask = charMask(normalizedQuery);
+	const queryWords = splitWords(normalizedQuery);
+	// The presence gate only ever front-gates multi-word queries, and only when
+	// the mask can't already prove exact char presence; everything else skips
+	// its construction entirely.
+	const needsPresenceGate = queryWords.length > 1 && !maskIsExact(queryMask);
+	return {
+		query: query.trim(),
+		normalizedQuery,
+		queryWords,
+		queryMask,
+		presenceGate: needsPresenceGate ? buildPresenceGate(normalizedQuery) : null,
+		fuzzyGate: buildFuzzyGate(normalizedQuery),
+		variants: null,
+	};
 };
 
 const sortByRangeStart = (a: Range, b: Range): number => a[0] - b[0];
@@ -86,17 +115,77 @@ const acronymMatch = (normalizedField: string, normalizedQuery: string): MatchRe
 	};
 };
 
-export const matchField = (
+const swapAt = (s: string, j: number): string =>
+	s.slice(0, j) + s[j + 1] + s[j] + s.slice(j + 2);
+
+// The transposition rescue: an adjacent-swap typo ("geenric") preserves the
+// character multiset, so the field passed the mask gate but failed the
+// order-sensitive tiers. Only a real-tier hit for the corrected query counts —
+// a rescued fuzzy chain would be double speculation (an invented swap on top
+// of a speculative assembly) and measurably just inflates noise (the
+// deletion-typo bench probes grew 0 → ~100 rows without this guard). Every
+// real tier then implies the corrected query appears contiguously in the
+// field, so ONE alternation regex over all distinct swap variants is a
+// complete per-field pre-gate: the hot path pays a single native test, and
+// variant preparation and the ladder rerun only happen on the rare hit.
+// (Earlier shapes paid per-variant work on every gate-failed field and made
+// scatter queries ~5× slower.) Only called after every tier failed, so an
+// existing match can never change.
+const transposeRescue = (
 	field: string,
 	normalizedField: string,
 	fieldMask: number,
 	q: PreparedQuery,
 	acronym: boolean,
 ): MatchResult | null => {
+	const { normalizedQuery } = q;
+	let gate = q.rescueGate;
+	if (gate === undefined) {
+		// Callers pre-check viability (single word, 4+ chars — shorter strings
+		// transpose into noise, and multi-word queries already match flexibly
+		// via their own tier), so every distinct swap becomes a literal.
+		const literals: string[] = [];
+		for (let j = 0; j < normalizedQuery.length - 1; j++) {
+			if (normalizedQuery[j] !== normalizedQuery[j + 1]) literals.push(escapeRegex(swapAt(normalizedQuery, j)));
+		}
+		gate = q.rescueGate = literals.length ? new RegExp(literals.join("|")) : null;
+	}
+	if (gate === null || !gate.test(normalizedField)) return null;
+
+	for (let j = 0; j < normalizedQuery.length - 1; j++) {
+		if (normalizedQuery[j] === normalizedQuery[j + 1]) continue; // identity swap
+		let variant = (q.variants ??= new Map()).get(j);
+		if (variant === undefined) {
+			const swapped = swapAt(normalizedQuery, j);
+			variant = prepareQuery(swapped, swapped);
+			q.variants.set(j, variant);
+		}
+		if (!normalizedField.includes(variant.normalizedQuery)) continue;
+		const result = matchField(field, normalizedField, fieldMask, variant, acronym, true);
+		if (result && result.score <= SCORES.CONTAINS) {
+			return {
+				score: result.score + TRANSPOSED_PENALTY,
+				tier: "transposed",
+				ranges: result.ranges,
+			};
+		}
+	}
+	return null;
+};
+
+export const matchField = (
+	field: string,
+	normalizedField: string,
+	fieldMask: number,
+	q: PreparedQuery,
+	acronym: boolean,
+	rescued = false,
+): MatchResult | null => {
 	const { query, normalizedQuery, queryWords } = q;
 
 	// One integer AND before any regex: a field missing one of the query's
-	// character classes can't match at any tier.
+	// character classes can't match at any tier. A transposition can't change
+	// the mask, so there is nothing to rescue here either.
 	if ((q.queryMask & fieldMask) !== q.queryMask) return null;
 
 	// Bulk-reject remaining non-candidates before the tier ladder. Single-word
@@ -106,7 +195,13 @@ export const matchField = (
 	// words out of order and a subsequence gate would wrongly reject them — but
 	// when the mask already proved exact char presence, the regex is skipped.
 	const frontGate = queryWords.length > 1 ? q.presenceGate : q.fuzzyGate;
-	if (frontGate && !frontGate.test(normalizedField)) return null;
+	if (frontGate && !frontGate.test(normalizedField)) {
+		// Rescue viability checked here so ineligible queries (multi-word,
+		// short) pay nothing, not even a call, on this bulk-reject path.
+		return !rescued && queryWords.length === 1 && normalizedQuery.length >= 4
+			? transposeRescue(field, normalizedField, fieldMask, q, acronym)
+			: null;
+	}
 
 	if (field === query)
 		return { score: SCORES.EXACT, tier: "exact", ranges: [[0, field.length - 1]] };
@@ -180,5 +275,10 @@ export const matchField = (
 	// only multi-word queries (presence-gated up front) still owe this test.
 	if (queryWords.length > 1 && !q.fuzzyGate.test(normalizedField)) return null;
 	const fuzzy = fuzzyChainMatch(normalizedField, normalizedQuery);
-	return fuzzy && { score: fuzzy[0], tier: "fuzzy", ranges: fuzzy[1] };
+	if (fuzzy) return { score: fuzzy[0], tier: "fuzzy", ranges: fuzzy[1] };
+	// Every tier failed (the chain can refuse via the density floor even past
+	// the gate) — last chance for the transposition rescue.
+	return !rescued && queryWords.length === 1 && normalizedQuery.length >= 4
+		? transposeRescue(field, normalizedField, fieldMask, q, acronym)
+		: null;
 };
