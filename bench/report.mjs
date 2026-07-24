@@ -7,7 +7,7 @@
  *   node report.mjs       # -> comparison.json + printed markdown tables
  *
  * Cells are `rel% (mean ms)`: rel% is time relative to krino (100%, lower =
- * faster). `Mean` aggregates a row: mean ± sd of its relative columns. `Valid`
+ * faster). `Valid`
  * marks whether the configuration actually does the corpus's task (on the
  * mixed corpus: folds diacritics — cross-checked per query by
  * hits.test.ts). Per-cell sd stays in comparison.json. One table per corpus
@@ -23,8 +23,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 //   yes = built-in/default, "opt-in", "partial", no. `updated` = last npm publish.
 const META = {
 	krino: {
-		gzipKB: 2.5, deps: 0, type: "subsequence (tiered)", module: "esm", updated: null,
-		features: { ranges: "yes", tier: "yes", diacritics: "yes", multiWord: "yes", perField: "yes", typos: "no" },
+		gzipKB: 2.6, deps: 0, type: "subsequence (tiered)", module: "esm", updated: null,
+		features: { ranges: "yes", tier: "yes", diacritics: "yes", multiWord: "yes", perField: "yes", typos: "partial" },
 	},
 	"@nozbe/microfuzz": {
 		gzipKB: 1.7, deps: 0, type: "subsequence", module: "cjs", updated: "2023-07-18",
@@ -67,17 +67,36 @@ const raw = JSON.parse(readFileSync(new URL("./results.json", import.meta.url)))
 // "[corpus] query N items × Q queries" groups. Q (queries per sample loop)
 // normalizes a sample to a single query; sd scales by the same factor.
 const perQuery = {}; // corpus -> lib -> size -> { ms, sd }
+// Build cost per library and size, from the "build index (N items)" groups.
+// Bench names map to the library names used in the query groups; a config
+// variant reuses its base library's build (the constructor is the same).
+const BUILD_NAMES = {
+	"krino createFuzzySearch": "krino",
+	"@nozbe/microfuzz": "@nozbe/microfuzz",
+	"fast-fuzzy new Searcher": "fast-fuzzy",
+	"fuse.js new Fuse": "fuse.js",
+	"fuzzysort prepare (lazy)": "fuzzysort",
+};
+const buildMs = {}; // lib -> size -> ms
 for (const file of raw.files ?? []) {
 	for (const group of file.groups ?? []) {
 		const label = group.fullName ?? group.name ?? "";
-		const m = label.match(/\[(\w+)\] query (\d+) items × (\d+) queries/);
-		if (!m) continue;
-		const [, corpus, size, queryCount] = m;
+		const qm = label.match(/\[(\w+)\] query (\d+) items × (\d+) queries/);
+		if (qm) {
+			const [, corpus, size, queryCount] = qm;
+			for (const b of group.benchmarks ?? []) {
+				((perQuery[corpus] ??= {})[b.name] ??= {})[size] = {
+					ms: b.mean / Number(queryCount),
+					sd: b.sd / Number(queryCount),
+				};
+			}
+			continue;
+		}
+		const bm = label.match(/build index \((\d+) items\)/);
+		if (!bm) continue;
 		for (const b of group.benchmarks ?? []) {
-			((perQuery[corpus] ??= {})[b.name] ??= {})[size] = {
-				ms: b.mean / Number(queryCount),
-				sd: b.sd / Number(queryCount),
-			};
+			const lib = BUILD_NAMES[b.name];
+			if (lib) (buildMs[lib] ??= {})[bm[1]] = b.mean;
 		}
 	}
 }
@@ -88,9 +107,13 @@ const GROUP_RANK = { subsequence: 0, "typo-tolerant": 1, substring: 2 };
 const groupRank = (type) => GROUP_RANK[type.replace(/ \(.*\)$/, "")] ?? 9;
 
 const summarize = (byLib, corpus) => {
-	const sizes = [...new Set(Object.values(byLib).flatMap((s) => Object.keys(s)))].sort(
+	// All measured sizes land in comparison.json; the published table shows only
+	// 100k — sub-millisecond 10k cells sit at timer granularity and mostly
+	// publish noise.
+	const allSizes = [...new Set(Object.values(byLib).flatMap((s) => Object.keys(s)))].sort(
 		(a, b) => Number(a) - Number(b),
 	);
+	const sizes = allSizes.filter((s) => Number(s) >= 100_000);
 	const base = byLib.krino;
 	if (!base) throw new Error(`no 'krino' row for corpus '${corpus}' — run \`pnpm bench\` first`);
 
@@ -124,8 +147,11 @@ const summarize = (byLib, corpus) => {
 				module: meta.module,
 				updated: meta.updated,
 				features: meta.features,
-				perQueryMs: Object.fromEntries(sizes.map((s) => [s, bySize[s]?.ms])),
-				perQuerySdMs: Object.fromEntries(sizes.map((s) => [s, bySize[s]?.sd])),
+				perQueryMs: Object.fromEntries(allSizes.map((s) => [s, bySize[s]?.ms])),
+				perQuerySdMs: Object.fromEntries(allSizes.map((s) => [s, bySize[s]?.sd])),
+				indexMs: Object.fromEntries(
+					sizes.map((s) => [s, buildMs[name.replace(/ \([^)]+\)$/, "")]?.[s] ?? null]),
+				),
 				relToKrino,
 				meanRelPct: Math.round(meanRel * 100),
 			};
@@ -140,6 +166,24 @@ const summarize = (byLib, corpus) => {
 const corpora = Object.fromEntries(
 	Object.entries(perQuery).map(([corpus, byLib]) => [corpus, summarize(byLib, corpus)]),
 );
+
+// Physical-invariant smoke alarm: the acronym configuration runs strictly more
+// code per query than base krino, so base measuring slower than acronym by more
+// than a tolerance means the run absorbed GC/thermal debt (observed: 2.4x on a
+// loaded machine) and must not be published. Exit nonzero so scripts notice.
+for (const [corpus, byLib] of Object.entries(perQuery)) {
+	for (const size of Object.keys(byLib.krino ?? {})) {
+		const base = byLib.krino?.[size]?.ms;
+		const acr = byLib["krino (acronym)"]?.[size]?.ms;
+		if (base != null && acr != null && base > acr * 1.15) {
+			console.error(
+				`WARNING: contaminated run — [${corpus}] ${size} items: base krino ${base.toFixed(2)} ms/query > ` +
+					`krino (acronym) ${acr.toFixed(2)} ms/query. More code cannot be faster; rerun on a quiet machine.`,
+			);
+			process.exitCode = 1;
+		}
+	}
+}
 
 const out = {
 	method: {
@@ -177,29 +221,83 @@ for (const [corpusName, { sizes, libraries }] of Object.entries(corpora)) {
 	// (the accent probe). fast-fuzzy and fuzzy have no folding option at all.
 	const shown = libraries.filter((l) => l.valid);
 	const dropped = libraries.filter((l) => !l.valid).map((l) => l.name);
-	const header = ["Library", ...sizes.flatMap((s) => [fmtSize(s), `${fmtSize(s)} rel`]), "Mean"];
+	const header = [
+		"Library",
+		...sizes.flatMap((s) => [
+			`${fmtSize(s)} index`,
+			`${fmtSize(s)} query`,
+			`${fmtSize(s)} total`,
+			"query rel",
+			"total rel",
+		]),
+	];
 	const rows = shown.map((l) => {
 		const nm = l.name === "krino" ? "**krino**" : l.name;
+		const kr = shown.find((x) => x.name === "krino");
 		const perf = sizes
 			.flatMap((s) => {
 				const r = l.relToKrino[String(s)];
-				if (r == null) return ["—", "—"];
-				const pct = l.name === "krino" ? `**${Math.round(r * 100)}%**` : `${Math.round(r * 100)}%`;
-				return [`${fmtMs(l.perQueryMs[String(s)])} ms`, pct];
+				if (r == null) return ["—", "—", "—", "—", "—"];
+				const emph = (v) => (l.name === "krino" ? `**${v}**` : v);
+				const idx = l.indexMs[String(s)];
+				const query = l.perQueryMs[String(s)];
+				// total = index + one query, the cold one-shot cost; a no-index
+				// library's preparation already runs inside its query.
+				const total = (idx ?? 0) + query;
+				const krTotal = (kr.indexMs[String(s)] ?? 0) + kr.perQueryMs[String(s)];
+				return [
+					idx == null ? "—" : `${fmtMs(idx)} ms`,
+					`${fmtMs(query)} ms`,
+					`${fmtMs(total)} ms`,
+					emph(`${Math.round(r * 100)}%`),
+					emph(`${Math.round((total / krTotal) * 100)}%`),
+				];
 			})
 			.join(" | ");
-		const mean = `${l.meanRelPct}% ± ${l.sdRelPct}`;
-		return `| ${nm} | ${perf} | ${mean} |`;
+		return `| ${nm} | ${perf} |`;
 	});
-	// Corpus-wide row: mean ± sd of per-query ms across the SHOWN configurations
-	// at each size — one number for how hard this corpus is at that scale.
-	const colMean = (size) => {
-		const vals = shown.map((l) => l.perQueryMs[String(size)]).filter((v) => v != null);
-		const m = vals.reduce((a, b) => a + b, 0) / vals.length;
-		const sd = Math.sqrt(vals.reduce((s, v) => s + (v - m) ** 2, 0) / vals.length);
-		return `${fmtMs(m)} ± ${fmtMs(sd)} ms | —`;
+	// Corpus-wide row: GEOMETRIC means across the SHOWN configurations. The
+	// per-library times span three orders of magnitude, so an arithmetic mean
+	// is dominated by the slowest library and describes nobody; the geomean is
+	// the standard aggregate for multiplicative spreads (and the only valid
+	// way to average ratios).
+	const geomean = (vals) => Math.exp(vals.reduce((a, v) => a + Math.log(v), 0) / vals.length);
+	const aggFor = (size) => {
+		const idxVals = shown.map((l) => l.indexMs[String(size)]).filter((v) => v != null);
+		const queryVals = shown.map((l) => l.perQueryMs[String(size)]).filter((v) => v != null);
+		const totalVals = shown
+			.map((l) => (l.perQueryMs[String(size)] == null ? null : (l.indexMs[String(size)] ?? 0) + l.perQueryMs[String(size)]))
+			.filter((v) => v != null);
+		return { idx: geomean(idxVals), query: geomean(queryVals), total: geomean(totalVals) };
 	};
-	rows.push(`| *all libraries* | ${sizes.map(colMean).join(" | ")} | — |`);
+	// The rel cells of the aggregate row are the geomean of each rel column;
+	// geomean-of-ratios = ratio-of-geomeans, so this is also geomean-time /
+	// krino-time (the reciprocal of the Krino-vs-geomean row).
+	const krRow = shown.find((x) => x.name === "krino");
+	const colAgg = (size) => {
+		const a = aggFor(size);
+		const krQuery = krRow.perQueryMs[String(size)];
+		const krTotal = (krRow.indexMs[String(size)] ?? 0) + krQuery;
+		return (
+			`${fmtMs(a.idx)} ms | ${fmtMs(a.query)} ms | ${fmtMs(a.total)} ms | ` +
+			`${Math.round((a.query / krQuery) * 100)}% | ${Math.round((a.total / krTotal) * 100)}%`
+		);
+	};
+	rows.push(`| *all libraries (geomean)* | ${sizes.map(colAgg).join(" | ")} |`);
+	// The field's geomean as a multiple of Krino, per metric — same direction
+	// as every other percentage in the table (Krino = 100%, higher = more
+	// expensive than Krino). Covers index, which has no rel column; the
+	// query/total cells necessarily repeat the geomean row's rel cells.
+	const kr = shown.find((x) => x.name === "krino");
+	const colField = (size) => {
+		const a = aggFor(size);
+		const idx = kr.indexMs[String(size)];
+		const query = kr.perQueryMs[String(size)];
+		const total = (idx ?? 0) + query;
+		const pct = (num, den) => (den == null ? "—" : `${Math.round((num / den) * 100)}%`);
+		return `${pct(a.idx, idx)} | ${pct(a.query, query)} | ${pct(a.total, total)} | ${pct(a.query, query)} | ${pct(a.total, total)}`;
+	};
+	rows.push(`| *geomean vs Krino* | ${sizes.map(colField).join(" | ")} |`);
 	console.log(`| ${header.join(" | ")} |`);
 	console.log(`|${header.map(() => "---").join("|")}|`);
 	console.log(rows.join("\n"));
@@ -210,5 +308,5 @@ for (const [corpusName, { sizes, libraries }] of Object.entries(corpora)) {
 	}
 }
 console.log(
-	"\n(per size: per-query mean ms, then time relative to krino=100%; Mean = mean ± sd of a row's relative columns; lower = faster)",
+	"\n(index = one-time build cost, — for libraries that keep no index (their preparation runs inside every query; a variant row shares its base build). query = per-query mean ms against a prebuilt searcher. total = index + one query, the cold one-shot cost. rel columns = time relative to krino=100%, lower = faster. The aggregate row is a geometric mean — the per-library spread covers three orders of magnitude, so an arithmetic mean would just describe the slowest library. The geomean vs Krino row restates that field average as a multiple of Krino, per metric (same Krino=100% direction as every other percentage; over 100% = the average library costs more). 10k cells sit at timer granularity and live in comparison.json only.)",
 );
