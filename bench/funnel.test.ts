@@ -11,7 +11,8 @@
 import { describe, expect, it } from "vitest";
 import { fuzzyMatch } from "krino";
 import { buildFuzzyGate, buildPresenceGate, charMask } from "../src/gates";
-import { normalizeText, splitWords } from "../src/normalize";
+import { splitWords } from "../src/boundaries";
+import { normalizeText } from "../src/normalize";
 import { CORPORA } from "./corpus";
 
 type FunnelRow = {
@@ -21,6 +22,7 @@ type FunnelRow = {
 	"regex cut": string;
 	"ladder entered": number;
 	matched: number;
+	rescued: number;
 };
 
 const pct = (part: number, whole: number): string =>
@@ -46,11 +48,16 @@ describe("pre-filter funnel", () => {
 				let maskPass = 0;
 				let gatePass = 0;
 				let matched = 0;
+				let rescued = 0;
 				for (let i = 0; i < list.length; i++) {
 					const maskOk = (queryMask & masks[i]) === queryMask;
-					const isMatch = fuzzyMatch(list[i], query) !== null;
-					if (isMatch) {
-						matched++;
+					const result = fuzzyMatch(list[i], query);
+					if (result) {
+						// The transposition rescue matches a *corrected* query, so
+						// its hits legitimately bypass the original query's gates;
+						// the mask still holds (a swap preserves the char classes).
+						if (result.tier === "transposed") rescued++;
+						else matched++;
 						// The mask must never reject anything the full matcher accepts.
 						expect(maskOk).toBe(true);
 					}
@@ -69,6 +76,7 @@ describe("pre-filter funnel", () => {
 					"regex cut": pct(maskPass - gatePass, maskPass),
 					"ladder entered": gatePass,
 					matched,
+					rescued,
 				});
 			}
 			console.table(rows);

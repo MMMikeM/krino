@@ -17,8 +17,7 @@
  *   pnpm --filter=krino-bench exec vitest run longtext --disable-console-intercept
  */
 import { describe, expect, it } from "vitest";
-import { fuzzyMatch } from "krino";
-import { normalizeText, splitWords } from "../src/normalize";
+import { fuzzyMatch, normalizeText, splitWords } from "krino";
 import { CORPORA } from "./corpus";
 
 const DOC_LENGTHS = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
