@@ -11,6 +11,19 @@ describe("acronym tier", () => {
 		expect(fuzzyMatch("us army", "us", { acronym: true })?.tier).toBe("prefix");
 	});
 
+	it("wins over contains when one field matches both ways", () => {
+		// The ladder must be monotonic in score: acronym (1.8) beats contains
+		// (2), so a field that matches both ways gets the better tier. The
+		// initials of "Universal Studios campus" are "usc"; "campus" also
+		// contains "us" as a substring.
+		const result = fuzzyMatch("Universal Studios campus", "us", { acronym: true });
+		expect(result?.tier).toBe("acronym");
+		expect(result?.ranges).toEqual([
+			[0, 0],
+			[10, 10],
+		]);
+	});
+
 	it("ranks an acronym match above an incidental contains", () => {
 		const results = createFuzzySearch(
 			["United States", "campus tour"],

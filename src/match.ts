@@ -1,7 +1,7 @@
 /**
  * The tier ladder: rank one field string against a query, trying each tier in
- * order (exact → normalized-exact → prefix → boundary-contains → multi-word →
- * contains-anywhere → acronym → fuzzy fallback) and returning the first match as
+ * order (exact → normalized-exact → prefix → boundary-exact → boundary →
+ * multi-word → acronym → contains → fuzzy fallback) and returning the first match as
  * { score, tier, ranges }. Lower score = better. `acronym` enables the
  * (opt-in) word-initials tier.
  */
@@ -158,6 +158,15 @@ export const matchField = (
 		}
 	}
 
+	// Acronym (1.8) outranks contains (2), so it must be tried first — a field
+	// matching both ways must get the better tier, or cross-item ordering
+	// inverts. Initials never contain a separator, so a multi-word query can
+	// never acronym-match — skip the full-field initials scan for those.
+	if (acronym && queryWords.length === 1) {
+		const result = acronymMatch(normalizedField, normalizedQuery);
+		if (result) return result;
+	}
+
 	const containsIdx = normalizedField.indexOf(normalizedQuery);
 	if (containsIdx > -1)
 		return {
@@ -165,13 +174,6 @@ export const matchField = (
 			tier: "contains",
 			ranges: [[containsIdx, containsIdx + normalizedQueryLen - 1]],
 		};
-
-	// Initials never contain a separator, so a multi-word query can never
-	// acronym-match — skip the full-field initials scan for those.
-	if (acronym && queryWords.length === 1) {
-		const result = acronymMatch(normalizedField, normalizedQuery);
-		if (result) return result;
-	}
 
 	// Fuzzy fallback — gate on the native subsequence test before the loop.
 	// Single-word queries already passed fuzzyGate as the ladder's front gate;
