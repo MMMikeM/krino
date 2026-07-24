@@ -47,8 +47,19 @@ const calibrated = (fn: () => void): { time: number; iterations: number; warmupT
 		warmupIterations: 1,
 	};
 };
+// Collect the previous task's garbage before this task's warmup and timing
+// begin. Bench cells otherwise absorb order-dependent GC debt: an
+// allocation-heavy neighbour's collection lands inside the next cell's
+// window, which has produced physically impossible orderings (base krino
+// timing 2.4x slower than its own strictly-more-code acronym config on a
+// loaded machine). A task's own garbage still lands in its own window —
+// that part is the task's real cost. No-op without --expose-gc (the bench
+// script sets it).
+const collectDebt = (): void => {
+	(globalThis as { gc?: () => void }).gc?.();
+};
 const cbench = (name: string, fn: () => void): void => {
-	bench(name, fn, calibrated(fn));
+	bench(name, fn, { ...calibrated(fn), setup: collectDebt });
 };
 
 // Every bench consumes its result into this sink so the JIT can't dead-code

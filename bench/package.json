@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Benchmarks comparing krino against other fuzzy-search libraries. Not published.",
   "scripts": {
-    "bench": "vitest bench --run",
+    "bench": "NODE_OPTIONS=--expose-gc vitest bench --run",
     "test": "vitest run"
   },
   "dependencies": {
