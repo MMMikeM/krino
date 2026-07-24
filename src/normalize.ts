@@ -10,7 +10,15 @@ const nonAscii = /[\u0080-\uffff]/;
  * syllables stay whole rather than exploding into jamo), then to the original
  * code point (lone combining marks stay put rather than vanishing).
  */
+// Typographic quote forms fold to their ASCII equivalents: keyboards type
+// U+0027/U+0022, macOS smart quotes and faker emit the curly forms, and
+// without folding, a query in one form can never match a field in the other
+// (the char-class mask rejects the pair before any tier runs).
+const QUOTE_FOLDS: Record<string, string> = { "‘": "'", "’": "'", "“": '"', "”": '"' };
+
 const computeFold = (ch: string): string => {
+	const quote = QUOTE_FOLDS[ch];
+	if (quote !== undefined) return quote;
 	const lower = ch.toLowerCase();
 	let candidate = lower.normalize("NFD").replace(diacritics, "");
 	// No NFD decomposition exists for ł; final sigma must fold to medial so

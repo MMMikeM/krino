@@ -30,10 +30,11 @@ export type PreparedQuery = {
 const sortByRangeStart = (a: Range, b: Range): number => a[0] - b[0];
 
 // Runs of word characters, used to read off word-initial letters for the
-// acronym tier. Word-internal apostrophes (both ASCII and typographic) don't
-// end a run: "people's" is one word with initial "p", not "people" + "s" —
-// otherwise "Lao People's Democratic Republic" could never match "lpdr".
-const wordRun = /[\p{L}\p{N}_]+(?:['’][\p{L}\p{N}_]+)*/gu;
+// acronym tier. Word-internal apostrophes don't end a run: "people's" is one
+// word with initial "p", not "people" + "s" — otherwise "Lao People's
+// Democratic Republic" could never match "lpdr". Only the ASCII form appears
+// here because normalizeText folds typographic apostrophes before this runs.
+const wordRun = /[\p{L}\p{N}_]+(?:'[\p{L}\p{N}_]+)*/gu;
 
 // First occurrence of `word` in `haystack` that is a whole word — bounded on
 // both sides by a non-word character (or the string edge). Equivalent to

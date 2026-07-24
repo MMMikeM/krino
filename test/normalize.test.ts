@@ -56,6 +56,16 @@ describe("normalizeText", () => {
 			expect(normalizeText(input)).toBe(expected);
 		});
 
+		it("folds typographic apostrophes and quotes to their ASCII forms", () => {
+			// Data sources disagree on apostrophe form (keyboards type U+0027,
+			// macOS smart quotes and faker emit U+2019); without folding, a
+			// query in one form can never match a field in the other — the
+			// char-class mask rejects it before any tier runs.
+			expect(normalizeText("O’Keefe")).toBe("o'keefe");
+			expect(normalizeText("‘quoted’")).toBe("'quoted'");
+			expect(normalizeText("“double”")).toBe('"double"');
+		});
+
 		it("leaves non-decomposable letters alone", () => {
 			// ø, đ, ß, ı have no NFD decomposition and no special-case entry;
 			// folding them to o/d/ss/i would be a (separate) transliteration

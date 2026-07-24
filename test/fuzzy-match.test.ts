@@ -84,3 +84,20 @@ describe("range semantics", () => {
 		expect("Hello World".slice(start, end + 1)).toBe("Wor");
 	});
 });
+
+describe("apostrophe forms match across sources", () => {
+	// Keyboards type U+0027; macOS smart quotes and faker emit U+2019. The
+	// fold makes the two forms interchangeable in either direction.
+	it("ASCII query finds a typographic field", () => {
+		expect(fuzzyMatch("O’Keefe", "o'keefe")?.tier).toBe("normalized-exact");
+	});
+
+	it("typographic query finds an ASCII field", () => {
+		expect(fuzzyMatch("O'Keefe", "o’keefe")?.tier).toBe("normalized-exact");
+	});
+
+	it("boundary tier treats both forms alike", () => {
+		expect(fuzzyMatch("O'Keefe Inc", "keefe")?.tier).toBe("boundary");
+		expect(fuzzyMatch("O’Keefe Inc", "keefe")?.tier).toBe("boundary");
+	});
+});
