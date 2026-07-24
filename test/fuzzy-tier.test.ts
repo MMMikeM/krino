@@ -69,6 +69,31 @@ describe("scorer honors the same word boundaries as the matcher", () => {
 			fuzzyMatch("bar foo", "barf")?.score as number,
 		);
 	});
+
+	describe("one boundary definition: any non-word character", () => {
+		// The boundary set used to be an enumerated allowlist that silently
+		// diverged from the tokenizer's word class: "?" separated words for
+		// splitWords but wasn't a boundary for the boundary tier or the chunk
+		// scorer. One predicate now: a boundary is any non-word character.
+		it("the boundary tiers fire across every separator splitWords honors", () => {
+			for (const sep of ["?", "&", "!", "+", "@", "#", "*", "\t"]) {
+				// Same case → the raw boundary-exact tier (0.9); previously these
+				// all fell through to contains (2).
+				expect(fuzzyMatch(`foo${sep}bar`, "bar")?.tier, `sep ${JSON.stringify(sep)}`).toBe(
+					"boundary-exact",
+				);
+				expect(fuzzyMatch(`FOO${sep}BAR`, "bar")?.tier, `sep ${JSON.stringify(sep)}`).toBe(
+					"boundary",
+				);
+			}
+		});
+
+		it("chunk scoring parity holds for the widened separators", () => {
+			expect(fuzzyMatch("foo&bar", "fbar")?.score).toBeCloseTo(
+				fuzzyMatch("foo bar", "fbar")?.score as number,
+			);
+		});
+	});
 });
 
 describe("fuzzy density floor", () => {

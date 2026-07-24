@@ -1,13 +1,10 @@
 /**
- * The two boundary definitions in play, side by side:
- *
- * - `wordChar` — the tokenization class. Its complement is what `splitWords`
- *   splits on, and the multi-word and acronym tiers follow it.
- * - `boundaryChars` — an enumerated allowlist used by the boundary tiers and
- *   by fuzzy chunk admission/pricing. Deliberately narrower than ¬wordChar:
- *   `?`, `&`, `!` and friends separate words for tokenization but do not count
- *   as boundaries here. Widening it to ¬wordChar would be more principled but
- *   shifts published fuzzy scores — a measured decision, not a drive-by.
+ * One boundary definition, everywhere: a word boundary is any non-word
+ * character. `splitWords`, the boundary tiers, the acronym tier, and fuzzy
+ * chunk admission/pricing all agree by construction. (Historically the
+ * boundary tiers used an enumerated allowlist that silently diverged — `?`,
+ * `&`, `!` separated words for tokenization but weren't boundaries; the
+ * unification was benchmarked before landing and moved no published cell.)
  */
 
 // The single source of truth for what counts as a word character. Underscore
@@ -27,6 +24,4 @@ const wordSeparators = new RegExp(`[^${WORD_CLASS}]+`, "u");
  */
 export const splitWords = (text: string): string[] => text.split(wordSeparators).filter(Boolean);
 
-const boundaryChars = new Set('  []()-–—\'"""'.split("").concat([".", ",", ":", ";", "/"]));
-
-export const isBoundaryChar = (char: string): boolean => boundaryChars.has(char);
+export const isBoundaryChar = (char: string): boolean => !wordChar.test(char);
