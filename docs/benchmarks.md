@@ -135,7 +135,7 @@ Two scorecard libraries are left out of the per-query tables to keep them readab
 fuzzy behaves like a less capable microfuzz: identical ranks on the plain-word, two-word, prefix, and light-typo probes; it drifts on the deep-typo and acronym probes, returns nothing on the reversed-phrase probe (order-sensitive), and misses the accent probe outright (no folding).
 match-sorter never places best on any query: some shown library always matches or beats it.
 Both keep full per-query cells in [`bench/scorecard-run.json`](../bench/scorecard-run.json).
-The garbage query `qxzwkv` returns 0 from every library, so it gets no table either.
+The garbage query `qxzwkv` gets a table of its own instead: it returns 0 everywhere, so there is no rank to report, but what it costs to return nothing is the whole point of the probe.
 
 ### long word: `ergonomic`
 
@@ -361,6 +361,25 @@ Tier semantics: apostrophes are word-internal (`People's` contributes one initia
 `kepa` targets items containing "Kępa".
 uFuzzy's 0 is the silent diacritics miss; its opt-in `latinize` config finds 4.
 fast-fuzzy's 82 come from edit distance rather than folding, and the source lands at rank 33.
+
+### garbage: `qxzwkv`
+
+| Library            | matches | query ms | vs `handmade` |
+|--------------------|--------:|---------:|--------------:|
+| Krino              |       0 |    0.002 |            1% |
+| Krino (acronym)    |       0 |    0.001 |            0% |
+| @nozbe/microfuzz   |       0 |    0.703 |           76% |
+| fast-fuzzy         |       0 |    6.690 |           78% |
+| Fuse.js            |       0 |   10.221 |           69% |
+| fuzzysort          |       0 |    0.138 |           65% |
+| uFuzzy             |       0 |    0.123 |           56% |
+
+No rank column: every library correctly returns nothing, which is the only right answer.
+What separates them is the price of that answer, shown against each library's own cost for `handmade` — a query that does match — so the column reads as "what fraction of a real query does a hopeless one cost you".
+Krino answers in **1%** of a matching query because the character-class mask rejects on one integer AND, before any regex runs; every other engine pays 56–78%, because a miss is only knowable after the full scan.
+This is the probe the gate architecture exists for, and the one place its cost model is visible in isolation.
+
+It is also the probe to keep in mind when reading the aggregate speed tables, which average all fifteen queries: a cheap reject is a real advantage on real traffic, where users type garbage constantly, but it flatters Krino's mean by about 7% against roughly 2% for microfuzz. Excluding it moves Krino from 4.65× to 4.39× microfuzz's per-query mean — the direction of every conclusion here is unchanged, the margin is slightly smaller.
 
 ## Scorecard
 
