@@ -3,13 +3,13 @@
 > Tiny, typed fuzzy matching
 
 - **~3.1 kB** gzip, zero dependencies, TS-first, ESM/CJS
-- **0.09 ms** per query over 10k items, ~1.3 ms over 100k, optimised for search-as-you-type
-- **Tops match-quality scorecard** across 13 tests
+- **0.25 ms** per query over 10k items, ~2.4 ms over 100k, optimised for search-as-you-type
+- **Tops match-quality scorecard** across 15 probes
 - **Returns** `tier`, `ranges` and `score` on every match: easily rank, highlight and explain
-- **Diacritics, multi-word, acronyms** built in
+- **Diacritics, multi-word, acronyms, one-edit typos** built in
 
 Krino (Ancient Greek κρίνω, KREE-no, "to sift, separate"; the root of criterion, discern, and critic) is a fuzzy text matcher: it sifts a list and judges each candidate against a criterion.
-Less typo-tolerant than the edit-distance engines, in exchange for the size and speed.
+Corrects single-character typos, not general edit distance, in exchange for the size and speed.
 Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz), and [benchmarked](./docs/benchmarks.md) against it and six others.
 
 ## Install
@@ -126,7 +126,7 @@ Anything it refuses either matched a higher tier already or wasn't worth showing
 
 ## Comparison
 
-Speed is not the constraint at any realistic size; a prebuilt Krino index answers a 100,000-item query in ~1.3 ms (0.09 ms at 10k), and `fuzzyMatch` over a 16,000-character document costs 0.28 ms.
+Speed is not the constraint at any realistic size; a prebuilt Krino index answers a 100,000-item query in ~2.4 ms (0.25 ms at 10k), and `fuzzyMatch` over a 16,000-character document costs 0.28 ms.
 What separates these libraries is **match quality** and **what you get back**.
 Accuracy against the total cost of one cold search (index + one query) — the least flattering ledger for Krino, since a no-index library pays nothing up front (the mixed 10k scorecard from [docs/benchmarks.md](./docs/benchmarks.md); the frontend chart there, query cost only, is a Krino-only frontier):
 
