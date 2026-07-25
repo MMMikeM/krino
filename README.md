@@ -2,7 +2,7 @@
 
 > Tiny, typed fuzzy matching
 
-- **~2.6 kB** gzip, zero dependencies, TS-first, ESM/CJS
+- **~3.1 kB** gzip, zero dependencies, TS-first, ESM/CJS
 - **0.09 ms** per query over 10k items, ~1.3 ms over 100k, optimised for search-as-you-type
 - **Tops match-quality scorecard** across 13 tests
 - **Returns** `tier`, `ranges` and `score` on every match: easily rank, highlight and explain
@@ -93,8 +93,15 @@ Lower is better. Each match reports a numeric `score` (for sorting) and a catego
 | 1.5   | `multi-word`       | all query words present, any order         |
 | 1.8   | `acronym`          | word initials (opt-in via `acronym: true`) |
 | 2     | `contains`         | contains query anywhere                    |
-| +0.9  | `transposed`       | adjacent-swap typo, scored as the corrected query's tier + 0.9 |
 | > 2   | `fuzzy`            | fuzzy chain (fewer chunks = better)        |
+| +2.1  | `transposed`       | adjacent-swap typo (`geenric`)             |
+| +2.1  | `inserted`         | one character too many (`generric`)        |
+| +2.1  | `deleted`          | one character missing (`genric`)           |
+| +2.1  | `substituted`      | one character wrong (`genaric`)            |
+
+The four typo tiers score as the corrected query's tier + 2.1, which puts even a corrected exact hit above `contains` (2).
+A correction is a guess at what you meant; a substring match is something you actually typed, so the literal hit always ranks first.
+`score <= SCORES.CONTAINS` is therefore exactly "the query text appears here", and filtering to it opts out of typo matching entirely.
 
 Import `SCORES` for thresholds and `atBest` values; or read `tier` directly:
 
@@ -104,7 +111,7 @@ results.filter((r) => r.fields[0]?.tier !== "fuzzy"); // drop fuzzy chains only,
 ```
 
 `atBest` shifts `score` but never `tier`, so tier filters stay reliable on demoted fields (a body-field prefix hit can report `score: 2.5, tier: "prefix"`).
-A rescued transposition can also score above `CONTAINS` (a rescued contains is 2.9) without being a fuzzy chain, so filter by `tier` when you mean the kind of match.
+All four typo tiers also score above `CONTAINS` (a rescued contains is 4.1) without being fuzzy chains, so filter by `tier` when you mean the kind of match.
 
 > **Long text:** a fuzzy chain assembled from chunks scattered across a document is junk; unguarded, a word *absent* from the text still "matches" 35% of the time by 512 chars, ~100% by 16k.
 > The fuzzy tier refuses any assembly covering less than 18% of its span (measured junk density never exceeds 0.143, the sparsest genuine match is 0.211), which holds the junk rate at **0% at every measured length** with label behaviour unchanged ([the long-text table](./docs/benchmarks.md#matching-inside-long-text)).
@@ -125,7 +132,7 @@ Accuracy against the total cost of one cold search (index + one query) — the l
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/pareto-total-dark.svg">
-  <img alt="Mixed-corpus accuracy (MRR) vs. total cost of one cold search (index + one query, log scale) as a Pareto frontier. The frontier runs uFuzzy, uFuzzy (latinize), Krino, Krino (acronym); fuzzysort's hidden prepare cache moves it off the frontier, and Fuse.js is dominated: Krino (acronym) scores 0.81 at a 1.5 ms total against Fuse's 0.71 at ~15.7 ms." src="./docs/pareto-total-light.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. total cost of one cold search (index + one query, log scale) as a Pareto frontier. The frontier runs uFuzzy, uFuzzy (all opts), Krino, Krino (acronym); fuzzysort's hidden prepare cache moves it off the frontier, and Fuse.js is dominated: Krino (acronym) scores 0.84 at a 1.9 ms total against Fuse's 0.75 at ~18 ms." src="./docs/pareto-total-light.svg">
 </picture>
 
 Krino is the only library that by default:
@@ -142,18 +149,19 @@ Originally written for matching in-memory lists on the client, Krino has proven 
 
 Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 
-- **Match quality**: Krino returns the smallest result set of the subsequence libraries and ranks the source item **first on every structured query**; a one-char slip still matches, and at two dropped chars it returns nothing where its parent returns 135 junk chains.
-  An adjacent transposition breaks the subsequence property; Krino's `transposed` tier rescues it (rank 1 with a single row on that probe), leaving substitutions and multi-error typos as the edit-distance engines' remaining edge.
+- **Match quality**: Krino returns the smallest result set of the subsequence libraries and ranks the queried item **first on every structured query**; a one-char slip still matches, and at two dropped chars it returns nothing where its parent returns 135 junk chains.
+  A transposition, an insertion and a substitution each break the subsequence property; Krino's four one-edit tiers take all three at rank 1 with a single row, where the subsequence engines return nothing at all. Two or more edits in one query remain the edit-distance engines' edge.
 - **Speed** (per-query mean): ~0.1–0.2 ms over 10k items and ~1.3–2.3 ms over 100k, ~6–10× faster than its parent microfuzz; uFuzzy now ties Krino on pure-ascii 100k corpora, while Krino leads accented data outright.
   A prefix-narrowing cache makes typing decay toward sub-millisecond keystrokes.
 
 ### What to pick when
 
-**Pick Krino.** It tops the quality scorecard on both benchmark corpora, leads or ties every speed table, and at ~2.6 kB only substring-only `fuzzy` and its parent `microfuzz` undercut it on size.
+**Pick Krino.** It tops the quality scorecard on both benchmark corpora by a wide margin, answers a query faster than anything else that ranks near it, and at ~3.1 kB only substring-only `fuzzy` and its parent `microfuzz` undercut it on size.
+It is not the fastest engine in the set: `uFuzzy` is ~2× quicker per query at 100k and keeps no index, trading most of the match quality to get there.
 Two workloads genuinely point elsewhere:
 
-- **Typos beyond adjacent swaps must still match** (user-typed queries over messy data): the `transposed` tier rescues swapped neighbours, but substitutions and multi-error typos need real edit distance. Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 4–5× the bundle, ~15–37 ms cold queries, and ~90–450-row result sets.
-- **Pure-ascii corpora at 100k+, one-shot queries, bare index output is enough**: `uFuzzy` now only ties Krino on raw query speed there, so what remains of this carve-out is its smaller working set and bare-array output, at a fraction of Krino's match quality. Search-as-you-type favours Krino outright: the prefix cache decays keystrokes below uFuzzy's flat per-query cost by the end of a word.
+- **Typos beyond a single edit must still match** (user-typed queries over messy data): the four typo tiers cover every one-character mistake, but two or more edits in one query need real edit distance. Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 3–4× the bundle, ~9–19 ms queries, and ~90–450-row result sets.
+- **Raw query throughput at 100k+, bare index output is enough**: `uFuzzy` is ~2× faster per query on ascii and ~1.3× on accented data, and keeps no index at all. It costs roughly half Krino's match quality (0.38 MRR to 0.77 on ascii), so this is a genuine trade rather than a free win.
 
 The rest of the field is dominated on these benchmarks; the full argument, per-library, is in [the recommendation](./docs/benchmarks.md#the-recommendation).
 (Already on `@nozbe/microfuzz`? Krino is its rebuild: same subsequence approach plus tier, ESM, and 4–8× faster. See [MIGRATION.md](./MIGRATION.md).)

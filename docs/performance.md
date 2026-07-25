@@ -130,6 +130,13 @@ collision can only cause a false *pass* (weaker filter), never a false reject �
 asserted per query in `bench/funnel.test.ts` (mask never rejects an item the
 full matcher accepts).
 
+**Amended by the `substituted` tier** (see below): a substitution typo can cost
+the query exactly one character class, so for queries a rescue could fire on the
+test tolerates one missing class — `missing & (missing - 1)`, where
+`missing = queryMask & ~fieldMask`. Still monotone under query extension, so the
+prefix-narrowing survivor cache stays sound. This is the single most expensive
+change in the library's history; the numbers are in the typo-tier section.
+
 Bonus found by the funnel diagnostics: for pure a–z queries the mask *is* an
 exact distinct-char presence check, making the multi-word presence regex
 redundant — measured cutting **0.0%** after the mask — so it's skipped entirely
@@ -186,6 +193,105 @@ Measured (100k items, min-of-N): typing 15 keystrokes 178.9 → 27.6 ms, per-key
 Cost: ~0.1 kB gzip.
 Lazy range allocation was considered alongside and deliberately skipped — range building no longer registers as a bottleneck next to these numbers.
 
+### Bounded chunk-start retries — DONE (and why the bound is correctness, not speed)
+
+The fuzzy chain took the leftmost admissible placement for every chunk and never
+reconsidered. In natural-language fields the query's first character very often
+also opens an *earlier* word, so the chain committed to a decoy and either
+stranded (no match at all) or paid for a lone 1-char chunk. Measured over the
+ascii corpus at chain level: **307 missed assemblies, 131 suboptimal**.
+
+Retrying the *first* chunk from other admissible placements fixes it. The
+surprise was what happened next: retrying from **every** placement broke the
+long-text guard (`bench/longtext.test.ts`), taking the junk rate from 0 to 45%
+at 16k chars — the exact v1 failure the density floor was built to kill.
+
+**The finding worth keeping: the density floor is not scale-free.** It is a
+ratio, so a compact assembly like `"madel" + "ine"` clears it at *any* field
+length. What actually kept junk out over long text was not the floor alone — it
+was that a single leftmost-greedy attempt stretched junk chains into sparse
+spans. Remove the leftmost bias and the floor stops rejecting. Junk matching is a
+multiple-comparisons problem: every additional assembly attempted is another
+chance at a dense coincidence, so an **unbounded** search makes the junk rate
+climb with field length.
+
+So the retry count is capped at 4 — a bound on attempts that does not grow with
+the field:
+
+| first-chunk attempts | missed | suboptimal | long-text junk hits |
+| -------------------- | ------ | ---------- | ------------------- |
+| 1 (previous)         | 307    | 131        | 0                   |
+| 3                    | 0      | 31         | 0                   |
+| **4**                | **0**  | **30**     | **0**               |
+| 8                    | 0      | 30         | 4                   |
+| ∞                    | 0      | 30         | 43                  |
+
+4 buys everything an unbounded search does while staying clear of the leak. The
+residual 30 are later-chunk placements that no first-chunk retry can reach;
+reaching them needs full backtracking, which is both exponential and the thing
+that leaks junk. Query time is at parity (+0.9% fuzzy-heavy scatter, 0% plain
+word, ±5% on an 8k-char single field) while returning ~1,070 more matches at 10k.
+
+**Implication for any future fuzziness work** (typo tiers, a relaxed mask gate):
+widening what reaches the chain re-opens the same hazard, and the density floor
+will not catch it on its own. Re-run the long-text guard, not just the unit tests.
+
+### One-edit typo tiers — DONE, at a real query-time cost
+
+Three tiers added alongside `transposed`: `inserted`, `deleted`, `substituted`.
+Two structural notes worth keeping.
+
+**Rank, not recall, is the metric.** Match-set size barely matters; what matters
+is where the queried item lands. Measured as MRR over the ascii corpus:
+
+| probe         | before | after | note                           |
+| ------------- | ------ | ----- | ------------------------------ |
+| clean         | 1.000  | 1.000 |                                |
+| prefix        | 0.977  | 0.977 |                                |
+| infix         | 0.973  | 0.973 |                                |
+| deletion      | 0.968  | 0.962 | was already matching, as fuzzy |
+| insertion     | 0.004  | 0.998 |                                |
+| transposition | 1.000  | 1.000 |                                |
+| substitution  | 0.000  | 0.996 |                                |
+
+The first version of this scored typo corrections *above* literal matches (the
+inherited 0.9 penalty), which sank infix to 0.906 — other items' guesses
+displacing the item the user's text literally appears in. Raising the penalty
+past `CONTAINS` fixed it with no loss anywhere. **A correction must never
+outrank a literal hit.**
+
+**Thresholds have to scale with the field.** The same lesson as the chunk-start
+cap: junk risk is a multiple-comparisons problem, so a constant floor has to
+pick one workload to fail. At a fixed floor of 7 the long-text junk rate was 0
+but short queries lost half their insertion ranking and all of their
+substitution ranking (MRR 0.547 / 0.000); at 5 the ranking was 0.952 / 0.923 but
+long text junked 30 probes. `minTypoQueryLength(fieldLength)` gets both.
+
+**The cost.** Query time at 10k, against the pre-change baseline:
+
+| stage                        | scatter | plain word |
+| ---------------------------- | ------- | ---------- |
+| baseline                     | 94.8 ms | 28.0 ms    |
+| + chunk-start retry          | 95.7 ms | 28.0 ms    |
+| + `inserted` / `deleted`     | 113 ms  | 28.9 ms    |
+| + relaxed mask gate          | 166 ms  | 46.9 ms    |
+| + substitution rescue        | 202 ms  | 73.6 ms    |
+
+`substituted` is the expensive one, and nearly all of it is the **relaxed mask
+gate** rather than the matcher: tolerating one missing character class is what
+makes a substitution reachable at all, and it widens the survivor set that the
+library's whole speed story depends on rejecting. Skipping the relaxation for
+queries no rescue could fire on (multi-word, under 5 characters) recovers part
+of it.
+
+The rest came from the pre-gate. A substituted window is only ever found at an
+occurrence of one of the query's two halves, so those halves are a complete
+pre-gate for it — folding them into the rescue's existing alternation means a
+rejected field costs one native regex test instead of two full-field scans. The first three tiers together cost ~19% on scatter and ~3% on plain
+words; the fourth roughly doubles query time on top of that. If Krino ever needs
+its old numbers back, `substituted` is the tier to put behind a flag — the other
+three are close to free.
+
 ### Still on the table
 
 - **Short-circuit ordering** — cheapest, most-selective tiers first (already
@@ -232,7 +338,7 @@ The bench harness grew several honesty mechanisms worth keeping:
   can't dead-code-eliminate the work being timed.
 - **Match-count + rank validation** (`bench/hits.test.ts`). Every query records
   the corpus item it was derived from; the test reports, per library, how many
-  items matched and where that source item ranked (`21 @1`, `959 @315`, `✗`).
+  items matched and where that queried item ranked (`21 @1`, `959 @315`, `✗`).
   Caught the headline facts: Krino v1's `aggressive` mode reproduced microfuzz
   cell-for-cell (that mode *was* the parent's behaviour; `smart` is the change,
   and v2 removed the legacy mode);
