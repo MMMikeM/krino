@@ -12,17 +12,17 @@ import { createFuzzySearch, fuzzyMatch } from "../src/index";
 
 describe("transposed tier", () => {
 	it("rescues an adjacent-swap typo to the corrected tier plus penalty", () => {
-		// corrected "generic" is an exact hit (0) → 0 + 0.9
+		// corrected "generic" is an exact hit (0) → 0 + 2.1
 		const result = fuzzyMatch("generic", "geenric");
 		expect(result?.tier).toBe("transposed");
-		expect(result?.score).toBeCloseTo(0.9);
+		expect(result?.score).toBeCloseTo(2.1);
 	});
 
 	it("rescues into whatever tier the corrected query earns", () => {
-		// corrected "generic" is a prefix (0.5) of the field → 0.5 + 0.9
+		// corrected "generic" is a prefix (0.5) of the field → 0.5 + 2.1
 		const result = fuzzyMatch("generic gasket", "geenric");
 		expect(result?.tier).toBe("transposed");
-		expect(result?.score).toBeCloseTo(1.4);
+		expect(result?.score).toBeCloseTo(2.6);
 	});
 
 	it("ranges come from the corrected match", () => {
@@ -57,9 +57,9 @@ describe("transposed tier", () => {
 
 	it("real-word neighbours match with the penalty visible", () => {
 		// "trial" ↔ "trail" are mutual transpositions of real words; the rescue
-		// finds it, and the 0.9 penalty keeps it below any true tier hit.
+		// finds it, and the penalty keeps it below every true tier hit.
 		const result = fuzzyMatch("trial", "trail");
 		expect(result?.tier).toBe("transposed");
-		expect(result!.score).toBeCloseTo(0.9); // corrected exact + penalty
+		expect(result!.score).toBeCloseTo(2.1); // corrected exact + penalty
 	});
 });

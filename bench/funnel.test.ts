@@ -11,6 +11,7 @@
 import { describe, expect, it } from "vitest";
 import { fuzzyMatch } from "krino";
 import { buildFuzzyGate, buildPresenceGate, charMask } from "../src/gates";
+import { admitsMissingClass } from "../src/match";
 import { splitWords } from "../src/boundaries";
 import { normalizeText } from "../src/normalize";
 import { CORPORA } from "./corpus";
@@ -27,6 +28,10 @@ type FunnelRow = {
 
 const pct = (part: number, whole: number): string =>
 	whole === 0 ? "-" : `${((100 * part) / whole).toFixed(1)}%`;
+
+// Tiers produced by a one-edit rescue: these match a *corrected* query, so they
+// legitimately bypass the original query's regex gate.
+const RESCUE_TIERS = new Set<string>(["transposed", "inserted", "deleted", "substituted"]);
 
 describe("pre-filter funnel", () => {
 	for (const { name, build, queries } of CORPORA)
@@ -45,21 +50,36 @@ describe("pre-filter funnel", () => {
 						? buildPresenceGate(normalizedQuery)
 						: buildFuzzyGate(normalizedQuery);
 
+				// Modelling the relaxed gate unconditionally would count items
+				// through a filter production never applies, overstating the cut.
+				const relaxed = admitsMissingClass(normalizedQuery, splitWords(normalizedQuery));
+
 				let maskPass = 0;
 				let gatePass = 0;
 				let matched = 0;
 				let rescued = 0;
 				for (let i = 0; i < list.length; i++) {
-					const maskOk = (queryMask & masks[i]) === queryMask;
+					const missingClasses = queryMask & ~masks[i];
+					const maskOk = relaxed
+						? (missingClasses & (missingClasses - 1)) === 0
+						: missingClasses === 0;
 					const result = fuzzyMatch(list[i], query);
 					if (result) {
-						// The transposition rescue matches a *corrected* query, so
-						// its hits legitimately bypass the original query's gates;
-						// the mask still holds (a swap preserves the char classes).
-						if (result.tier === "transposed") rescued++;
+						// A one-edit rescue matches a *corrected* query, so its hits
+						// legitimately bypass the original query's gates.
+						if (RESCUE_TIERS.has(result.tier)) rescued++;
 						else matched++;
 						// The mask must never reject anything the full matcher accepts.
 						expect(maskOk).toBe(true);
+						// Only the two edits that can consume a query character may
+						// actually be missing a class: a substitution (the wrong
+						// character was typed) or a drop (an extra character the
+						// field never had). A swap preserves the multiset and a
+						// dropped keystroke only shrinks it, so those still need
+						// every class present.
+						if (missingClasses !== 0) {
+							expect(["substituted", "inserted"]).toContain(result.tier);
+						}
 					}
 					if (!maskOk) continue;
 					maskPass++;

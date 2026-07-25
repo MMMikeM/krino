@@ -1,8 +1,10 @@
 /**
  * The tier ladder as named constants. Lower = better. Any score greater than
- * CONTAINS is a fuzzy-fallback match (see fuzzy.ts) or a deep transposition
- * rescue (tier "transposed", up to CONTAINS + TRANSPOSED_PENALTY). Exported so
- * callers can filter or re-rank by tier without hardcoding magic numbers.
+ * CONTAINS is a fuzzy-fallback match (see fuzzy.ts) or a one-edit typo rescue
+ * (see TYPO_PENALTY) — every genuine tier is at or below CONTAINS, so that
+ * constant is the dividing line between a literal match and a speculative one.
+ * Exported so callers can filter or re-rank by tier without hardcoding magic
+ * numbers.
  */
 export const SCORES = {
 	EXACT: 0,
@@ -15,9 +17,20 @@ export const SCORES = {
 	CONTAINS: 2,
 } as const;
 
-// Added to the corrected query's score when the transposition rescue fires
-// (tier "transposed"). Sized so a rescued boundary hit (1 + 0.9) stays under a
-// true contains (2) — a typo correction never outranks a genuine tier hit at
-// its level. Only a rescued contains (2.9) lands inside the fuzzy band's
-// numeric range; the tier field is what tells those apart.
-export const TRANSPOSED_PENALTY = 0.9;
+// Added to the corrected query's score when a one-edit rescue fires (tiers
+// "transposed", "inserted", "deleted", "substituted").
+//
+// Sized so the BEST possible correction — a corrected exact hit, 0 + 2.1 —
+// still sorts below the WEAKEST genuine tier, CONTAINS (2). A correction is a
+// guess about what the user meant; a substring match is something they actually
+// typed, so the literal hit wins every time. Sizing this below 2 inverts that,
+// and it is measurable: at 0.9 an infix query's intended item fell from MRR
+// 0.973 to 0.906, because other items' typo corrections displaced it.
+//
+// Rescued scores therefore land at 2.1 and up, overlapping the fuzzy band
+// numerically; the tier field is what tells them apart.
+//
+// One penalty for all four kinds: they are the same edit distance, and pricing
+// them differently would rank a swapped keystroke above a dropped one on no
+// evidence.
+export const TYPO_PENALTY = 2.1;

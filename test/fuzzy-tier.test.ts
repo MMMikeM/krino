@@ -1,6 +1,6 @@
 /**
- * Fuzzy chunk scoring and the density floor (the "fuzzy" tier), exercised
- * through the primitive.
+ * Fuzzy chunk assembly, chunk scoring, and the density floor (the "fuzzy"
+ * tier), exercised through the primitive.
  * Fuzzy scores are runtime sums → toBeCloseTo.
  */
 import { describe, expect, it } from "vitest";
@@ -92,6 +92,126 @@ describe("scorer honors the same word boundaries as the matcher", () => {
 			expect(fuzzyMatch("foo&bar", "fbar")?.score).toBeCloseTo(
 				fuzzyMatch("foo bar", "fbar")?.score as number,
 			);
+		});
+	});
+});
+
+describe("chunk assembly reconsiders its first choice", () => {
+	// The matcher used to take the leftmost admissible occurrence of each query
+	// character and never look back. In natural-language fields the first query
+	// character almost always also opens an *earlier* word ("towls" → the "T" of
+	// "Tasty", not the "T" of "Towels"), and committing to that decoy strands the
+	// rest of the query: it must then assemble from whatever follows, or fail
+	// outright. Measured over the ascii bench corpus: 307 outright misses and 131
+	// needlessly expensive assemblies.
+
+	describe("finds the intended word past a decoy initial", () => {
+		// These land on the "deleted" tier rather than "fuzzy", and that is the
+		// point: retrying the first chunk is what produces the clean two-chunk
+		// assembly, and a two-chunk assembly split by one character is exactly
+		// what the dropped-keystroke rescue recognises. Without the retry the
+		// chain returns nothing (or a three-chunk scatter) and there is nothing
+		// for the rescue to read.
+		it("matches inside the intended word past an earlier word-initial", () => {
+			const r = fuzzyMatch("Tasty Silk Towels", "towls");
+			expect(r?.tier).toBe("deleted");
+			expect(r?.score).toBeCloseTo(3.1); // boundary (1) + typo penalty (2.1)
+			expect(r?.ranges).toEqual([[11, 16]]);
+		});
+
+		it("skips a decoy initial two words back", () => {
+			const r = fuzzyMatch("New Mistyborough, San Marino", "marno");
+			expect(r?.score).toBeCloseTo(3.1);
+			expect(r?.ranges).toEqual([[22, 27]]);
+		});
+
+		it("skips a decoy initial across a punctuated boundary", () => {
+			const r = fuzzyMatch("South Eliseboro, Serbia", "seria");
+			expect(r?.score).toBeCloseTo(3.1);
+			expect(r?.ranges).toEqual([[17, 22]]);
+		});
+
+		it("absorbs a decoy that the old matcher paid for as a lone chunk", () => {
+			// Previously assembled as [[0,0],[12,14],[16,18]] — a 1-char chunk on
+			// the "M" of "Milwaukee" plus two fragments — and scored 4.0.
+			const r = fuzzyMatch("Milwaukee, Malaysia", "malasia");
+			expect(r?.score).toBeCloseTo(3.1);
+			expect(r?.ranges).toEqual([[11, 18]]);
+		});
+
+		it("does not pay for a leading singleton when the word itself matches", () => {
+			const r = fuzzyMatch("Pfeffer - Predovic", "predvic");
+			expect(r?.score).toBeCloseTo(3.1);
+			expect(r?.ranges).toEqual([[10, 17]]);
+		});
+
+		it("prefers the real word over a split assembly", () => {
+			const r = fuzzyMatch("Port Pasqualefurt, Bolivia", "pasquaefurt");
+			expect(r?.score).toBeCloseTo(3.1);
+			expect(r?.ranges).toEqual([[5, 16]]);
+		});
+	});
+
+	describe("still assembles when no single edit explains the query", () => {
+		// Pure fuzzy-tier coverage: three chunks, so the dropped-keystroke rescue
+		// cannot fire and what is asserted is the assembly itself.
+		it("recovers a three-chunk assembly the leftmost path missed", () => {
+			const r = fuzzyMatch("Wiegand, Weissnat and Harris", "wead");
+			expect(r?.tier).toBe("fuzzy");
+			expect(r?.score).toBeCloseTo(4.4); // 2 + 0.4 + 1.6 + 0.4
+			expect(r?.ranges).toEqual([
+				[9, 10],
+				[18, 18],
+				[20, 20],
+			]);
+		});
+
+		it("skips a stranding decoy when the gap is a separator, not a typo", () => {
+			// One decoy "a" at index 0 strands the chain; the real assembly sits at
+			// the end. The gap between its two chunks is "-", a word separator, so
+			// this stays an assembly rather than being read as a dropped keystroke.
+			const r = fuzzyMatch(`a${"z".repeat(60)}abc-e`, "abce");
+			expect(r?.tier).toBe("fuzzy");
+			expect(r?.score).toBeCloseTo(3); // 2 + 0.8 (mid-word "abc") + 0.2 (whole-word "e")
+			expect(r?.ranges).toEqual([
+				[61, 63],
+				[65, 65],
+			]);
+		});
+	});
+
+	describe("reconsidering does not widen what the tier accepts", () => {
+		// Exploring more assemblies means more chances to slip past the density
+		// floor and the chunk-admission rules — and over long text that is exactly
+		// what happens (see fuzzy.ts). These pin the rules that hold the line.
+		it("still rejects sparse chains scattered across long text", () => {
+			expect(fuzzyMatch("alpha xxxxxx beta xxxxxx cat", "abc")).toBeNull();
+		});
+
+		it("still rejects short mid-word chunks", () => {
+			expect(fuzzyMatch("abcdef", "adf")).toBeNull();
+		});
+
+		it("gives up after a bounded number of first-chunk placements", () => {
+			// The bound is deliberate and load-bearing, not a speed knob: the
+			// density floor is a ratio, so every extra assembly attempted is
+			// another chance at a dense coincidence, and an unbounded search
+			// makes the long-text junk rate climb with field length (measured in
+			// fuzzy.ts). Four decoy word-initials before the real word is past
+			// the cap, so this correctly-spelled-but-buried match is refused —
+			// the price of holding the junk rate at zero.
+			expect(fuzzyMatch("Tasty Tidy Trim Tall Towels", "towls")).toBeNull();
+			// Three decoys is still within it.
+			expect(fuzzyMatch("Tasty Tidy Trim Towels", "towls")?.tier).toBe("deleted");
+		});
+
+		it("leaves the documented long-text hazard scored exactly as before", () => {
+			const r = fuzzyMatch("zero cost branch prediction and other stories", "zebra");
+			expect(r?.score).toBeCloseTo(2.8); // 2 + 0.4 ("ze") + 0.4 ("bra")
+			expect(r?.ranges).toEqual([
+				[0, 1],
+				[10, 12],
+			]);
 		});
 	});
 });

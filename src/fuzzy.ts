@@ -60,53 +60,113 @@ const scoreChunks = (
 	return [score, chunks];
 };
 
+// Whether a chunk may start at `idx`, consuming the query from `queryIdx`:
+// either it opens a word, or it runs 3+ characters (short tails exempt, since a
+// query with fewer than 3 characters left could never satisfy the run rule).
+const admitsChunk = (
+	normalizedField: string,
+	normalizedQuery: string,
+	idx: number,
+	queryIdx: number,
+): boolean => {
+	if (idx === 0 || isBoundaryChar(normalizedField[idx - 1])) return true;
+	const queryCharsLeft = normalizedQuery.length - queryIdx;
+	const fieldCharsLeft = normalizedField.length - idx;
+	const minChunkLen = Math.min(3, queryCharsLeft, fieldCharsLeft);
+	return normalizedField.startsWith(normalizedQuery.slice(queryIdx, queryIdx + minChunkLen), idx);
+};
+
+// Assemble the whole query starting from a chunk at `start` (already admitted),
+// taking the leftmost admissible placement for every later chunk. Returns null
+// if the chain dead-ends before consuming the query.
+const chainFrom = (
+	normalizedField: string,
+	normalizedQuery: string,
+	start: number,
+): Chunk[] | null => {
+	const normalizedFieldLen = normalizedField.length;
+	const normalizedQueryLen = normalizedQuery.length;
+	const chunks: Chunk[] = [];
+	let queryIdx = 0;
+	let queryChar = normalizedQuery[queryIdx];
+	let chunkStart = start;
+
+	while (true) {
+		// The chunk start is a known occurrence of queryChar, so this always
+		// consumes at least one character and chunkEnd lands at or after it.
+		let chunkEnd = chunkStart;
+		while (chunkEnd < normalizedFieldLen && normalizedField[chunkEnd] === queryChar) {
+			queryIdx++;
+			queryChar = normalizedQuery[queryIdx];
+			chunkEnd++;
+		}
+		chunkEnd--;
+		chunks.push([chunkStart, chunkEnd]);
+
+		if (queryIdx === normalizedQueryLen) return chunks;
+
+		// Resume the scan after each rejected occurrence. `indexOf` returned the
+		// first occurrence at or past the cursor, so nothing between the cursor
+		// and `idx` can match; advancing one char at a time instead re-finds the
+		// same occurrence per step and turns a far-away reject into O(gap²).
+		let idx = normalizedField.indexOf(queryChar, chunkEnd + 1);
+		while (idx > -1 && !admitsChunk(normalizedField, normalizedQuery, idx, queryIdx)) {
+			idx = normalizedField.indexOf(queryChar, idx + 1);
+		}
+		if (idx === -1) return null;
+		chunkStart = idx;
+	}
+};
+
+// How many placements of the *first* chunk the assembly may try. This bound is
+// a correctness guard, not a speed knob: the density floor is a ratio, so a
+// compact assembly ("madel" + "ine") clears it at any field length, and the only
+// reason junk chains used to be rejected over long text is that a single
+// leftmost-greedy attempt stretched them into a sparse span. Every extra attempt
+// is another chance to hit a dense coincidence, so an unbounded search makes the
+// junk rate climb with field length — the exact v1 failure the floor exists to
+// prevent. A fixed cap keeps the number of attempts independent of field length.
+// Measured over the ascii bench corpus (chain-level probes) and the mixed
+// long-text probes at 64…16384 chars (bench/longtext.test.ts):
+//
+//   attempts | missed | suboptimal | junk hits
+//   1 (was)  |    307 |        131 |         0
+//   3        |      0 |         31 |         0
+//   4        |      0 |         30 |         0
+//   8        |      0 |         30 |         4
+//   ∞        |      0 |         30 |        43
+//
+// 4 buys everything an unbounded search does — the residual 30 are later-chunk
+// placements no first-chunk retry can reach — while staying clear of the leak.
+const MAX_CHUNK_STARTS = 4;
+
 export const fuzzyChainMatch = (
 	normalizedField: string,
 	normalizedQuery: string,
 ): [number, HighlightRanges] | null => {
-	const normalizedFieldLen = normalizedField.length;
-	const chunks: Chunk[] = [];
-	let queryIdx = 0;
-	let queryChar = normalizedQuery[queryIdx];
-	let chunkStart = -1;
-	let chunkEnd = -2;
+	// Retry the assembly from the first few admissible placements of the first
+	// chunk and keep the cheapest. Taking only the leftmost one strands the
+	// chain whenever the query's first character also opens an earlier word —
+	// the common shape in natural-language fields ("towls" over "Tasty Silk
+	// Towels" hits the T of "Tasty") — which either misses outright or pays for
+	// a lone 1-character chunk it never needed. Later chunks stay
+	// leftmost-greedy: the first chunk is where the corpus showed the divergence
+	// to be, and reconsidering those too is what starts leaking junk.
+	const firstChar = normalizedQuery[0];
+	let best: [number, HighlightRanges] | null = null;
+	let starts = 0;
 
-	while (true) {
-		const idx = normalizedField.indexOf(queryChar, chunkEnd + 1);
-		if (idx === -1) break;
-
-		if (idx === 0 || isBoundaryChar(normalizedField[idx - 1])) {
-			chunkStart = idx;
-		} else {
-			const queryCharsLeft = normalizedQuery.length - queryIdx;
-			const fieldCharsLeft = normalizedField.length - idx;
-			const minChunkLen = Math.min(3, queryCharsLeft, fieldCharsLeft);
-			const minQueryChunk = normalizedQuery.slice(queryIdx, queryIdx + minChunkLen);
-			if (normalizedField.slice(idx, idx + minChunkLen) === minQueryChunk) {
-				chunkStart = idx;
-			} else {
-				// Resume the scan after the rejected occurrence. `indexOf`
-				// returned the first occurrence at or past the cursor, so
-				// nothing between the cursor and `idx` can match; advancing
-				// one char at a time instead re-finds the same occurrence
-				// per step and turns a far-away reject into O(gap²).
-				chunkEnd = idx;
-				continue;
-			}
-		}
-
-		for (chunkEnd = chunkStart; chunkEnd < normalizedFieldLen; chunkEnd++) {
-			if (normalizedField[chunkEnd] !== queryChar) break;
-			queryIdx++;
-			queryChar = normalizedQuery[queryIdx];
-		}
-
-		chunkEnd--;
-		chunks.push([chunkStart, chunkEnd]);
-
-		if (queryIdx === normalizedQuery.length) {
-			return scoreChunks(chunks, normalizedField);
-		}
+	for (
+		let start = normalizedField.indexOf(firstChar);
+		start > -1;
+		start = normalizedField.indexOf(firstChar, start + 1)
+	) {
+		if (!admitsChunk(normalizedField, normalizedQuery, start, 0)) continue;
+		if (++starts > MAX_CHUNK_STARTS) break;
+		const chunks = chainFrom(normalizedField, normalizedQuery, start);
+		if (chunks === null) continue;
+		const scored = scoreChunks(chunks, normalizedField);
+		if (scored !== null && (best === null || scored[0] < best[0])) best = scored;
 	}
-	return null;
+	return best;
 };

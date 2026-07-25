@@ -9,8 +9,8 @@
 import { isBoundaryChar, splitWords, wordChar } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
 import { buildFuzzyGate, buildPresenceGate, charMask, escapeRegex, maskIsExact } from "./gates";
-import { SCORES, TRANSPOSED_PENALTY } from "./scores";
-import type { MatchResult, Range } from "./types";
+import { SCORES, TYPO_PENALTY } from "./scores";
+import type { HighlightRanges, MatchResult, Range, Tier } from "./types";
 
 // Query-derived state, built once per query and reused across every field.
 export type PreparedQuery = {
@@ -26,13 +26,25 @@ export type PreparedQuery = {
 	presenceGate: RegExp | null;
 	// Subsequence gate for the fuzzy tier (see buildFuzzyGate).
 	fuzzyGate: RegExp;
-	// Lazily-built adjacent-swap variants for the transposition rescue, keyed
-	// by swap index; null until the first rescue attempt needs one.
-	variants: Map<number, PreparedQuery> | null;
-	// One alternation regex over every distinct swap variant (the rescue's
-	// per-field pre-gate); undefined = not built yet, null = query has no
-	// viable variants. See transposeRescue.
+	// Lazily-built one-edit corrections of the query, each tagged with the tier a
+	// hit should report; undefined until the first rescue attempt, null when the
+	// query admits none. See typoRescue.
+	rescueVariants?: RescueVariant[] | null;
+	// Pre-gate for both rescue families; undefined = not built yet, null = query
+	// admits no rescue. See typoRescue.
 	rescueGate?: RegExp | null;
+	variantGate?: RegExp | null;
+	lastRescue?: PreparedQuery;
+};
+
+// One candidate correction of a mistyped query. `prepared` is filled in only if
+// a field actually contains this variant — preparing all of them up front would
+// pay per-variant cost on every gate-failed field.
+type RescueVariant = {
+	text: string;
+	rawText: string;
+	tier: Tier;
+	prepared: PreparedQuery | null;
 };
 
 // Build the query-derived state once, reused across every field. The raw query
@@ -52,7 +64,6 @@ export const prepareQuery = (query: string, normalizedQuery: string): PreparedQu
 		queryMask,
 		presenceGate: needsPresenceGate ? buildPresenceGate(normalizedQuery) : null,
 		fuzzyGate: buildFuzzyGate(normalizedQuery),
-		variants: null,
 	};
 };
 
@@ -115,23 +126,250 @@ const acronymMatch = (normalizedField: string, normalizedQuery: string): MatchRe
 	};
 };
 
-const swapAt = (s: string, j: number): string =>
-	s.slice(0, j) + s[j + 1] + s[j] + s.slice(j + 2);
+const swapAt = (s: string, j: number): string => s.slice(0, j) + s[j + 1] + s[j] + s.slice(j + 2);
 
-// The transposition rescue: an adjacent-swap typo ("geenric") preserves the
-// character multiset, so the field passed the mask gate but failed the
-// order-sensitive tiers. Only a real-tier hit for the corrected query counts —
-// a rescued fuzzy chain would be double speculation (an invented swap on top
-// of a speculative assembly) and measurably just inflates noise (the
-// deletion-typo bench probes grew 0 → ~100 rows without this guard). Every
-// real tier then implies the corrected query appears contiguously in the
-// field, so ONE alternation regex over all distinct swap variants is a
-// complete per-field pre-gate: the hot path pays a single native test, and
-// variant preparation and the ladder rerun only happen on the rare hit.
-// (Earlier shapes paid per-variant work on every gate-failed field and made
-// scatter queries ~5× slower.) Only called after every tier failed, so an
-// existing match can never change.
-const transposeRescue = (
+const dropAt = (s: string, j: number): string => s.slice(0, j) + s.slice(j + 1);
+
+// Shortest query any rescue will correct: below this the correction describes
+// the field rather than the query, since almost every field offers a window one
+// character away from a 3-character string.
+const MIN_RESCUE_QUERY_LENGTH = 4;
+
+// A drop variant is one character shorter than the query and a substituted
+// window admits any character, so both need a higher bar than a same-length
+// swap does.
+const MIN_TYPO_QUERY_LENGTH = 5;
+
+// Chance corrections are a multiple-comparisons problem, scaling with how many
+// windows the field offers, while a high floor is paid by the short queries that
+// dominate label search. A constant has to fail one workload or the other
+// (@see docs/benchmarks.md).
+const minTypoQueryLength = (fieldLength: number): number =>
+	fieldLength <= 64 ? 5 : fieldLength <= 1024 ? 6 : 7;
+
+export const isRescuableQuery = (normalizedQuery: string, queryWords: string[]): boolean =>
+	queryWords.length === 1 && normalizedQuery.length >= MIN_RESCUE_QUERY_LENGTH;
+
+// Only a substitution or a drop can explain an absent character class, and both
+// are floored at MIN_TYPO_QUERY_LENGTH — so a shorter query keeps the strict
+// mask gate. matchField and the searcher's survivor scan must ask this same
+// question or the searcher silently drops hits the matcher would accept.
+export const admitsMissingClass = (normalizedQuery: string, queryWords: string[]): boolean =>
+	isRescuableQuery(normalizedQuery, queryWords) && normalizedQuery.length >= MIN_TYPO_QUERY_LENGTH;
+
+const SCORE_EPSILON = 1e-9;
+
+// Ties are reachable on both sides of the rescue/fuzzy split, and break toward
+// the one-edit reading: it names the character the user got wrong, where a
+// chain only says the letters appear in order.
+function cheaper(a: MatchResult | null, b: MatchResult): MatchResult;
+function cheaper(a: MatchResult, b: MatchResult | null): MatchResult;
+function cheaper(a: MatchResult | null, b: MatchResult | null): MatchResult | null;
+function cheaper(a: MatchResult | null, b: MatchResult | null): MatchResult | null {
+	if (a === null) return b;
+	if (b === null) return a;
+	if (b.score < a.score - SCORE_EPSILON) return b;
+	if (a.score < b.score - SCORE_EPSILON) return a;
+	return a.tier === "fuzzy" ? b : a;
+}
+
+// The corrections below index the raw query by normalized offsets, which needs
+// normalizeText's 1:1 code-point mapping. NFC can shorten decomposed input; when
+// it has, there is no offset map and the caller falls back to the normalized
+// correction — sound, just case-blind.
+const offsetsAligned = (query: string, normalizedQuery: string): boolean =>
+	query.length === normalizedQuery.length;
+
+// A rescue rescores a corrected *query*, so it must be the user's own text with
+// one character changed. Spelling it out of the normalized field instead makes
+// the raw exact-case tiers report on the field's capitalization, crediting an
+// ALL-CAPS query with an exact-case match it never made.
+const rawSubstitution = (q: PreparedQuery, corrected: string): string => {
+	const { query, normalizedQuery } = q;
+	if (!offsetsAligned(query, normalizedQuery)) return corrected;
+	for (let k = 0; k < corrected.length; k++) {
+		if (corrected[k] !== normalizedQuery[k]) {
+			return query.slice(0, k) + corrected[k] + query.slice(k + 1);
+		}
+	}
+	return corrected;
+};
+
+const rawInsertion = (q: PreparedQuery, gapChar: string, insertAt: number): string | null => {
+	const { query, normalizedQuery } = q;
+	return offsetsAligned(query, normalizedQuery)
+		? query.slice(0, insertAt) + gapChar + query.slice(insertAt)
+		: null;
+};
+
+// A field-derived correction can't be memoized on the variant the way an
+// enumerated one can, but near-misses of one intended word all spell the same
+// correction, so a single slot catches nearly every repeat.
+const prepareRescue = (
+	q: PreparedQuery,
+	rawCorrected: string,
+	corrected: string,
+): PreparedQuery => {
+	const cached = q.lastRescue;
+	if (
+		cached !== undefined &&
+		cached.query === rawCorrected &&
+		cached.normalizedQuery === corrected
+	) {
+		return cached;
+	}
+	return (q.lastRescue = prepareQuery(rawCorrected, corrected));
+};
+
+// Only a real-tier hit counts: rescuing a fuzzy chain is an invented edit on top
+// of a speculative assembly, and just inflates noise (@see docs/benchmarks.md).
+// The `rescued` flag disables every rescue inside the recursion, so the penalty
+// cannot apply twice.
+const rescueWith = (
+	field: string,
+	normalizedField: string,
+	fieldMask: number,
+	prepared: PreparedQuery,
+	tier: Tier,
+	acronym: boolean,
+): MatchResult | null => {
+	const result = matchField(field, normalizedField, fieldMask, prepared, acronym, true);
+	return result && result.score <= SCORES.CONTAINS
+		? { score: result.score + TYPO_PENALTY, tier, ranges: result.ranges }
+		: null;
+};
+
+// Every single-character correction of a mistyped query that can be enumerated
+// cheaply. Swaps and drops are both O(query length) families; the third kind — a
+// query *missing* a character — is not, since it would mean trying every
+// possible insertion, so it is recovered from the fuzzy chain instead (see
+// missingCharRescue). A swap and a drop can never produce the same string (they
+// differ in length), so the two families never collide.
+const buildRescueVariants = (query: string, normalizedQuery: string): RescueVariant[] => {
+	const seen = new Set<string>();
+	const variants: RescueVariant[] = [];
+	const aligned = offsetsAligned(query, normalizedQuery);
+	const add = (j: number, edit: (s: string, j: number) => string, tier: Tier): void => {
+		const text = edit(normalizedQuery, j);
+		if (seen.has(text)) return;
+		seen.add(text);
+		variants.push({ text, rawText: aligned ? edit(query, j) : text, tier, prepared: null });
+	};
+	// Adjacent swap: "geenric" → "generic". An identity swap is not a variant.
+	for (let j = 0; j < normalizedQuery.length - 1; j++) {
+		if (normalizedQuery[j] !== normalizedQuery[j + 1]) add(j, swapAt, "transposed");
+	}
+	// One character too many: "generric" → "generic". Dropping either half of a
+	// repeated pair yields the same string, which the dedupe collapses.
+	if (normalizedQuery.length >= MIN_TYPO_QUERY_LENGTH) {
+		for (let j = 0; j < normalizedQuery.length; j++) add(j, dropAt, "inserted");
+	}
+	return variants;
+};
+
+// A swapped or doubled keystroke leaves the field passing the mask gate while
+// failing the order-sensitive tiers. Since only a real tier can be rescued, the
+// corrected query must appear contiguously in the field — which is what lets one
+// alternation gate reject a field outright, before any variant is prepared.
+const typoRescue = (
+	field: string,
+	normalizedField: string,
+	fieldMask: number,
+	q: PreparedQuery,
+	acronym: boolean,
+): MatchResult | null => {
+	let gate = q.rescueGate;
+	if (gate === undefined) {
+		const variants = buildRescueVariants(q.query, q.normalizedQuery);
+		q.rescueVariants = variants.length ? variants : null;
+		const literals = variants.map((v) => escapeRegex(v.text));
+		q.variantGate = literals.length ? new RegExp(literals.join("|")) : null;
+		// substitutedWindows only inspects positions indexOf finds for one of
+		// the query's halves, so a field holding neither provably has no window:
+		// adding them makes one native test rule out both families, on the path
+		// nearly every field takes. The gate may only false-pass, so it uses the
+		// lowest value the field-scaled floor can take and leaves that floor to
+		// substitutionRescue.
+		if (q.normalizedQuery.length >= MIN_TYPO_QUERY_LENGTH) {
+			const splitAt = q.normalizedQuery.length >> 1;
+			literals.push(
+				escapeRegex(q.normalizedQuery.slice(0, splitAt)),
+				escapeRegex(q.normalizedQuery.slice(splitAt)),
+			);
+		}
+		gate = q.rescueGate = literals.length ? new RegExp(literals.join("|")) : null;
+	}
+	if (gate === null || !gate.test(normalizedField)) return null;
+
+	let best: MatchResult | null = null;
+	if (q.variantGate !== null && (q.variantGate as RegExp).test(normalizedField)) {
+		const floor = minTypoQueryLength(normalizedField.length);
+		for (const variant of q.rescueVariants as RescueVariant[]) {
+			// Only a drop shortens the query, so only it answers to the
+			// field-length floor; a swap stays on MIN_RESCUE_QUERY_LENGTH.
+			if (variant.tier === "inserted" && q.normalizedQuery.length < floor) continue;
+			if (!normalizedField.includes(variant.text)) continue;
+			const prepared = (variant.prepared ??= prepareQuery(variant.rawText, variant.text));
+			// Enumeration order is by edit position, which says nothing about how
+			// well each variant reads, so the family is priced before one is taken.
+			best = cheaper(
+				best,
+				rescueWith(field, normalizedField, fieldMask, prepared, variant.tier, acronym),
+			);
+			// A corrected exact hit is every rescue's floor: unbeatable.
+			if (best !== null && best.score <= TYPO_PENALTY) return best;
+		}
+	}
+
+	// A query mistyped at its first or last character has two valid readings —
+	// "ergonomiq" is a substitution, but dropping the "q" leaves "ergonomi", a
+	// prefix — and the enumerated families are tried first, so the worse one
+	// would win by default.
+	return cheaper(best, substitutionRescue(field, normalizedField, fieldMask, q, acronym));
+};
+
+// A substitution can't be enumerated the way a swap or a drop can, but by the
+// pigeonhole principle splitting the query in two leaves at least one half
+// intact, so those halves' occurrences are the only windows worth testing.
+//
+// Returns corrected text rather than indices, deduped: the text is the whole
+// input to the rerun. Position must not rank them — the rerun rescans the field
+// for the corrected string, so a window found mid-word can still score off the
+// same word at a boundary elsewhere.
+const substitutedWindows = (normalizedField: string, normalizedQuery: string): string[] => {
+	const queryLen = normalizedQuery.length;
+	const splitAt = queryLen >> 1;
+	const corrections: string[] = [];
+	for (let side = 0; side < 2; side++) {
+		const offset = side === 0 ? 0 : splitAt;
+		const half = side === 0 ? normalizedQuery.slice(0, splitAt) : normalizedQuery.slice(splitAt);
+		for (
+			let hit = normalizedField.indexOf(half);
+			hit > -1;
+			hit = normalizedField.indexOf(half, hit + 1)
+		) {
+			const start = hit - offset;
+			if (start < 0 || start + queryLen > normalizedField.length) continue;
+			let mismatches = 0;
+			for (let k = 0; k < queryLen; k++) {
+				if (normalizedField[start + k] !== normalizedQuery[k] && ++mismatches > 1) break;
+			}
+			// Exactly one: zero would mean the query is present verbatim, which
+			// the contains tier already owns.
+			if (mismatches !== 1) continue;
+			const corrected = normalizedField.slice(start, start + queryLen);
+			if (!corrections.includes(corrected)) corrections.push(corrected);
+		}
+	}
+	return corrections;
+};
+
+// The substitution rescue: one wrong character ("genaric" for "generic"). Unlike
+// the other three edits this one can change the query's character-class mask, so
+// it is only reachable at all because the mask gate tolerates a single missing
+// class (see matchField). The correction needs no enumeration — the field's own
+// window is the corrected query.
+const substitutionRescue = (
 	field: string,
 	normalizedField: string,
 	fieldMask: number,
@@ -139,38 +377,55 @@ const transposeRescue = (
 	acronym: boolean,
 ): MatchResult | null => {
 	const { normalizedQuery } = q;
-	let gate = q.rescueGate;
-	if (gate === undefined) {
-		// Callers pre-check viability (single word, 4+ chars — shorter strings
-		// transpose into noise, and multi-word queries already match flexibly
-		// via their own tier), so every distinct swap becomes a literal.
-		const literals: string[] = [];
-		for (let j = 0; j < normalizedQuery.length - 1; j++) {
-			if (normalizedQuery[j] !== normalizedQuery[j + 1]) literals.push(escapeRegex(swapAt(normalizedQuery, j)));
-		}
-		gate = q.rescueGate = literals.length ? new RegExp(literals.join("|")) : null;
-	}
-	if (gate === null || !gate.test(normalizedField)) return null;
+	if (normalizedQuery.length < minTypoQueryLength(normalizedField.length)) return null;
 
-	for (let j = 0; j < normalizedQuery.length - 1; j++) {
-		if (normalizedQuery[j] === normalizedQuery[j + 1]) continue; // identity swap
-		let variant = (q.variants ??= new Map()).get(j);
-		if (variant === undefined) {
-			const swapped = swapAt(normalizedQuery, j);
-			variant = prepareQuery(swapped, swapped);
-			q.variants.set(j, variant);
-		}
-		if (!normalizedField.includes(variant.normalizedQuery)) continue;
-		const result = matchField(field, normalizedField, fieldMask, variant, acronym, true);
-		if (result && result.score <= SCORES.CONTAINS) {
-			return {
-				score: result.score + TRANSPOSED_PENALTY,
-				tier: "transposed",
-				ranges: result.ranges,
-			};
-		}
+	let best: MatchResult | null = null;
+	for (const corrected of substitutedWindows(normalizedField, normalizedQuery)) {
+		const prepared = prepareRescue(q, rawSubstitution(q, corrected), corrected);
+		best = cheaper(
+			best,
+			rescueWith(field, normalizedField, fieldMask, prepared, "substituted", acronym),
+		);
+		if (best !== null && best.score <= TYPO_PENALTY) break;
 	}
-	return null;
+	return best;
+};
+
+// A fuzzy assembly of exactly two chunks separated by exactly one field
+// character is not a scattered chain — it is a dropped keystroke ("ergonmic"
+// for "ergonomic"), and the character the query is missing is sitting in the
+// gap, so the correction needs no enumeration at all: it is the field's own
+// span. Rescued into a real tier so it ranks as the typo it is instead of
+// sharing the fuzzy band with junk chains.
+//
+// The gap must be a word character. A skipped *separator* ("bigcat" for "big
+// cat") is ordinary concatenated-word matching, not a typo — the chunk scorer
+// already prices it as the cheapest fuzzy shape there is, and promoting it
+// would rank it above genuine tier hits.
+//
+// Takes the flat minimum, not the field-scaled floor, and admits multi-word
+// queries. Those floors guard a multiple-comparisons hazard that needs O(field
+// length) candidate positions; the chain shape here pins the correction to one
+// contiguous window at density >= 0.5, so the hazard never arises
+// (@see bench/longtext.test.ts).
+const missingCharRescue = (
+	field: string,
+	normalizedField: string,
+	fieldMask: number,
+	q: PreparedQuery,
+	acronym: boolean,
+	ranges: HighlightRanges,
+): MatchResult | null => {
+	if (q.normalizedQuery.length < MIN_RESCUE_QUERY_LENGTH) return null;
+	if (ranges.length !== 2) return null;
+	const [[startA, endA], [, endB]] = ranges;
+	if (ranges[1][0] !== endA + 2 || !wordChar.test(normalizedField[endA + 1])) return null;
+
+	const corrected = normalizedField.slice(startA, endB + 1);
+	// The first chunk's length is where the query dropped the gap character.
+	const raw = rawInsertion(q, normalizedField[endA + 1], endA - startA + 1);
+	const prepared = prepareRescue(q, raw ?? corrected, corrected);
+	return rescueWith(field, normalizedField, fieldMask, prepared, "deleted", acronym);
 };
 
 export const matchField = (
@@ -183,10 +438,24 @@ export const matchField = (
 ): MatchResult | null => {
 	const { query, normalizedQuery, queryWords } = q;
 
-	// One integer AND before any regex: a field missing one of the query's
-	// character classes can't match at any tier. A transposition can't change
-	// the mask, so there is nothing to rescue here either.
-	if ((q.queryMask & fieldMask) !== q.queryMask) return null;
+	// One integer AND before any regex: a field missing more than one of the
+	// query's character classes can't match at any tier, nor be rescued — every
+	// tier needs the query's classes present, a swap or a drop can only preserve
+	// or shrink the query's mask, and a substitution can account for exactly one
+	// missing class. `n & (n - 1)` clears the lowest set bit, so it is zero iff
+	// at most one class is absent.
+	const rescuable = !rescued && isRescuableQuery(normalizedQuery, queryWords);
+	const missingClasses = q.queryMask & ~fieldMask;
+	const relaxed = rescuable && admitsMissingClass(normalizedQuery, queryWords);
+	if (relaxed ? missingClasses & (missingClasses - 1) : missingClasses) return null;
+	// A class is genuinely absent, so no ordinary tier can fire — skip the ladder
+	// and go straight to the rescue, which has exactly two ways to explain it: a
+	// substitution (the wrong character was typed) or a drop (a character the
+	// field never had was typed as well, "genexric"). A swap cannot, so its
+	// variants simply fail the gate.
+	if (missingClasses !== 0) {
+		return typoRescue(field, normalizedField, fieldMask, q, acronym);
+	}
 
 	// Bulk-reject remaining non-candidates before the tier ladder. Single-word
 	// queries use the stricter, single-pass subsequence gate (every tier needs
@@ -196,11 +465,9 @@ export const matchField = (
 	// when the mask already proved exact char presence, the regex is skipped.
 	const frontGate = queryWords.length > 1 ? q.presenceGate : q.fuzzyGate;
 	if (frontGate && !frontGate.test(normalizedField)) {
-		// Rescue viability checked here so ineligible queries (multi-word,
-		// short) pay nothing, not even a call, on this bulk-reject path.
-		return !rescued && queryWords.length === 1 && normalizedQuery.length >= 4
-			? transposeRescue(field, normalizedField, fieldMask, q, acronym)
-			: null;
+		// Rescue viability was already decided above, so ineligible queries
+		// (multi-word, short) pay nothing, not even a call, on this bulk-reject path.
+		return rescuable ? typoRescue(field, normalizedField, fieldMask, q, acronym) : null;
 	}
 
 	if (field === query)
@@ -275,10 +542,17 @@ export const matchField = (
 	// only multi-word queries (presence-gated up front) still owe this test.
 	if (queryWords.length > 1 && !q.fuzzyGate.test(normalizedField)) return null;
 	const fuzzy = fuzzyChainMatch(normalizedField, normalizedQuery);
-	if (fuzzy) return { score: fuzzy[0], tier: "fuzzy", ranges: fuzzy[1] };
+	if (fuzzy) {
+		const chain: MatchResult = { score: fuzzy[0], tier: "fuzzy", ranges: fuzzy[1] };
+		if (rescued) return chain;
+		// A chain assembling is not evidence it is the best reading: a decoy can
+		// let junk assemble out of scraps while the field literally contains the
+		// corrected word. Returning here would hide both rescues below.
+		const dropped = missingCharRescue(field, normalizedField, fieldMask, q, acronym, fuzzy[1]);
+		const corrected = rescuable ? typoRescue(field, normalizedField, fieldMask, q, acronym) : null;
+		return cheaper(cheaper(dropped, corrected), chain);
+	}
 	// Every tier failed (the chain can refuse via the density floor even past
-	// the gate) — last chance for the transposition rescue.
-	return !rescued && queryWords.length === 1 && normalizedQuery.length >= 4
-		? transposeRescue(field, normalizedField, fieldMask, q, acronym)
-		: null;
+	// the gate) — last chance for the one-edit rescue.
+	return rescuable ? typoRescue(field, normalizedField, fieldMask, q, acronym) : null;
 };

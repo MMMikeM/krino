@@ -6,7 +6,7 @@
  */
 
 import { charMask } from "./gates";
-import { matchField, prepareQuery } from "./match";
+import { admitsMissingClass, matchField, prepareQuery } from "./match";
 import { normalizeText } from "./normalize";
 import type { FieldSpec, FuzzyResult, FuzzySearcher, MatchOptions, MatchResult } from "./types";
 
@@ -146,7 +146,13 @@ export function createFuzzySearch<T>(
 	// previous query's mask-pass set while `spare` receives the current one,
 	// then they swap. Reusing the pair keeps the query path allocation-free
 	// (a fresh 100k Int32Array costs ~65 µs of alloc + zeroing per keystroke).
+	//
+	// That monotonicity holds per gate, and the gate is not fixed — it relaxes
+	// for rescuable queries. Narrowing is only sound when the current gate is no
+	// more permissive than the one that built the cache, which `cachedRelaxed`
+	// records.
 	let cachedQuery = "";
+	let cachedRelaxed = false;
 	let cachedSurvivors: Int32Array | null = null;
 	let spare: Int32Array | null = null;
 	let cachedCount = 0;
@@ -157,8 +163,18 @@ export function createFuzzySearch<T>(
 
 		const q = prepareQuery(query, normalizedQuery);
 		const { queryMask } = q;
+		// Same predicate matchField's mask gate uses, so the two cannot drift.
+		// It stays a flat query-length test rather than the rescue's
+		// field-scaled floor because this scan reads one union mask per item and
+		// never touches field lengths.
+		const rescuable = admitsMissingClass(normalizedQuery, q.queryWords);
 
-		const narrowed = cachedSurvivors !== null && normalizedQuery.startsWith(cachedQuery);
+		// Only strict → relaxed is unsound: that cached set already dropped
+		// exactly the items the relaxed gate wants back.
+		const narrowed =
+			cachedSurvivors !== null &&
+			normalizedQuery.startsWith(cachedQuery) &&
+			(!rescuable || cachedRelaxed);
 		const source = narrowed ? cachedSurvivors : null;
 		const scanCount = narrowed ? cachedCount : count;
 
@@ -168,7 +184,10 @@ export function createFuzzySearch<T>(
 
 		for (let k = 0; k < scanCount; k++) {
 			const i = source ? source[k] : k;
-			if ((queryMask & unionMasks[i]) !== queryMask) continue;
+			// Tolerate one missing character class, which is what a substitution
+			// typo looks like from here (see matchField).
+			const missingClasses = queryMask & ~unionMasks[i];
+			if (rescuable ? missingClasses & (missingClasses - 1) : missingClasses) continue;
 			survivors[survivorCount++] = i;
 
 			const prepared = preparedFields[i];
@@ -179,7 +198,13 @@ export function createFuzzySearch<T>(
 			for (let f = 0; f < specCount; f++) {
 				const p = prepared[f];
 				const s = resolvedSpecs[f];
-				const result = matchField(p.field, p.normalizedField, fieldMasks[maskBase + f], q, s.acronym);
+				const result = matchField(
+					p.field,
+					p.normalizedField,
+					fieldMasks[maskBase + f],
+					q,
+					s.acronym,
+				);
 				if (result) {
 					// matchField returns a fresh object per call, so the atBest
 					// shift can mutate it instead of spreading a copy.
@@ -199,6 +224,7 @@ export function createFuzzySearch<T>(
 		}
 
 		cachedQuery = normalizedQuery;
+		cachedRelaxed = rescuable;
 		spare = cachedSurvivors; // the retired previous list becomes the next scratch buffer
 		cachedSurvivors = survivors;
 		cachedCount = survivorCount;

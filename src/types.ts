@@ -9,9 +9,16 @@ export type Range = [number, number];
 export type HighlightRanges = Range[];
 
 /**
- * Which tier a match came from. Lower on this list is a weaker match; a `score`
- * greater than SCORES.CONTAINS is a fuzzy chain or a deep transposition rescue
- * (a rescued contains is 2.9) — the tier tells them apart.
+ * Which tier a match came from. Lower on this list is a weaker match. Every
+ * genuine tier scores at or below `SCORES.CONTAINS`; anything above it is a
+ * fuzzy chain or a one-edit typo rescue, and the tier is what tells those
+ * apart — so `score <= SCORES.CONTAINS` is the test for "the user's text
+ * actually appears here", and filtering to it is how you opt out of guessing.
+ *
+ * The last four name a single-character correction the *query* needed, not the
+ * field: `transposed` swapped an adjacent pair ("geenric"), `inserted` had one
+ * character too many ("generric"), `deleted` was missing one ("genric"),
+ * `substituted` had one wrong ("genaric").
  */
 export type Tier =
 	| "exact"
@@ -23,7 +30,10 @@ export type Tier =
 	| "acronym"
 	| "contains"
 	| "fuzzy"
-	| "transposed";
+	| "transposed"
+	| "inserted"
+	| "deleted"
+	| "substituted";
 
 /**
  * The result of matching one string against a query.

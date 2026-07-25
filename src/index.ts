@@ -1,14 +1,9 @@
 /**
  * Krino — tiny, typed fuzzy matching. Inspired by @nozbe/microfuzz.
  *
- * Two entry points:
- * - `fuzzyMatch(text, query, options?)` — the primitive: score one string,
- *   returning `{ score, tier, ranges }`.
- * - `createFuzzySearch(list, getText? | fields?)` — a cached, sorted search over
- *   a collection.
- *
- * Scoring is lower = better; see the `SCORES` constants and the `Tier` type.
- * Any score greater than `SCORES.CONTAINS` is tier "fuzzy".
+ * Scoring is lower = better. `score <= SCORES.CONTAINS` is the test for "the
+ * user's text actually appears here"; above it is a fuzzy chain or a one-edit
+ * typo rescue, and only `tier` tells those apart.
  */
 
 export { createFuzzySearch, fuzzyMatch } from "./search";
