@@ -87,6 +87,9 @@ describe("bench validity: per-library match counts and source rank", () => {
 		it(`[${name}] every library matches the plain-word query`, { timeout: 30_000 }, () => {
 			const list = build(SIZE);
 			const uf = new uFuzzy();
+			// SingleError with all four edits — uFuzzy's closest config to krino's
+			// one-edit tiers. Held off until krino could reciprocate; it now can.
+			const ufAll = new uFuzzy({ intraMode: 1, intraIns: 1, intraSub: 1, intraTrn: 1, intraDel: 1 });
 			const latinized = uFuzzy.latinize(list);
 			const krino = createFuzzySearch(list);
 			const krinoAcronym = createFuzzySearch(list, [{ text: (x: string) => x, acronym: true }]);
@@ -103,8 +106,14 @@ describe("bench validity: per-library match counts and source rank", () => {
 
 			// uFuzzy's ranked order needs search() info; it's null above the
 			// info threshold, where only the count survives.
-			const uFuzzyRun = (haystack: string[], needle: string, source: string | null): Outcome => {
-				const [idxs, info, order] = uf.search(haystack, needle);
+			const uFuzzyRun = (
+				haystack: string[],
+				needle: string,
+				source: string | null,
+				instance: uFuzzy = uf,
+				outOfOrder?: number,
+			): Outcome => {
+				const [idxs, info, order] = instance.search(haystack, needle, outOfOrder);
 				if (!idxs?.length) return { count: 0, rank: null };
 				if (!info || !order) return { count: idxs.length, rank: null };
 				const ranked = order.map((o) => list[info.idx[o]]);
@@ -125,7 +134,8 @@ describe("bench validity: per-library match counts and source rank", () => {
 				"match-sorter": (q, src) => outcome(matchSorter(list, q), src),
 				"fast-fuzzy": (q, src) => outcome(fastFuzzy.search(q), src),
 				uFuzzy: (q, src) => uFuzzyRun(list, q, src),
-				"uFuzzy (latinize)": (q, src) => uFuzzyRun(latinized, uFuzzy.latinize([q])[0], src),
+				"uFuzzy (all opts)": (q, src) =>
+					uFuzzyRun(latinized, uFuzzy.latinize([q])[0], src, ufAll, 1),
 				"fuse.js": (q, src) => outcome(fuse.search(q).map((r) => r.item), src),
 				"fuse.js (all opts)": (q, src) => outcome(fuseAll.search(q).map((r) => r.item), src),
 				fuzzy: (q, src) => outcome(fuzzyFilter(q, list).map((r) => r.original ?? r.string), src),
@@ -141,7 +151,8 @@ describe("bench validity: per-library match counts and source rank", () => {
 				"match-sorter": (q) => matchSorter(list, q).length,
 				"fast-fuzzy": (q) => fastFuzzy.search(q).length,
 				uFuzzy: (q) => uf.search(list, q)[0]?.length ?? 0,
-				"uFuzzy (latinize)": (q) => uf.search(latinized, uFuzzy.latinize([q])[0])[0]?.length ?? 0,
+				"uFuzzy (all opts)": (q) =>
+					ufAll.search(latinized, uFuzzy.latinize([q])[0], 1)[0]?.length ?? 0,
 				"fuse.js": (q) => fuse.search(q).length,
 				"fuse.js (all opts)": (q) => fuseAll.search(q).length,
 				fuzzy: (q) => fuzzyFilter(q, list).length,
@@ -170,8 +181,9 @@ describe("bench validity: per-library match counts and source rank", () => {
 			// ~87× a steady query at 10k), so its cell times an explicit
 			// prepare-all loop — the same work go() does lazily, but repeatable,
 			// where the one-shot lazy fill would be visible only once per process.
-			// uFuzzy (latinize) counts latinizing the haystack — real preparation
-			// that normally hides as "no index".
+			// uFuzzy (all opts) counts latinizing the haystack — real preparation
+			// that normally hides as "no index", and the config that competes on
+			// the total column, so it has to carry it.
 			// Consume a constructed object so creation can't be elided.
 			const consume = (o: object): number => o.constructor.name.length;
 			const firstQuery = specs[0]?.query ?? "steel";
@@ -191,7 +203,7 @@ describe("bench validity: per-library match counts and source rank", () => {
 							useExtendedSearch: true,
 						}),
 					),
-				"uFuzzy (latinize)": () => uFuzzy.latinize(list).length,
+				"uFuzzy (all opts)": () => uFuzzy.latinize(list).length,
 				fuzzysort: () => {
 					let n = 0;
 					for (const s of list) n += fuzzysort.prepare(s).target.length;
@@ -349,12 +361,14 @@ describe("bench validity: per-library match counts and source rank", () => {
 				const { count, rank } = runners.krino(query, source);
 				if (kind === "miss") {
 					expect(count, `krino matched garbage "${query}"`).toBe(0);
-				} else if (!kind.startsWith("scatter") && kind !== "transposition") {
+				} else if (!kind.startsWith("scatter")) {
 					// krino must surface the item each query was derived from.
-					// (scatter and transposition kinds exempt: scatter probes where
-					// smart chunking legitimately gives up, and a transposition
-					// breaks the subsequence property outright — those limits are
-					// the measurement.)
+					// (Only the scatter kinds are exempt — those probe where chunk
+					// assembly legitimately gives up, and that limit is the
+					// measurement. The three single-edit typo kinds used to be
+					// exempt too, on the grounds that they break the subsequence
+					// property outright; the one-edit rescue tiers now recover all
+					// of them, so they are held to the same bar as everything else.)
 					expect(rank, `krino lost source of "${query}" (${kind})`).not.toBeNull();
 				}
 			}
@@ -365,7 +379,7 @@ describe("bench validity: per-library match counts and source rank", () => {
 			if (accentProbe) {
 				const { query, source } = accentProbe;
 				expect(runners.krino(query, source).count).toBeGreaterThan(0);
-				expect(runners["uFuzzy (latinize)"](query, source).count).toBeGreaterThanOrEqual(
+				expect(runners["uFuzzy (all opts)"](query, source).count).toBeGreaterThanOrEqual(
 					runners.uFuzzy(query, source).count,
 				);
 				expect(runners["fuse.js (all opts)"](query, source).count).toBeGreaterThanOrEqual(

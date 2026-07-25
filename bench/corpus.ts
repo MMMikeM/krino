@@ -24,7 +24,8 @@ import mixedJson from "./corpus-mixed.json";
 const slicer =
 	(data: string[]) =>
 	(n: number): string[] => {
-		if (n > data.length) throw new Error(`corpus snapshot has ${data.length} items; asked for ${n}`);
+		if (n > data.length)
+			throw new Error(`corpus snapshot has ${data.length} items; asked for ${n}`);
 		return data.slice(0, n);
 	};
 
@@ -45,6 +46,8 @@ export type QuerySpec = {
 		| "scatter-medium"
 		| "scatter-heavy"
 		| "transposition"
+		| "insertion"
+		| "substitution"
 		| "acronym"
 		| "accent-stripped"
 		| "miss";
@@ -61,6 +64,23 @@ const transpose = (w: string): string => {
 		if (w[k] !== w[k + 1]) return w.slice(0, k) + w[k + 1] + w[k] + w.slice(k + 2);
 	}
 	return w;
+};
+
+// The other two single-character typos, both of which also break the
+// subsequence property: one character too many (a doubled keystroke) and one
+// character wrong. Deletion is already covered by `scatter-light`, which drops
+// exactly one middle character.
+const doubleChar = (w: string): string => {
+	const k = Math.floor(w.length / 2);
+	return w.slice(0, k) + w[k] + w.slice(k);
+};
+
+const substitute = (w: string): string => {
+	const k = Math.floor(w.length / 2);
+	// A character the word does not contain, so the query's character-class mask
+	// genuinely loses one — the case a strict mask gate rejects outright.
+	const replacement = w.includes("x") ? "q" : "x";
+	return w.slice(0, k) + replacement + w.slice(k + 1);
 };
 
 // Queries derived from a fixed sample so they actually match: a real word, a
@@ -128,16 +148,22 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 					source: sample[i],
 				},
 				{
-					query: [...scatterWord].filter((_, k) => k % 3 !== 2).join("").toLowerCase(),
+					query: [...scatterWord]
+						.filter((_, k) => k % 3 !== 2)
+						.join("")
+						.toLowerCase(),
 					kind: "scatter-medium",
 					source: sample[i],
 				},
 				{ query: everyOther(scatterWord).toLowerCase(), kind: "scatter-heavy", source: sample[i] },
-				// Fourth grade, different axis: same char count, two adjacent chars
-				// out of order. Deletions stay subsequences; a transposition does
-				// not, so this is where the edit-distance engines should win and
-				// the subsequence engines legitimately return nothing.
+				// A different axis: the three edits that break the subsequence
+				// property outright, where a pure subsequence engine returns
+				// nothing and only edit-distance matching recovers the item.
+				// (`scatter-light` above is the fourth edit — one dropped
+				// character — which does stay a subsequence.)
 				{ query: transpose(scatterWord).toLowerCase(), kind: "transposition", source: sample[i] },
+				{ query: doubleChar(scatterWord).toLowerCase(), kind: "insertion", source: sample[i] },
+				{ query: substitute(scatterWord).toLowerCase(), kind: "substitution", source: sample[i] },
 			);
 			break;
 		}

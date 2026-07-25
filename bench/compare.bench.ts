@@ -15,8 +15,21 @@
  *   still moves the numbers — don't read them as universal.
  * - Each lib with optional features gets a second "(all opts)" line: every
  *   opt-in switched on (diacritic folding, multi-word, ranges/highlight
- *   output) EXCEPT typo modes — krino can't reciprocate, so typo tolerance
- *   stays off everywhere. Base lines are stock defaults.
+ *   output) INCLUDING typo modes, which krino now matches.
+ *
+ *   This used to exclude typo modes, because krino couldn't reciprocate them.
+ *   krino now does one-edit matching (transposed / inserted / deleted /
+ *   substituted) and can't switch it off, so excluding them would have made
+ *   every cell a comparison between engines doing different jobs — in krino's
+ *   favour. In practice only uFuzzy was actually held back: Fuse (Bitap at
+ *   threshold 0.4) and fast-fuzzy (edit distance) were always typo-tolerant
+ *   here, which is why they were already flagged above as doing more work.
+ *   uFuzzy's "(all opts)" row now enables SingleError with all four edits, the
+ *   closest match to krino's one-edit tiers.
+ *
+ *   Expect the typo-tolerant rows to return far more rows than the literal
+ *   ones (the hits table measures 3–10× the true hit count); rank/MRR, not raw
+ *   count, is what makes those rows comparable.
  * The point is positioning, not a leaderboard. Run: `pnpm bench`.
  */
 import uFuzzy from "@leeoniya/ufuzzy";
@@ -88,7 +101,7 @@ for (const size of [10000, 100000]) {
 	const fuse = new Fuse(list, { ignoreLocation: true, threshold: 0.4 });
 	const uf = new uFuzzy();
 
-	// "(all opts)" variants — every opt-in on except typo modes. Cached prep
+	// "(all opts)" variants — every opt-in on, typo modes included. Cached prep
 	// (latinized haystack, prebuilt indexes) stays outside the query loop, same
 	// as the base lines.
 	const mikroAll = createFuzzySearch(list, [{ text: (x: string) => x, acronym: true }]);
@@ -103,6 +116,9 @@ for (const size of [10000, 100000]) {
 	});
 	const latinized = uFuzzy.latinize(list);
 	const OUT_OF_ORDER = 1;
+	// SingleError with all four edits enabled — the closest uFuzzy config to
+	// krino's one-edit tiers (transposed / inserted / deleted / substituted).
+	const ufAll = new uFuzzy({ intraMode: 1, intraIns: 1, intraSub: 1, intraTrn: 1, intraDel: 1 });
 
 	describe(`[${corpusName}] query ${size} items × ${QUERIES.length} queries`, () => {
 		cbench("krino", () => {
@@ -140,7 +156,7 @@ for (const size of [10000, 100000]) {
 		});
 		cbench("uFuzzy (all opts)", () => {
 			for (const q of QUERIES)
-				sink += uf.search(latinized, uFuzzy.latinize([q])[0], OUT_OF_ORDER)[0]?.length ?? 0;
+				sink += ufAll.search(latinized, uFuzzy.latinize([q])[0], OUT_OF_ORDER)[0]?.length ?? 0;
 		});
 		cbench("fuse.js", () => {
 			for (const q of QUERIES) sink += fuse.search(q).length;

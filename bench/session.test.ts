@@ -52,8 +52,8 @@ it("frontend session: three successive queries at 100k", { timeout: 60_000 }, ()
 
 	const krino = createFuzzySearch(list);
 	const microfuzz = createMicrofuzz(list);
-	const uf = new uFuzzy();
 	const latinized = uFuzzy.latinize(list);
+	const ufAll = new uFuzzy({ intraMode: 1, intraIns: 1, intraSub: 1, intraTrn: 1, intraDel: 1 });
 	const fuseAll = new Fuse(list, {
 		ignoreLocation: true,
 		threshold: 0.4,
@@ -68,7 +68,7 @@ it("frontend session: three successive queries at 100k", { timeout: 60_000 }, ()
 		{ name: "krino", run: (q) => krino(q).length, stateful: true },
 		{ name: "@nozbe/microfuzz", run: (q) => microfuzz(q).length },
 		{ name: "fuzzysort", run: (q) => fuzzysort.go(q, list).length },
-		{ name: "uFuzzy (latinize)", run: (q) => uf.search(latinized, uFuzzy.latinize([q])[0])[0]?.length ?? 0 },
+		{ name: "uFuzzy (all opts)", run: (q) => ufAll.search(latinized, uFuzzy.latinize([q])[0], 1)[0]?.length ?? 0 },
 		{ name: "fuse.js (all opts)", run: (q) => fuseAll.search(q).length },
 	];
 
