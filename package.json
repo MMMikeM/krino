@@ -31,9 +31,9 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt src test",
-    "lint:types": "tsc --noEmit",
+    "lint:types": "tsc --noEmit && tsc -p bench --noEmit",
     "test": "vitest run",
-    "bench": "pnpm build && pnpm --filter=krino-bench bench",
+    "bench": "pnpm build && node bench/pipeline.ts",
     "prepublishOnly": "pnpm lint:types && pnpm test && pnpm build"
   },
   "keywords": [

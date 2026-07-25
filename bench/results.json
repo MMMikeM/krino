@@ -1,0 +1,2923 @@
+{
+	"method": {
+		"size": "esbuild --bundle --minify (tree-shaken to primary API) | gzip",
+		"speed": "vitest bench, per-query mean ± sd; rel = time relative to krino (100%), lower is faster",
+		"quality": "time-boxed median per cell, median across N fresh processes; MRR@10 over the scored probes",
+		"corpora": {
+			"ascii": "en faker locale — effectively no diacritics",
+			"mixed": "mostly en with fr/pl every 7th item — ~5% of items carry a diacritic"
+		}
+	},
+	"libraries": {
+		"krino": {
+			"gzipKB": 3.1,
+			"deps": 0,
+			"type": "subsequence (tiered)",
+			"module": "esm",
+			"updated": null,
+			"features": {
+				"ranges": "yes",
+				"tier": "yes",
+				"diacritics": "yes",
+				"multiWord": "yes",
+				"perField": "yes",
+				"typos": "partial"
+			}
+		},
+		"@nozbe/microfuzz": {
+			"gzipKB": 1.7,
+			"deps": 0,
+			"type": "subsequence",
+			"module": "cjs",
+			"updated": "2023-07-18",
+			"features": {
+				"ranges": "yes",
+				"tier": "no",
+				"diacritics": "yes",
+				"multiWord": "yes",
+				"perField": "yes",
+				"typos": "no"
+			}
+		},
+		"fuzzysort": {
+			"gzipKB": 3.7,
+			"deps": 0,
+			"type": "subsequence",
+			"module": "cjs",
+			"updated": "2024-10-14",
+			"features": {
+				"ranges": "yes",
+				"tier": "no",
+				"diacritics": "yes",
+				"multiWord": "yes",
+				"perField": "yes",
+				"typos": "no"
+			}
+		},
+		"match-sorter": {
+			"gzipKB": 3.4,
+			"deps": 2,
+			"type": "subsequence (tiered)",
+			"module": "dual",
+			"updated": "2026-04-15",
+			"features": {
+				"ranges": "no",
+				"tier": "yes",
+				"diacritics": "yes",
+				"multiWord": "no",
+				"perField": "yes",
+				"typos": "no"
+			}
+		},
+		"uFuzzy": {
+			"gzipKB": 4.1,
+			"deps": 0,
+			"type": "subsequence",
+			"module": "dual",
+			"updated": "2025-08-22",
+			"features": {
+				"ranges": "yes",
+				"tier": "no",
+				"diacritics": "opt-in",
+				"multiWord": "opt-in",
+				"perField": "no",
+				"typos": "opt-in"
+			}
+		},
+		"fuzzy": {
+			"gzipKB": 0.8,
+			"deps": 0,
+			"type": "substring",
+			"module": "cjs",
+			"updated": "2016-10-01",
+			"features": {
+				"ranges": "partial",
+				"tier": "no",
+				"diacritics": "no",
+				"multiWord": "no",
+				"perField": "no",
+				"typos": "no"
+			}
+		},
+		"fuse.js": {
+			"gzipKB": 9.3,
+			"deps": 0,
+			"type": "typo-tolerant",
+			"module": "dual",
+			"updated": "2026-07-13",
+			"features": {
+				"ranges": "opt-in",
+				"tier": "no",
+				"diacritics": "opt-in",
+				"multiWord": "opt-in",
+				"perField": "yes",
+				"typos": "yes"
+			}
+		},
+		"fast-fuzzy": {
+			"gzipKB": 11,
+			"deps": 1,
+			"type": "typo-tolerant",
+			"module": "dual",
+			"updated": "2022-11-05",
+			"features": {
+				"ranges": "partial",
+				"tier": "no",
+				"diacritics": "no",
+				"multiWord": "no",
+				"perField": "yes",
+				"typos": "yes"
+			}
+		}
+	},
+	"speed": {
+		"ascii": {
+			"krino": {
+				"10000": {
+					"ms": 0.29810501666664396,
+					"sd": 0.024014656869713064
+				},
+				"100000": {
+					"ms": 3.5683097599999747,
+					"sd": 0.16745463225260362
+				}
+			},
+			"krino (acronym)": {
+				"10000": {
+					"ms": 0.3996883533333191,
+					"sd": 0.16697620430386254
+				},
+				"100000": {
+					"ms": 4.1722879199999925,
+					"sd": 0.19119667366607515
+				}
+			},
+			"@nozbe/microfuzz": {
+				"10000": {
+					"ms": 1.3730136727272606,
+					"sd": 0.08114549522300958
+				},
+				"100000": {
+					"ms": 18.151859079999948,
+					"sd": 0.3913334179598548
+				}
+			},
+			"@nozbe/microfuzz (all opts)": {
+				"10000": {
+					"ms": 1.4116241372549079,
+					"sd": 0.262838218923082
+				},
+				"100000": {
+					"ms": 14.20746176000015,
+					"sd": 0.18157848199900098
+				}
+			},
+			"fuzzy": {
+				"10000": {
+					"ms": 2.503792219999984,
+					"sd": 0.1196604456901679
+				},
+				"100000": {
+					"ms": 27.08559480000006,
+					"sd": 0.20411579329765747
+				}
+			},
+			"fuzzy (all opts)": {
+				"10000": {
+					"ms": 2.5840123866666787,
+					"sd": 0.1307790727162389
+				},
+				"100000": {
+					"ms": 27.915903186666743,
+					"sd": 0.32485262389010755
+				}
+			},
+			"fuzzysort": {
+				"10000": {
+					"ms": 0.36127558571426477,
+					"sd": 0.05731045560490555
+				},
+				"100000": {
+					"ms": 4.7660519199999785,
+					"sd": 0.20166900219681813
+				}
+			},
+			"match-sorter": {
+				"10000": {
+					"ms": 3.09783574666663,
+					"sd": 0.09240937059769468
+				},
+				"100000": {
+					"ms": 31.478032493333256,
+					"sd": 0.2597150852386585
+				}
+			},
+			"fast-fuzzy": {
+				"10000": {
+					"ms": 9.222506626666583,
+					"sd": 0.6330698962185274
+				},
+				"100000": {
+					"ms": 77.91710366666666,
+					"sd": 0.16857028758795387
+				}
+			},
+			"fast-fuzzy (all opts)": {
+				"10000": {
+					"ms": 7.635548466666563,
+					"sd": 0.6185683111974473
+				},
+				"100000": {
+					"ms": 77.44537917333345,
+					"sd": 0.38125193434728183
+				}
+			},
+			"uFuzzy": {
+				"10000": {
+					"ms": 0.24667424666663768,
+					"sd": 0.09460886098185717
+				},
+				"100000": {
+					"ms": 2.244418525000098,
+					"sd": 0.13495191359854003
+				}
+			},
+			"uFuzzy (all opts)": {
+				"10000": {
+					"ms": 0.2848672833333209,
+					"sd": 0.04780374578467695
+				},
+				"100000": {
+					"ms": 2.606873971428528,
+					"sd": 0.01589416503036861
+				}
+			},
+			"fuse.js": {
+				"10000": {
+					"ms": 15.987985599999956,
+					"sd": 0.056230788508275384
+				},
+				"100000": {
+					"ms": 165.0913232133334,
+					"sd": 0.2815946902452147
+				}
+			},
+			"fuse.js (all opts)": {
+				"10000": {
+					"ms": 19.305705373333282,
+					"sd": 0.10423139341704059
+				},
+				"100000": {
+					"ms": 197.60970606666677,
+					"sd": 2.4495030590088507
+				}
+			}
+		},
+		"mixed": {
+			"krino": {
+				"10000": {
+					"ms": 0.2809583233333736,
+					"sd": 0.23157495468408953
+				},
+				"100000": {
+					"ms": 2.2377371750003174,
+					"sd": 0.3899503306026061
+				}
+			},
+			"krino (acronym)": {
+				"10000": {
+					"ms": 0.24376596000016434,
+					"sd": 0.1108314222393489
+				},
+				"100000": {
+					"ms": 3.7677364800001185,
+					"sd": 0.5192549525545112
+				}
+			},
+			"@nozbe/microfuzz": {
+				"10000": {
+					"ms": 1.3071243133335764,
+					"sd": 0.096545749193471
+				},
+				"100000": {
+					"ms": 14.035490533332728,
+					"sd": 0.12674689571957864
+				}
+			},
+			"@nozbe/microfuzz (all opts)": {
+				"10000": {
+					"ms": 1.323613519298133,
+					"sd": 0.10151535589005277
+				},
+				"100000": {
+					"ms": 14.428361173333057,
+					"sd": 0.1452101560335452
+				}
+			},
+			"fuzzy": {
+				"10000": {
+					"ms": 2.781357199999911,
+					"sd": 0.06007053520032859
+				},
+				"100000": {
+					"ms": 28.704914600000098,
+					"sd": 0.4595989769187602
+				}
+			},
+			"fuzzy (all opts)": {
+				"10000": {
+					"ms": 2.809337566666606,
+					"sd": 0.06423789668051617
+				},
+				"100000": {
+					"ms": 28.91687370666652,
+					"sd": 0.18623392474417402
+				}
+			},
+			"fuzzysort": {
+				"10000": {
+					"ms": 0.40895942499967836,
+					"sd": 0.15612768189829193
+				},
+				"100000": {
+					"ms": 4.018096853333603,
+					"sd": 0.2849565002425602
+				}
+			},
+			"match-sorter": {
+				"10000": {
+					"ms": 3.315568177777459,
+					"sd": 0.08350507083984926
+				},
+				"100000": {
+					"ms": 34.24683141333362,
+					"sd": 0.4806529950816675
+				}
+			},
+			"fast-fuzzy": {
+				"10000": {
+					"ms": 6.688190386666295,
+					"sd": 0.26968828936931805
+				},
+				"100000": {
+					"ms": 80.106357626667,
+					"sd": 0.4015069239804917
+				}
+			},
+			"fast-fuzzy (all opts)": {
+				"10000": {
+					"ms": 6.8647539599996525,
+					"sd": 0.40147813537675037
+				},
+				"100000": {
+					"ms": 75.81833973333318,
+					"sd": 0.390766344772432
+				}
+			},
+			"uFuzzy": {
+				"10000": {
+					"ms": 0.3203955033334205,
+					"sd": 0.12053991253320144
+				},
+				"100000": {
+					"ms": 2.338850628571596,
+					"sd": 0.22299108585174582
+				}
+			},
+			"uFuzzy (all opts)": {
+				"10000": {
+					"ms": 0.3002769833332665,
+					"sd": 0.008377072924912243
+				},
+				"100000": {
+					"ms": 2.7328454285713155,
+					"sd": 0.02712680850181879
+				}
+			},
+			"fuse.js": {
+				"10000": {
+					"ms": 15.948470306666568,
+					"sd": 0.0659021164918381
+				},
+				"100000": {
+					"ms": 172.40413098666582,
+					"sd": 0.36859160804469876
+				}
+			},
+			"fuse.js (all opts)": {
+				"10000": {
+					"ms": 17.958911733333178,
+					"sd": 0.15532686790883946
+				},
+				"100000": {
+					"ms": 183.4868076399997,
+					"sd": 1.0432622315833138
+				}
+			}
+		}
+	},
+	"build": {
+		"krino": {
+			"10000": 2.763225833334824,
+			"100000": 46.98530293749718
+		},
+		"@nozbe/microfuzz": {
+			"10000": 10.46929170000367,
+			"100000": 89.75116199999465
+		},
+		"fast-fuzzy": {
+			"10000": 39.62853380000452,
+			"100000": 655.9251257999974
+		},
+		"fuse.js": {
+			"10000": 1.0593352000039886,
+			"100000": 8.691639850001957
+		},
+		"fuzzysort": {
+			"10000": 9.805910450003285,
+			"100000": 90.98847679999889
+		}
+	},
+	"scorecard": {
+		"runs": 5,
+		"corpora": {
+			"ascii": [
+				{
+					"library": "krino (acronym)",
+					"mrr": 0.77,
+					"indexMs": 1.481,
+					"queryMs": 0.291,
+					"totalMs": 1.772
+				},
+				{
+					"library": "krino",
+					"mrr": 0.73,
+					"indexMs": 1.481,
+					"queryMs": 0.261,
+					"totalMs": 1.742
+				},
+				{
+					"library": "fuse.js",
+					"mrr": 0.61,
+					"indexMs": 0.98,
+					"queryMs": 16.09,
+					"totalMs": 17.07
+				},
+				{
+					"library": "fuse.js (all opts)",
+					"mrr": 0.61,
+					"indexMs": 0.819,
+					"queryMs": 18.817,
+					"totalMs": 19.636
+				},
+				{
+					"library": "@nozbe/microfuzz",
+					"mrr": 0.6,
+					"indexMs": 7.179,
+					"queryMs": 1.009,
+					"totalMs": 8.188
+				},
+				{
+					"library": "fuzzy",
+					"mrr": 0.43,
+					"indexMs": 0,
+					"queryMs": 1.727,
+					"totalMs": 1.727
+				},
+				{
+					"library": "fast-fuzzy",
+					"mrr": 0.4,
+					"indexMs": 36.404,
+					"queryMs": 7.896,
+					"totalMs": 44.300000000000004
+				},
+				{
+					"library": "uFuzzy (all opts)",
+					"mrr": 0.38,
+					"indexMs": 0.554,
+					"queryMs": 0.245,
+					"totalMs": 0.799
+				},
+				{
+					"library": "match-sorter",
+					"mrr": 0.31,
+					"indexMs": 0,
+					"queryMs": 2.655,
+					"totalMs": 2.655
+				},
+				{
+					"library": "fuzzysort",
+					"mrr": 0.29,
+					"indexMs": 7.028,
+					"queryMs": 0.161,
+					"totalMs": 7.188999999999999
+				},
+				{
+					"library": "uFuzzy",
+					"mrr": 0.11,
+					"indexMs": 0,
+					"queryMs": 0.168,
+					"totalMs": 0.168
+				}
+			],
+			"mixed": [
+				{
+					"library": "krino (acronym)",
+					"mrr": 0.84,
+					"indexMs": 1.316,
+					"queryMs": 0.171,
+					"totalMs": 1.487
+				},
+				{
+					"library": "krino",
+					"mrr": 0.8,
+					"indexMs": 1.316,
+					"queryMs": 0.159,
+					"totalMs": 1.475
+				},
+				{
+					"library": "fuse.js",
+					"mrr": 0.75,
+					"indexMs": 0.598,
+					"queryMs": 15.62,
+					"totalMs": 16.218
+				},
+				{
+					"library": "fuse.js (all opts)",
+					"mrr": 0.75,
+					"indexMs": 0.562,
+					"queryMs": 17.626,
+					"totalMs": 18.188000000000002
+				},
+				{
+					"library": "@nozbe/microfuzz",
+					"mrr": 0.59,
+					"indexMs": 6.96,
+					"queryMs": 1.022,
+					"totalMs": 7.982
+				},
+				{
+					"library": "fast-fuzzy",
+					"mrr": 0.55,
+					"indexMs": 28.81,
+					"queryMs": 6.468,
+					"totalMs": 35.278
+				},
+				{
+					"library": "fuzzysort",
+					"mrr": 0.54,
+					"indexMs": 6.988,
+					"queryMs": 0.136,
+					"totalMs": 7.1240000000000006
+				},
+				{
+					"library": "fuzzy",
+					"mrr": 0.45,
+					"indexMs": 0,
+					"queryMs": 2.286,
+					"totalMs": 2.286
+				},
+				{
+					"library": "uFuzzy (all opts)",
+					"mrr": 0.42,
+					"indexMs": 0.6,
+					"queryMs": 0.248,
+					"totalMs": 0.848
+				},
+				{
+					"library": "match-sorter",
+					"mrr": 0.41,
+					"indexMs": 0,
+					"queryMs": 2.818,
+					"totalMs": 2.818
+				},
+				{
+					"library": "uFuzzy",
+					"mrr": 0.14,
+					"indexMs": 0,
+					"queryMs": 0.177,
+					"totalMs": 0.177
+				}
+			]
+		}
+	},
+	"probes": {
+		"ascii": [
+			{
+				"kind": "long-word",
+				"query": "handmade",
+				"source": "Handmade Bronze Chips",
+				"cells": {
+					"krino": {
+						"count": 102,
+						"rank": 1,
+						"queryMs": 0.389,
+						"totalMs": 1.87
+					},
+					"krino (acronym)": {
+						"count": 102,
+						"rank": 1,
+						"queryMs": 0.384,
+						"totalMs": 1.864
+					},
+					"@nozbe/microfuzz": {
+						"count": 102,
+						"rank": 1,
+						"queryMs": 0.978,
+						"totalMs": 8.161
+					},
+					"fuzzysort": {
+						"count": 102,
+						"rank": 46,
+						"queryMs": 0.199,
+						"totalMs": 7.222
+					},
+					"match-sorter": {
+						"count": 102,
+						"rank": 14,
+						"queryMs": 2.733,
+						"totalMs": 2.733
+					},
+					"fast-fuzzy": {
+						"count": 179,
+						"rank": 42,
+						"queryMs": 8.752,
+						"totalMs": 45.883
+					},
+					"uFuzzy": {
+						"count": 102,
+						"rank": 14,
+						"queryMs": 0.235,
+						"totalMs": 0.235
+					},
+					"uFuzzy (all opts)": {
+						"count": 102,
+						"rank": 14,
+						"queryMs": 0.3,
+						"totalMs": 0.854
+					},
+					"fuse.js": {
+						"count": 176,
+						"rank": 1,
+						"queryMs": 15.538,
+						"totalMs": 16.536
+					},
+					"fuse.js (all opts)": {
+						"count": 176,
+						"rank": 1,
+						"queryMs": 20.532,
+						"totalMs": 21.107
+					},
+					"fuzzy": {
+						"count": 102,
+						"rank": 1,
+						"queryMs": 1.816,
+						"totalMs": 1.816
+					}
+				}
+			},
+			{
+				"kind": "short-word",
+				"query": "weimann",
+				"source": "Weimann, Bins and Conn",
+				"cells": {
+					"krino": {
+						"count": 12,
+						"rank": 2,
+						"queryMs": 0.281,
+						"totalMs": 1.762
+					},
+					"krino (acronym)": {
+						"count": 12,
+						"rank": 2,
+						"queryMs": 0.285,
+						"totalMs": 1.765
+					},
+					"@nozbe/microfuzz": {
+						"count": 19,
+						"rank": 2,
+						"queryMs": 0.892,
+						"totalMs": 8.074
+					},
+					"fuzzysort": {
+						"count": 19,
+						"rank": 10,
+						"queryMs": 0.128,
+						"totalMs": 7.157
+					},
+					"match-sorter": {
+						"count": 19,
+						"rank": 4,
+						"queryMs": 2.585,
+						"totalMs": 2.585
+					},
+					"fast-fuzzy": {
+						"count": 74,
+						"rank": 5,
+						"queryMs": 6.532,
+						"totalMs": 42.849
+					},
+					"uFuzzy": {
+						"count": 12,
+						"rank": 4,
+						"queryMs": 0.191,
+						"totalMs": 0.191
+					},
+					"uFuzzy (all opts)": {
+						"count": 12,
+						"rank": 4,
+						"queryMs": 0.211,
+						"totalMs": 0.765
+					},
+					"fuse.js": {
+						"count": 74,
+						"rank": 11,
+						"queryMs": 11.832,
+						"totalMs": 12.812
+					},
+					"fuse.js (all opts)": {
+						"count": 74,
+						"rank": 11,
+						"queryMs": 17.135,
+						"totalMs": 17.682
+					},
+					"fuzzy": {
+						"count": 19,
+						"rank": 2,
+						"queryMs": 1.742,
+						"totalMs": 1.742
+					}
+				}
+			},
+			{
+				"kind": "two-words",
+				"query": "practical metal",
+				"source": "Practical Metal Towels",
+				"cells": {
+					"krino": {
+						"count": 8,
+						"rank": 1,
+						"queryMs": 0.065,
+						"totalMs": 1.545
+					},
+					"krino (acronym)": {
+						"count": 8,
+						"rank": 1,
+						"queryMs": 0.064,
+						"totalMs": 1.545
+					},
+					"@nozbe/microfuzz": {
+						"count": 9,
+						"rank": 1,
+						"queryMs": 0.963,
+						"totalMs": 8.135
+					},
+					"fuzzysort": {
+						"count": 10,
+						"rank": 5,
+						"queryMs": 0.13,
+						"totalMs": 7.158
+					},
+					"match-sorter": {
+						"count": 9,
+						"rank": 7,
+						"queryMs": 2.368,
+						"totalMs": 2.368
+					},
+					"fast-fuzzy": {
+						"count": 135,
+						"rank": 5,
+						"queryMs": 10.058,
+						"totalMs": 46.974
+					},
+					"uFuzzy": {
+						"count": 8,
+						"rank": 7,
+						"queryMs": 0.113,
+						"totalMs": 0.113
+					},
+					"uFuzzy (all opts)": {
+						"count": 8,
+						"rank": null,
+						"queryMs": 0.2,
+						"totalMs": 0.754
+					},
+					"fuse.js": {
+						"count": 135,
+						"rank": 1,
+						"queryMs": 32.173,
+						"totalMs": 33.071
+					},
+					"fuse.js (all opts)": {
+						"count": 8,
+						"rank": 1,
+						"queryMs": 20.855,
+						"totalMs": 21.645
+					},
+					"fuzzy": {
+						"count": 9,
+						"rank": 1,
+						"queryMs": 1.639,
+						"totalMs": 1.639
+					}
+				}
+			},
+			{
+				"kind": "two-words-reversed",
+				"query": "metal practical",
+				"source": "Practical Metal Towels",
+				"cells": {
+					"krino": {
+						"count": 8,
+						"rank": 1,
+						"queryMs": 0.055,
+						"totalMs": 1.536
+					},
+					"krino (acronym)": {
+						"count": 8,
+						"rank": 1,
+						"queryMs": 0.055,
+						"totalMs": 1.536
+					},
+					"@nozbe/microfuzz": {
+						"count": 8,
+						"rank": 1,
+						"queryMs": 1.028,
+						"totalMs": 8.21
+					},
+					"fuzzysort": {
+						"count": 10,
+						"rank": 5,
+						"queryMs": 0.122,
+						"totalMs": 7.15
+					},
+					"match-sorter": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.408,
+						"totalMs": 2.408
+					},
+					"fast-fuzzy": {
+						"count": 120,
+						"rank": 33,
+						"queryMs": 9.245,
+						"totalMs": 45.751
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.164,
+						"totalMs": 0.164
+					},
+					"uFuzzy (all opts)": {
+						"count": 8,
+						"rank": null,
+						"queryMs": 0.199,
+						"totalMs": 0.754
+					},
+					"fuse.js": {
+						"count": 120,
+						"rank": 1,
+						"queryMs": 31.838,
+						"totalMs": 32.818
+					},
+					"fuse.js (all opts)": {
+						"count": 8,
+						"rank": 1,
+						"queryMs": 17.221,
+						"totalMs": 18.023
+					},
+					"fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 1.689,
+						"totalMs": 1.689
+					}
+				}
+			},
+			{
+				"kind": "prefix",
+				"query": "kasey",
+				"source": "Kasey Conn II",
+				"cells": {
+					"krino": {
+						"count": 2,
+						"rank": 1,
+						"queryMs": 0.259,
+						"totalMs": 1.74
+					},
+					"krino (acronym)": {
+						"count": 2,
+						"rank": 1,
+						"queryMs": 0.271,
+						"totalMs": 1.754
+					},
+					"@nozbe/microfuzz": {
+						"count": 16,
+						"rank": 1,
+						"queryMs": 0.908,
+						"totalMs": 8.087
+					},
+					"fuzzysort": {
+						"count": 16,
+						"rank": 1,
+						"queryMs": 0.114,
+						"totalMs": 7.142
+					},
+					"match-sorter": {
+						"count": 16,
+						"rank": 1,
+						"queryMs": 2.631,
+						"totalMs": 2.631
+					},
+					"fast-fuzzy": {
+						"count": 478,
+						"rank": 1,
+						"queryMs": 7.732,
+						"totalMs": 43.808
+					},
+					"uFuzzy": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.213,
+						"totalMs": 0.213
+					},
+					"uFuzzy (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.227,
+						"totalMs": 0.782
+					},
+					"fuse.js": {
+						"count": 475,
+						"rank": 1,
+						"queryMs": 11.215,
+						"totalMs": 12.133
+					},
+					"fuse.js (all opts)": {
+						"count": 475,
+						"rank": 1,
+						"queryMs": 16.698,
+						"totalMs": 17.478
+					},
+					"fuzzy": {
+						"count": 16,
+						"rank": 1,
+						"queryMs": 1.748,
+						"totalMs": 1.748
+					}
+				}
+			},
+			{
+				"kind": "infix",
+				"query": "tting",
+				"source": "Wittingfort, Algeria",
+				"cells": {
+					"krino": {
+						"count": 31,
+						"rank": 3,
+						"queryMs": 0.541,
+						"totalMs": 2.026
+					},
+					"krino (acronym)": {
+						"count": 31,
+						"rank": 3,
+						"queryMs": 0.594,
+						"totalMs": 2.075
+					},
+					"@nozbe/microfuzz": {
+						"count": 98,
+						"rank": 3,
+						"queryMs": 1.032,
+						"totalMs": 8.211
+					},
+					"fuzzysort": {
+						"count": 98,
+						"rank": 6,
+						"queryMs": 0.218,
+						"totalMs": 7.246
+					},
+					"match-sorter": {
+						"count": 98,
+						"rank": 25,
+						"queryMs": 2.673,
+						"totalMs": 2.673
+					},
+					"fast-fuzzy": {
+						"count": 641,
+						"rank": 6,
+						"queryMs": 7.471,
+						"totalMs": 44.317
+					},
+					"uFuzzy": {
+						"count": 28,
+						"rank": 10,
+						"queryMs": 0.193,
+						"totalMs": 0.193
+					},
+					"uFuzzy (all opts)": {
+						"count": 31,
+						"rank": 10,
+						"queryMs": 0.288,
+						"totalMs": 0.841
+					},
+					"fuse.js": {
+						"count": 628,
+						"rank": 2,
+						"queryMs": 10.916,
+						"totalMs": 11.935
+					},
+					"fuse.js (all opts)": {
+						"count": 628,
+						"rank": 2,
+						"queryMs": 16.134,
+						"totalMs": 16.971
+					},
+					"fuzzy": {
+						"count": 98,
+						"rank": 2,
+						"queryMs": 1.704,
+						"totalMs": 1.704
+					}
+				}
+			},
+			{
+				"kind": "scatter-light",
+				"query": "nadiaouth",
+				"source": "Nadiamouth, Ireland",
+				"cells": {
+					"krino": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.188,
+						"totalMs": 1.664
+					},
+					"krino (acronym)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.19,
+						"totalMs": 1.666
+					},
+					"@nozbe/microfuzz": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 1.087,
+						"totalMs": 8.273
+					},
+					"fuzzysort": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.111,
+						"totalMs": 7.138
+					},
+					"match-sorter": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 2.787,
+						"totalMs": 2.787
+					},
+					"fast-fuzzy": {
+						"count": 11,
+						"rank": 1,
+						"queryMs": 7.733,
+						"totalMs": 44.328
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.169,
+						"totalMs": 0.169
+					},
+					"uFuzzy (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.278,
+						"totalMs": 0.83
+					},
+					"fuse.js": {
+						"count": 9,
+						"rank": 1,
+						"queryMs": 16.444,
+						"totalMs": 17.424
+					},
+					"fuse.js (all opts)": {
+						"count": 9,
+						"rank": 1,
+						"queryMs": 21.24,
+						"totalMs": 22.053
+					},
+					"fuzzy": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 1.841,
+						"totalMs": 1.841
+					}
+				}
+			},
+			{
+				"kind": "scatter-medium",
+				"query": "naiaouh",
+				"source": "Nadiamouth, Ireland",
+				"cells": {
+					"krino": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.308,
+						"totalMs": 1.789
+					},
+					"krino (acronym)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.31,
+						"totalMs": 1.791
+					},
+					"@nozbe/microfuzz": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 1.102,
+						"totalMs": 8.284
+					},
+					"fuzzysort": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 0.139,
+						"totalMs": 7.163
+					},
+					"match-sorter": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 2.76,
+						"totalMs": 2.76
+					},
+					"fast-fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 7.108,
+						"totalMs": 43.906
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.131,
+						"totalMs": 0.131
+					},
+					"uFuzzy (all opts)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.258,
+						"totalMs": 0.812
+					},
+					"fuse.js": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 11.819,
+						"totalMs": 12.838
+					},
+					"fuse.js (all opts)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 16.508,
+						"totalMs": 17.301
+					},
+					"fuzzy": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 1.702,
+						"totalMs": 1.702
+					}
+				}
+			},
+			{
+				"kind": "scatter-heavy",
+				"query": "ndaot",
+				"source": "Nadiamouth, Ireland",
+				"cells": {
+					"krino": {
+						"count": 5,
+						"rank": null,
+						"queryMs": 0.853,
+						"totalMs": 2.332
+					},
+					"krino (acronym)": {
+						"count": 5,
+						"rank": null,
+						"queryMs": 0.915,
+						"totalMs": 2.391
+					},
+					"@nozbe/microfuzz": {
+						"count": 122,
+						"rank": 95,
+						"queryMs": 1.094,
+						"totalMs": 8.286
+					},
+					"fuzzysort": {
+						"count": 122,
+						"rank": 19,
+						"queryMs": 0.269,
+						"totalMs": 7.296
+					},
+					"match-sorter": {
+						"count": 122,
+						"rank": 4,
+						"queryMs": 2.747,
+						"totalMs": 2.747
+					},
+					"fast-fuzzy": {
+						"count": 489,
+						"rank": null,
+						"queryMs": 8.052,
+						"totalMs": 44.633
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.178,
+						"totalMs": 0.178
+					},
+					"uFuzzy (all opts)": {
+						"count": 2,
+						"rank": null,
+						"queryMs": 0.278,
+						"totalMs": 0.832
+					},
+					"fuse.js": {
+						"count": 477,
+						"rank": null,
+						"queryMs": 11.134,
+						"totalMs": 12.099
+					},
+					"fuse.js (all opts)": {
+						"count": 477,
+						"rank": null,
+						"queryMs": 16.282,
+						"totalMs": 17.118
+					},
+					"fuzzy": {
+						"count": 122,
+						"rank": 81,
+						"queryMs": 1.718,
+						"totalMs": 1.718
+					}
+				}
+			},
+			{
+				"kind": "transposition",
+				"query": "nadimaouth",
+				"source": "Nadiamouth, Ireland",
+				"cells": {
+					"krino": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.116,
+						"totalMs": 1.596
+					},
+					"krino (acronym)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.116,
+						"totalMs": 1.599
+					},
+					"@nozbe/microfuzz": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 1.066,
+						"totalMs": 8.24
+					},
+					"fuzzysort": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.099,
+						"totalMs": 7.127
+					},
+					"match-sorter": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.711,
+						"totalMs": 2.711
+					},
+					"fast-fuzzy": {
+						"count": 44,
+						"rank": 1,
+						"queryMs": 8.621,
+						"totalMs": 45.607
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.131,
+						"totalMs": 0.131
+					},
+					"uFuzzy (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.265,
+						"totalMs": 0.817
+					},
+					"fuse.js": {
+						"count": 44,
+						"rank": 1,
+						"queryMs": 20.714,
+						"totalMs": 21.591
+					},
+					"fuse.js (all opts)": {
+						"count": 44,
+						"rank": 1,
+						"queryMs": 25.829,
+						"totalMs": 26.376
+					},
+					"fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 1.709,
+						"totalMs": 1.709
+					}
+				}
+			},
+			{
+				"kind": "insertion",
+				"query": "nadiammouth",
+				"source": "Nadiamouth, Ireland",
+				"cells": {
+					"krino": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.115,
+						"totalMs": 1.595
+					},
+					"krino (acronym)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.115,
+						"totalMs": 1.596
+					},
+					"@nozbe/microfuzz": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 1.057,
+						"totalMs": 8.24
+					},
+					"fuzzysort": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.1,
+						"totalMs": 7.125
+					},
+					"match-sorter": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.7,
+						"totalMs": 2.7
+					},
+					"fast-fuzzy": {
+						"count": 11,
+						"rank": 1,
+						"queryMs": 8.146,
+						"totalMs": 44.353
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.141,
+						"totalMs": 0.141
+					},
+					"uFuzzy (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.253,
+						"totalMs": 0.804
+					},
+					"fuse.js": {
+						"count": 10,
+						"rank": 1,
+						"queryMs": 21.444,
+						"totalMs": 22.229
+					},
+					"fuse.js (all opts)": {
+						"count": 10,
+						"rank": 1,
+						"queryMs": 26.117,
+						"totalMs": 26.908
+					},
+					"fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 1.692,
+						"totalMs": 1.692
+					}
+				}
+			},
+			{
+				"kind": "substitution",
+				"query": "nadiaxouth",
+				"source": "Nadiamouth, Ireland",
+				"cells": {
+					"krino": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.058,
+						"totalMs": 1.54
+					},
+					"krino (acronym)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.058,
+						"totalMs": 1.538
+					},
+					"@nozbe/microfuzz": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 1.062,
+						"totalMs": 8.245
+					},
+					"fuzzysort": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.088,
+						"totalMs": 7.116
+					},
+					"match-sorter": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.705,
+						"totalMs": 2.705
+					},
+					"fast-fuzzy": {
+						"count": 15,
+						"rank": 1,
+						"queryMs": 8.503,
+						"totalMs": 45.283
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.122,
+						"totalMs": 0.122
+					},
+					"uFuzzy (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.265,
+						"totalMs": 0.815
+					},
+					"fuse.js": {
+						"count": 14,
+						"rank": 1,
+						"queryMs": 20.498,
+						"totalMs": 21.504
+					},
+					"fuse.js (all opts)": {
+						"count": 14,
+						"rank": 1,
+						"queryMs": 25.228,
+						"totalMs": 26.053
+					},
+					"fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 1.687,
+						"totalMs": 1.687
+					}
+				}
+			},
+			{
+				"kind": "acronym",
+				"query": "sgh",
+				"source": "Soft Gold Hat",
+				"cells": {
+					"krino": {
+						"count": 31,
+						"rank": 3,
+						"queryMs": 0.16,
+						"totalMs": 1.642
+					},
+					"krino (acronym)": {
+						"count": 32,
+						"rank": 1,
+						"queryMs": 0.244,
+						"totalMs": 1.724
+					},
+					"@nozbe/microfuzz": {
+						"count": 232,
+						"rank": 2,
+						"queryMs": 1.011,
+						"totalMs": 8.19
+					},
+					"fuzzysort": {
+						"count": 232,
+						"rank": 3,
+						"queryMs": 0.224,
+						"totalMs": 7.252
+					},
+					"match-sorter": {
+						"count": 232,
+						"rank": 2,
+						"queryMs": 2.728,
+						"totalMs": 2.728
+					},
+					"fast-fuzzy": {
+						"count": 1508,
+						"rank": null,
+						"queryMs": 7.442,
+						"totalMs": 43.846
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.169,
+						"totalMs": 0.169
+					},
+					"uFuzzy (all opts)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.17,
+						"totalMs": 0.725
+					},
+					"fuse.js": {
+						"count": 1484,
+						"rank": null,
+						"queryMs": 7.188,
+						"totalMs": 8.063
+					},
+					"fuse.js (all opts)": {
+						"count": 1484,
+						"rank": null,
+						"queryMs": 12.885,
+						"totalMs": 13.694
+					},
+					"fuzzy": {
+						"count": 232,
+						"rank": 81,
+						"queryMs": 1.715,
+						"totalMs": 1.715
+					}
+				}
+			},
+			{
+				"kind": "accent-stripped",
+				"query": "cote",
+				"source": "North Jamelberg, Côte d'Ivoire",
+				"cells": {
+					"krino": {
+						"count": 392,
+						"rank": 1,
+						"queryMs": 0.487,
+						"totalMs": 1.973
+					},
+					"krino (acronym)": {
+						"count": 392,
+						"rank": 1,
+						"queryMs": 0.721,
+						"totalMs": 2.204
+					},
+					"@nozbe/microfuzz": {
+						"count": 601,
+						"rank": 1,
+						"queryMs": 1.07,
+						"totalMs": 8.271
+					},
+					"fuzzysort": {
+						"count": 601,
+						"rank": 11,
+						"queryMs": 0.397,
+						"totalMs": 7.424
+					},
+					"match-sorter": {
+						"count": 601,
+						"rank": 7,
+						"queryMs": 2.832,
+						"totalMs": 2.832
+					},
+					"fast-fuzzy": {
+						"count": 296,
+						"rank": 289,
+						"queryMs": 6.648,
+						"totalMs": 43.218
+					},
+					"uFuzzy": {
+						"count": 23,
+						"rank": null,
+						"queryMs": 0.236,
+						"totalMs": 0.236
+					},
+					"uFuzzy (all opts)": {
+						"count": 57,
+						"rank": 11,
+						"queryMs": 0.263,
+						"totalMs": 0.813
+					},
+					"fuse.js": {
+						"count": 296,
+						"rank": 273,
+						"queryMs": 7.18,
+						"totalMs": 8.199
+					},
+					"fuse.js (all opts)": {
+						"count": 296,
+						"rank": 21,
+						"queryMs": 12.114,
+						"totalMs": 12.951
+					},
+					"fuzzy": {
+						"count": 590,
+						"rank": null,
+						"queryMs": 1.969,
+						"totalMs": 1.969
+					}
+				}
+			},
+			{
+				"kind": "miss",
+				"query": "qxzwkv",
+				"source": null,
+				"cells": {
+					"krino": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.023,
+						"totalMs": 1.505
+					},
+					"krino (acronym)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.023,
+						"totalMs": 1.505
+					},
+					"@nozbe/microfuzz": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.793,
+						"totalMs": 7.977
+					},
+					"fuzzysort": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.088,
+						"totalMs": 7.116
+					},
+					"match-sorter": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.473,
+						"totalMs": 2.473
+					},
+					"fast-fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 6.107,
+						"totalMs": 42.979
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.103,
+						"totalMs": 0.103
+					},
+					"uFuzzy (all opts)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.192,
+						"totalMs": 0.746
+					},
+					"fuse.js": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 10.875,
+						"totalMs": 11.622
+					},
+					"fuse.js (all opts)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 16.007,
+						"totalMs": 16.554
+					},
+					"fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 1.558,
+						"totalMs": 1.558
+					}
+				}
+			}
+		],
+		"mixed": [
+			{
+				"kind": "long-word",
+				"query": "ergonomic",
+				"source": "Ergonomic Granite Hat",
+				"cells": {
+					"krino": {
+						"count": 76,
+						"rank": 1,
+						"queryMs": 0.188,
+						"totalMs": 1.503
+					},
+					"krino (acronym)": {
+						"count": 76,
+						"rank": 1,
+						"queryMs": 0.186,
+						"totalMs": 1.502
+					},
+					"@nozbe/microfuzz": {
+						"count": 76,
+						"rank": 1,
+						"queryMs": 1.196,
+						"totalMs": 8.156
+					},
+					"fuzzysort": {
+						"count": 76,
+						"rank": 20,
+						"queryMs": 0.138,
+						"totalMs": 7.124
+					},
+					"match-sorter": {
+						"count": 76,
+						"rank": 29,
+						"queryMs": 3.113,
+						"totalMs": 3.113
+					},
+					"fast-fuzzy": {
+						"count": 82,
+						"rank": 13,
+						"queryMs": 7.176,
+						"totalMs": 36.074
+					},
+					"uFuzzy": {
+						"count": 76,
+						"rank": 29,
+						"queryMs": 0.218,
+						"totalMs": 0.218
+					},
+					"uFuzzy (all opts)": {
+						"count": 76,
+						"rank": 29,
+						"queryMs": 0.352,
+						"totalMs": 0.952
+					},
+					"fuse.js": {
+						"count": 81,
+						"rank": 1,
+						"queryMs": 16.627,
+						"totalMs": 17.221
+					},
+					"fuse.js (all opts)": {
+						"count": 81,
+						"rank": 1,
+						"queryMs": 21.622,
+						"totalMs": 22.184
+					},
+					"fuzzy": {
+						"count": 76,
+						"rank": 1,
+						"queryMs": 2.467,
+						"totalMs": 2.467
+					}
+				}
+			},
+			{
+				"kind": "short-word",
+				"query": "grady",
+				"source": "Grady Group",
+				"cells": {
+					"krino": {
+						"count": 24,
+						"rank": 1,
+						"queryMs": 0.229,
+						"totalMs": 1.543
+					},
+					"krino (acronym)": {
+						"count": 24,
+						"rank": 1,
+						"queryMs": 0.239,
+						"totalMs": 1.553
+					},
+					"@nozbe/microfuzz": {
+						"count": 36,
+						"rank": 1,
+						"queryMs": 0.993,
+						"totalMs": 7.939
+					},
+					"fuzzysort": {
+						"count": 36,
+						"rank": 2,
+						"queryMs": 0.129,
+						"totalMs": 7.116
+					},
+					"match-sorter": {
+						"count": 36,
+						"rank": 2,
+						"queryMs": 2.923,
+						"totalMs": 2.923
+					},
+					"fast-fuzzy": {
+						"count": 382,
+						"rank": 2,
+						"queryMs": 6.359,
+						"totalMs": 35.12
+					},
+					"uFuzzy": {
+						"count": 19,
+						"rank": 2,
+						"queryMs": 0.201,
+						"totalMs": 0.201
+					},
+					"uFuzzy (all opts)": {
+						"count": 24,
+						"rank": 2,
+						"queryMs": 0.25,
+						"totalMs": 0.85
+					},
+					"fuse.js": {
+						"count": 375,
+						"rank": 1,
+						"queryMs": 11.236,
+						"totalMs": 11.872
+					},
+					"fuse.js (all opts)": {
+						"count": 375,
+						"rank": 1,
+						"queryMs": 16.853,
+						"totalMs": 17.409
+					},
+					"fuzzy": {
+						"count": 36,
+						"rank": 1,
+						"queryMs": 2.371,
+						"totalMs": 2.371
+					}
+				}
+			},
+			{
+				"kind": "two-words",
+				"query": "handcrafted wooden",
+				"source": "Handcrafted Wooden Car",
+				"cells": {
+					"krino": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 0.033,
+						"totalMs": 1.353
+					},
+					"krino (acronym)": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 0.032,
+						"totalMs": 1.352
+					},
+					"@nozbe/microfuzz": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 1.065,
+						"totalMs": 8.016
+					},
+					"fuzzysort": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 0.115,
+						"totalMs": 7.102
+					},
+					"match-sorter": {
+						"count": 5,
+						"rank": 2,
+						"queryMs": 2.391,
+						"totalMs": 2.391
+					},
+					"fast-fuzzy": {
+						"count": 95,
+						"rank": 1,
+						"queryMs": 8.307,
+						"totalMs": 37.065
+					},
+					"uFuzzy": {
+						"count": 5,
+						"rank": 2,
+						"queryMs": 0.132,
+						"totalMs": 0.132
+					},
+					"uFuzzy (all opts)": {
+						"count": 5,
+						"rank": null,
+						"queryMs": 0.242,
+						"totalMs": 0.842
+					},
+					"fuse.js": {
+						"count": 95,
+						"rank": 1,
+						"queryMs": 40.314,
+						"totalMs": 40.949
+					},
+					"fuse.js (all opts)": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 25.93,
+						"totalMs": 26.504
+					},
+					"fuzzy": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 2.332,
+						"totalMs": 2.332
+					}
+				}
+			},
+			{
+				"kind": "two-words-reversed",
+				"query": "wooden handcrafted",
+				"source": "Handcrafted Wooden Car",
+				"cells": {
+					"krino": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 0.029,
+						"totalMs": 1.344
+					},
+					"krino (acronym)": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 0.029,
+						"totalMs": 1.344
+					},
+					"@nozbe/microfuzz": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 0.998,
+						"totalMs": 7.957
+					},
+					"fuzzysort": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 0.112,
+						"totalMs": 7.1
+					},
+					"match-sorter": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.32,
+						"totalMs": 2.32
+					},
+					"fast-fuzzy": {
+						"count": 76,
+						"rank": 5,
+						"queryMs": 8.33,
+						"totalMs": 37.307
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.104,
+						"totalMs": 0.104
+					},
+					"uFuzzy (all opts)": {
+						"count": 5,
+						"rank": null,
+						"queryMs": 0.241,
+						"totalMs": 0.84
+					},
+					"fuse.js": {
+						"count": 76,
+						"rank": 1,
+						"queryMs": 40.245,
+						"totalMs": 40.843
+					},
+					"fuse.js (all opts)": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 16.967,
+						"totalMs": 17.528
+					},
+					"fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.254,
+						"totalMs": 2.254
+					}
+				}
+			},
+			{
+				"kind": "prefix",
+				"query": "auxen",
+				"source": "Auxence Deschamps",
+				"cells": {
+					"krino": {
+						"count": 16,
+						"rank": 1,
+						"queryMs": 0.219,
+						"totalMs": 1.537
+					},
+					"krino (acronym)": {
+						"count": 16,
+						"rank": 1,
+						"queryMs": 0.224,
+						"totalMs": 1.543
+					},
+					"@nozbe/microfuzz": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 1.141,
+						"totalMs": 8.086
+					},
+					"fuzzysort": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.107,
+						"totalMs": 7.093
+					},
+					"match-sorter": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 2.951,
+						"totalMs": 2.951
+					},
+					"fast-fuzzy": {
+						"count": 452,
+						"rank": 1,
+						"queryMs": 6.484,
+						"totalMs": 35.056
+					},
+					"uFuzzy": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.235,
+						"totalMs": 0.235
+					},
+					"uFuzzy (all opts)": {
+						"count": 16,
+						"rank": 1,
+						"queryMs": 0.323,
+						"totalMs": 0.92
+					},
+					"fuse.js": {
+						"count": 444,
+						"rank": 1,
+						"queryMs": 11.447,
+						"totalMs": 12.045
+					},
+					"fuse.js (all opts)": {
+						"count": 452,
+						"rank": 1,
+						"queryMs": 17.131,
+						"totalMs": 17.692
+					},
+					"fuzzy": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 2.26,
+						"totalMs": 2.26
+					}
+				}
+			},
+			{
+				"kind": "infix",
+				"query": "gonom",
+				"source": "Ergonomic Silk Cheese",
+				"cells": {
+					"krino": {
+						"count": 76,
+						"rank": 5,
+						"queryMs": 0.35,
+						"totalMs": 1.668
+					},
+					"krino (acronym)": {
+						"count": 76,
+						"rank": 5,
+						"queryMs": 0.384,
+						"totalMs": 1.7
+					},
+					"@nozbe/microfuzz": {
+						"count": 88,
+						"rank": 5,
+						"queryMs": 0.986,
+						"totalMs": 7.945
+					},
+					"fuzzysort": {
+						"count": 88,
+						"rank": 13,
+						"queryMs": 0.168,
+						"totalMs": 7.155
+					},
+					"match-sorter": {
+						"count": 88,
+						"rank": 58,
+						"queryMs": 2.85,
+						"totalMs": 2.85
+					},
+					"fast-fuzzy": {
+						"count": 197,
+						"rank": 14,
+						"queryMs": 6.307,
+						"totalMs": 35.021
+					},
+					"uFuzzy": {
+						"count": 76,
+						"rank": 58,
+						"queryMs": 0.236,
+						"totalMs": 0.236
+					},
+					"uFuzzy (all opts)": {
+						"count": 76,
+						"rank": 58,
+						"queryMs": 0.28,
+						"totalMs": 0.88
+					},
+					"fuse.js": {
+						"count": 174,
+						"rank": 5,
+						"queryMs": 11.325,
+						"totalMs": 11.919
+					},
+					"fuse.js (all opts)": {
+						"count": 174,
+						"rank": 5,
+						"queryMs": 16.25,
+						"totalMs": 16.811
+					},
+					"fuzzy": {
+						"count": 88,
+						"rank": 5,
+						"queryMs": 2.244,
+						"totalMs": 2.244
+					}
+				}
+			},
+			{
+				"kind": "scatter-light",
+				"query": "hugutte",
+				"source": "Huguette Rousseau",
+				"cells": {
+					"krino": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.175,
+						"totalMs": 1.488
+					},
+					"krino (acronym)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.179,
+						"totalMs": 1.493
+					},
+					"@nozbe/microfuzz": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 0.989,
+						"totalMs": 7.949
+					},
+					"fuzzysort": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 0.131,
+						"totalMs": 7.114
+					},
+					"match-sorter": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 2.923,
+						"totalMs": 2.923
+					},
+					"fast-fuzzy": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 6.009,
+						"totalMs": 34.819
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.169,
+						"totalMs": 0.169
+					},
+					"uFuzzy (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.23,
+						"totalMs": 0.83
+					},
+					"fuse.js": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 11.89,
+						"totalMs": 12.525
+					},
+					"fuse.js (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 16.929,
+						"totalMs": 17.491
+					},
+					"fuzzy": {
+						"count": 5,
+						"rank": 1,
+						"queryMs": 2.359,
+						"totalMs": 2.359
+					}
+				}
+			},
+			{
+				"kind": "scatter-medium",
+				"query": "huuete",
+				"source": "Huguette Rousseau",
+				"cells": {
+					"krino": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.329,
+						"totalMs": 1.646
+					},
+					"krino (acronym)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.334,
+						"totalMs": 1.653
+					},
+					"@nozbe/microfuzz": {
+						"count": 9,
+						"rank": 1,
+						"queryMs": 0.984,
+						"totalMs": 7.934
+					},
+					"fuzzysort": {
+						"count": 9,
+						"rank": 1,
+						"queryMs": 0.186,
+						"totalMs": 7.159
+					},
+					"match-sorter": {
+						"count": 9,
+						"rank": 1,
+						"queryMs": 2.849,
+						"totalMs": 2.849
+					},
+					"fast-fuzzy": {
+						"count": 26,
+						"rank": 1,
+						"queryMs": 5.778,
+						"totalMs": 34.513
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.124,
+						"totalMs": 0.124
+					},
+					"uFuzzy (all opts)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.23,
+						"totalMs": 0.828
+					},
+					"fuse.js": {
+						"count": 26,
+						"rank": 3,
+						"queryMs": 11.182,
+						"totalMs": 11.789
+					},
+					"fuse.js (all opts)": {
+						"count": 26,
+						"rank": 3,
+						"queryMs": 16.39,
+						"totalMs": 16.963
+					},
+					"fuzzy": {
+						"count": 9,
+						"rank": 1,
+						"queryMs": 2.239,
+						"totalMs": 2.239
+					}
+				}
+			},
+			{
+				"kind": "scatter-heavy",
+				"query": "hget",
+				"source": "Huguette Rousseau",
+				"cells": {
+					"krino": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.124,
+						"totalMs": 1.44
+					},
+					"krino (acronym)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.153,
+						"totalMs": 1.469
+					},
+					"@nozbe/microfuzz": {
+						"count": 67,
+						"rank": 21,
+						"queryMs": 1.001,
+						"totalMs": 7.952
+					},
+					"fuzzysort": {
+						"count": 67,
+						"rank": 1,
+						"queryMs": 0.164,
+						"totalMs": 7.149
+					},
+					"match-sorter": {
+						"count": 67,
+						"rank": 1,
+						"queryMs": 2.831,
+						"totalMs": 2.831
+					},
+					"fast-fuzzy": {
+						"count": 24,
+						"rank": null,
+						"queryMs": 5.278,
+						"totalMs": 34.102
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.199,
+						"totalMs": 0.199
+					},
+					"uFuzzy (all opts)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.224,
+						"totalMs": 0.825
+					},
+					"fuse.js": {
+						"count": 24,
+						"rank": null,
+						"queryMs": 7.173,
+						"totalMs": 7.808
+					},
+					"fuse.js (all opts)": {
+						"count": 25,
+						"rank": null,
+						"queryMs": 12.346,
+						"totalMs": 12.902
+					},
+					"fuzzy": {
+						"count": 67,
+						"rank": 10,
+						"queryMs": 2.25,
+						"totalMs": 2.25
+					}
+				}
+			},
+			{
+				"kind": "transposition",
+				"query": "hugeutte",
+				"source": "Huguette Rousseau",
+				"cells": {
+					"krino": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.174,
+						"totalMs": 1.493
+					},
+					"krino (acronym)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.174,
+						"totalMs": 1.494
+					},
+					"@nozbe/microfuzz": {
+						"count": 2,
+						"rank": null,
+						"queryMs": 0.983,
+						"totalMs": 7.933
+					},
+					"fuzzysort": {
+						"count": 2,
+						"rank": null,
+						"queryMs": 0.125,
+						"totalMs": 7.113
+					},
+					"match-sorter": {
+						"count": 2,
+						"rank": null,
+						"queryMs": 2.846,
+						"totalMs": 2.846
+					},
+					"fast-fuzzy": {
+						"count": 6,
+						"rank": 1,
+						"queryMs": 6.427,
+						"totalMs": 35.237
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.157,
+						"totalMs": 0.157
+					},
+					"uFuzzy (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.22,
+						"totalMs": 0.822
+					},
+					"fuse.js": {
+						"count": 6,
+						"rank": 1,
+						"queryMs": 15.623,
+						"totalMs": 16.218
+					},
+					"fuse.js (all opts)": {
+						"count": 6,
+						"rank": 1,
+						"queryMs": 20.436,
+						"totalMs": 20.998
+					},
+					"fuzzy": {
+						"count": 2,
+						"rank": null,
+						"queryMs": 2.226,
+						"totalMs": 2.226
+					}
+				}
+			},
+			{
+				"kind": "insertion",
+				"query": "hugueette",
+				"source": "Huguette Rousseau",
+				"cells": {
+					"krino": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.171,
+						"totalMs": 1.485
+					},
+					"krino (acronym)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.171,
+						"totalMs": 1.486
+					},
+					"@nozbe/microfuzz": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.979,
+						"totalMs": 7.939
+					},
+					"fuzzysort": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.125,
+						"totalMs": 7.112
+					},
+					"match-sorter": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.836,
+						"totalMs": 2.836
+					},
+					"fast-fuzzy": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 6.294,
+						"totalMs": 35.104
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.171,
+						"totalMs": 0.171
+					},
+					"uFuzzy (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.228,
+						"totalMs": 0.826
+					},
+					"fuse.js": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 15.955,
+						"totalMs": 16.549
+					},
+					"fuse.js (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 20.993,
+						"totalMs": 21.547
+					},
+					"fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.234,
+						"totalMs": 2.234
+					}
+				}
+			},
+			{
+				"kind": "substitution",
+				"query": "huguxtte",
+				"source": "Huguette Rousseau",
+				"cells": {
+					"krino": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.058,
+						"totalMs": 1.379
+					},
+					"krino (acronym)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.057,
+						"totalMs": 1.378
+					},
+					"@nozbe/microfuzz": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.973,
+						"totalMs": 7.93
+					},
+					"fuzzysort": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.104,
+						"totalMs": 7.091
+					},
+					"match-sorter": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.83,
+						"totalMs": 2.83
+					},
+					"fast-fuzzy": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 6.509,
+						"totalMs": 35.141
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.165,
+						"totalMs": 0.165
+					},
+					"uFuzzy (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 0.221,
+						"totalMs": 0.819
+					},
+					"fuse.js": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 15.814,
+						"totalMs": 16.407
+					},
+					"fuse.js (all opts)": {
+						"count": 1,
+						"rank": 1,
+						"queryMs": 20.545,
+						"totalMs": 21.118
+					},
+					"fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.216,
+						"totalMs": 2.216
+					}
+				}
+			},
+			{
+				"kind": "acronym",
+				"query": "rsaw",
+				"source": "Rath, Streich and Witting",
+				"cells": {
+					"krino": {
+						"count": 7,
+						"rank": 2,
+						"queryMs": 0.182,
+						"totalMs": 1.498
+					},
+					"krino (acronym)": {
+						"count": 8,
+						"rank": 1,
+						"queryMs": 0.237,
+						"totalMs": 1.55
+					},
+					"@nozbe/microfuzz": {
+						"count": 133,
+						"rank": 2,
+						"queryMs": 1.174,
+						"totalMs": 8.134
+					},
+					"fuzzysort": {
+						"count": 133,
+						"rank": 2,
+						"queryMs": 0.203,
+						"totalMs": 7.191
+					},
+					"match-sorter": {
+						"count": 133,
+						"rank": 2,
+						"queryMs": 2.996,
+						"totalMs": 2.996
+					},
+					"fast-fuzzy": {
+						"count": 28,
+						"rank": null,
+						"queryMs": 5.731,
+						"totalMs": 34.418
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.194,
+						"totalMs": 0.194
+					},
+					"uFuzzy (all opts)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.264,
+						"totalMs": 0.862
+					},
+					"fuse.js": {
+						"count": 28,
+						"rank": null,
+						"queryMs": 7.124,
+						"totalMs": 7.759
+					},
+					"fuse.js (all opts)": {
+						"count": 28,
+						"rank": null,
+						"queryMs": 12.223,
+						"totalMs": 12.784
+					},
+					"fuzzy": {
+						"count": 131,
+						"rank": 24,
+						"queryMs": 2.325,
+						"totalMs": 2.325
+					}
+				}
+			},
+			{
+				"kind": "accent-stripped",
+				"query": "kepa",
+				"source": "Marczak-Kępa",
+				"cells": {
+					"krino": {
+						"count": 7,
+						"rank": 2,
+						"queryMs": 0.096,
+						"totalMs": 1.412
+					},
+					"krino (acronym)": {
+						"count": 7,
+						"rank": 2,
+						"queryMs": 0.124,
+						"totalMs": 1.437
+					},
+					"@nozbe/microfuzz": {
+						"count": 70,
+						"rank": 2,
+						"queryMs": 0.997,
+						"totalMs": 7.949
+					},
+					"fuzzysort": {
+						"count": 70,
+						"rank": 2,
+						"queryMs": 0.148,
+						"totalMs": 7.136
+					},
+					"match-sorter": {
+						"count": 70,
+						"rank": 4,
+						"queryMs": 2.88,
+						"totalMs": 2.88
+					},
+					"fast-fuzzy": {
+						"count": 82,
+						"rank": 33,
+						"queryMs": 5.686,
+						"totalMs": 34.108
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.195,
+						"totalMs": 0.195
+					},
+					"uFuzzy (all opts)": {
+						"count": 4,
+						"rank": 3,
+						"queryMs": 0.221,
+						"totalMs": 0.821
+					},
+					"fuse.js": {
+						"count": 74,
+						"rank": 1,
+						"queryMs": 7.231,
+						"totalMs": 7.824
+					},
+					"fuse.js (all opts)": {
+						"count": 74,
+						"rank": 1,
+						"queryMs": 12.3,
+						"totalMs": 12.873
+					},
+					"fuzzy": {
+						"count": 65,
+						"rank": null,
+						"queryMs": 2.365,
+						"totalMs": 2.365
+					}
+				}
+			},
+			{
+				"kind": "miss",
+				"query": "qxzwkv",
+				"source": null,
+				"cells": {
+					"krino": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.025,
+						"totalMs": 1.341
+					},
+					"krino (acronym)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.025,
+						"totalMs": 1.341
+					},
+					"@nozbe/microfuzz": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.881,
+						"totalMs": 7.837
+					},
+					"fuzzysort": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.104,
+						"totalMs": 7.09
+					},
+					"match-sorter": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.698,
+						"totalMs": 2.698
+					},
+					"fast-fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 5.366,
+						"totalMs": 34.079
+					},
+					"uFuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.103,
+						"totalMs": 0.103
+					},
+					"uFuzzy (all opts)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 0.199,
+						"totalMs": 0.799
+					},
+					"fuse.js": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 11.068,
+						"totalMs": 11.695
+					},
+					"fuse.js (all opts)": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 15.962,
+						"totalMs": 16.518
+					},
+					"fuzzy": {
+						"count": 0,
+						"rank": null,
+						"queryMs": 2.164,
+						"totalMs": 2.164
+					}
+				}
+			}
+		]
+	},
+	"session": {
+		"size": 100000,
+		"corpus": "mixed",
+		"steps": [
+			"gra",
+			"grad",
+			"grady"
+		],
+		"rows": [
+			{
+				"library": "krino",
+				"stepMs": [
+					4.3986999999999625,
+					2.487907999999834,
+					2.653579000000036
+				],
+				"sessionMs": 9.540186999999833
+			},
+			{
+				"library": "@nozbe/microfuzz",
+				"stepMs": [
+					33.221385000000055,
+					26.459819000000152,
+					25.948137000000088
+				],
+				"sessionMs": 85.6293410000003
+			},
+			{
+				"library": "fuzzysort",
+				"stepMs": [
+					10.319988000000194,
+					4.693871000000399,
+					2.5626240000001417
+				],
+				"sessionMs": 17.576483000000735
+			},
+			{
+				"library": "uFuzzy (all opts)",
+				"stepMs": [
+					2.6111570000002757,
+					2.5086089999999786,
+					2.5967390000000705
+				],
+				"sessionMs": 7.716505000000325
+			},
+			{
+				"library": "fuse.js (all opts)",
+				"stepMs": [
+					141.92369400000007,
+					129.03974900000003,
+					172.41911900000014
+				],
+				"sessionMs": 443.38256200000023
+			}
+		]
+	},
+	"longtext": {
+		"rows": [
+			{
+				"docChars": 64,
+				"junkRate": 0,
+				"presentHits": 8,
+				"presentProbes": 8,
+				"missMs": 0.006914000000051601
+			},
+			{
+				"docChars": 128,
+				"junkRate": 0,
+				"presentHits": 15,
+				"presentProbes": 15,
+				"missMs": 0.006562000000030821
+			},
+			{
+				"docChars": 256,
+				"junkRate": 0,
+				"presentHits": 20,
+				"presentProbes": 20,
+				"missMs": 0.011110999999800697
+			},
+			{
+				"docChars": 512,
+				"junkRate": 0,
+				"presentHits": 20,
+				"presentProbes": 20,
+				"missMs": 0.013776999999890904
+			},
+			{
+				"docChars": 1024,
+				"junkRate": 0,
+				"presentHits": 20,
+				"presentProbes": 20,
+				"missMs": 0.03566899999987072
+			},
+			{
+				"docChars": 2048,
+				"junkRate": 0,
+				"presentHits": 20,
+				"presentProbes": 20,
+				"missMs": 0.04428600000028382
+			},
+			{
+				"docChars": 4096,
+				"junkRate": 0,
+				"presentHits": 20,
+				"presentProbes": 20,
+				"missMs": 0.0752360000005865
+			},
+			{
+				"docChars": 8192,
+				"junkRate": 0,
+				"presentHits": 20,
+				"presentProbes": 20,
+				"missMs": 0.14170500000000175
+			},
+			{
+				"docChars": 16384,
+				"junkRate": 0,
+				"presentHits": 20,
+				"presentProbes": 20,
+				"missMs": 0.2803429999994478
+			}
+		]
+	}
+}

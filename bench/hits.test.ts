@@ -20,6 +20,7 @@ import fuzzysort from "fuzzysort";
 import { matchSorter } from "match-sorter";
 import { describe, expect, it } from "vitest";
 import { createFuzzySearch } from "krino";
+import { type ProbeTable, type ScorecardRow, ensureRawDir, rawFile } from "./artifact.ts";
 import { CORPORA } from "./corpus";
 
 const SIZE = 10_000;
@@ -42,17 +43,10 @@ const fmtMs = (ms: number): string => ms.toFixed(2);
 // Consumed by every timed call so the JIT can't dead-code-eliminate the work.
 let sink = 0;
 
-// Per-corpus scorecards + per-query tables for this process, written to
-// scorecard-run.json for the cross-run aggregator (scorecard.mjs) and the
-// docs table emitter (tables.mjs).
-type ScorecardRow = { library: string; mrr: number; indexMs: number; queryMs: number; totalMs: number };
-type QueryTable = {
-	kind: string;
-	query: string;
-	source: string | null;
-	cells: Record<string, { count: number; rank: number | null; queryMs: number; totalMs: number }>;
-};
-const scorecardOut: Record<string, { scorecard: ScorecardRow[]; tables: QueryTable[] }> = {};
+// One process's numbers. The pipeline runs several and medians them; RUN names
+// the slot so concurrent processes can't overwrite each other.
+const RUN = process.env.BENCH_RUN ?? "0";
+const runOut: Record<string, { scorecard: ScorecardRow[]; tables: ProbeTable[] }> = {};
 
 // Time-boxed MEDIAN of one call: warm up, then sample for ~100 ms and take the
 // middle sample. Median beats a longer mean here — scheduler/GC interruptions
@@ -276,10 +270,10 @@ describe("bench validity: per-library match counts and source rank", () => {
 			// queries, time over every query.
 			const scores: Record<string, { rrs: number[]; times: number[] }> = {};
 
-			const tables: QueryTable[] = [];
+			const tables: ProbeTable[] = [];
 			const rows = specs.map(({ query, kind, source }) => {
 				const row: Record<string, string> = { kind, query };
-				const cells: QueryTable["cells"] = {};
+				const cells: ProbeTable["cells"] = {};
 				for (const [lib, run] of Object.entries(runners)) {
 					const ms = timeQuery(() => timers[lib](query), resets[lib]);
 					const { count, rank } = run(query, source);
@@ -340,12 +334,11 @@ describe("bench validity: per-library match counts and source rank", () => {
 					"total ms": r.totalMs.toFixed(2),
 				})),
 			);
-			// Machine-readable copy per corpus, consumed by scorecard.mjs (the
-			// cross-run aggregator) and tables.mjs (the docs table emitter).
 			// Same-process accumulation: the later corpus rewrites the file with
 			// both entries.
-			scorecardOut[name] = { scorecard, tables };
-			writeFileSync(new URL("./scorecard-run.json", import.meta.url), JSON.stringify(scorecardOut, null, "\t"));
+			runOut[name] = { scorecard, tables };
+			ensureRawDir();
+			writeFileSync(rawFile(`hits-${RUN}.json`), JSON.stringify(runOut, null, "\t"));
 
 			// Every benched lib must find something for a plain corpus word —
 			// otherwise its speed numbers time a no-op.

@@ -1,4 +1,3 @@
 dist/
 node_modules/
-bench/results.json
-bench/scorecard-run.json
+bench/.raw/

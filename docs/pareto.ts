@@ -2,43 +2,59 @@
 // - pareto-query-*.svg — query ms with the index prebuilt (frontend ledger:
 //   the index is built eagerly at load, keystrokes pay query only).
 // - pareto-total-*.svg — total ms = index + one query (backend one-shot ledger).
-// Emits GitHub-safe light/dark SVGs (all styling inlined — GitHub strips
-// <style> blocks) for <picture> swaps.
-//   node docs/pareto.mjs
-// Data: the mixed-corpus Scorecard in docs/benchmarks.md (5-process medians).
-// DATA below is hand-pasted from that table — regenerating the scorecard does
-// NOT update it. Re-paste the numbers here before redrawing.
+// All styling is inlined because GitHub strips <style> blocks from SVGs.
 import { writeFileSync } from "node:fs";
+import type { Artifact } from "../bench/artifact.ts";
+import { displayName } from "../bench/libraries.ts";
 
-// Per-point label placement can differ per metric (positions move).
-const lab = (a, dy, dx = 0) => ({ a, dy, dx });
-const DATA = [
-	{ n: "krino (acronym)", mrr: 0.84, query: 0.18, total: 1.9, lab: { query: lab("start", -8), total: lab("start", -8) } },
-	{ n: "krino", mrr: 0.8, query: 0.17, total: 1.89, lab: { query: lab("start", 16), total: lab("end", 16) } },
-	{ n: "Fuse.js", mrr: 0.75, query: 16.82, total: 17.68, lab: { query: lab("middle", -15), total: lab("middle", -15) } },
-	{ n: "Fuse.js (all opts)", mrr: 0.75, query: 18.77, total: 19.59, lab: { query: lab("end", 20, -10), total: lab("middle", 20) } },
-	{ n: "@nozbe/microfuzz", mrr: 0.59, query: 1.07, total: 10.96, lab: { query: lab("start", 4), total: lab("end", 4) } },
-	{ n: "fast-fuzzy", mrr: 0.55, query: 8.44, total: 48.21, lab: { query: lab("start", 4), total: lab("end", 4) } },
-	{ n: "fuzzysort", mrr: 0.54, query: 0.15, total: 7.82, lab: { query: lab("start", 4), total: lab("start", 4) } },
-	{ n: "fuzzy", mrr: 0.45, query: 2.41, total: 2.41, lab: { query: lab("start", -10), total: lab("start", -10) } },
-	{ n: "uFuzzy (all opts)", mrr: 0.42, query: 0.26, total: 0.88, lab: { query: lab("start", -8), total: lab("end", 4, -10) } },
-	{ n: "match-sorter", mrr: 0.41, query: 2.99, total: 2.99, lab: { query: lab("start", 16), total: lab("start", 16) } },
-	{ n: "uFuzzy", mrr: 0.14, query: 0.19, total: 0.19, lab: { query: lab("start", 10), total: lab("start", 4) } },
-];
+type Anchor = "start" | "middle" | "end";
+type Placement = { a: Anchor; dy: number; dx: number };
+type Metric = "query" | "total";
 
-const METRICS = {
+const lab = (a: Anchor, dy: number, dx = 0): Placement => ({ a, dy, dx });
+
+// Hand-tuned so labels don't collide; positions differ per metric because the
+// points move. Numbers come from the artifact, never from here.
+const PLACEMENT: Record<string, Record<Metric, Placement>> = {
+	"krino (acronym)": { query: lab("start", -8), total: lab("start", -8) },
+	krino: { query: lab("start", 16), total: lab("end", 16) },
+	"fuse.js": { query: lab("middle", -15), total: lab("middle", -15) },
+	"fuse.js (all opts)": { query: lab("end", 20, -10), total: lab("middle", 20) },
+	"@nozbe/microfuzz": { query: lab("start", 4), total: lab("end", 4) },
+	"fast-fuzzy": { query: lab("start", 4), total: lab("end", 4) },
+	fuzzysort: { query: lab("start", 4), total: lab("start", 4) },
+	fuzzy: { query: lab("start", -10), total: lab("start", -10) },
+	"uFuzzy (all opts)": { query: lab("start", -8), total: lab("end", 4, -10) },
+	"match-sorter": { query: lab("start", 16), total: lab("start", 16) },
+	uFuzzy: { query: lab("start", 10), total: lab("start", 4) },
+};
+
+const FALLBACK: Placement = lab("start", 4);
+
+type Point = { name: string; mrr: number; query: number; total: number };
+
+const METRICS: Record<Metric, {
+	file: string;
+	X0: number;
+	X1: number;
+	ticks: number[];
+	heading: string;
+	subtitle: (probes: number) => string;
+	axis: string;
+	title: string;
+	tail: string;
+}> = {
 	query: {
 		file: "pareto-query",
 		X0: 0.08,
 		X1: 25,
 		ticks: [0.1, 0.2, 0.5, 1, 2, 5, 10, 20],
 		heading: "Ranking quality vs. warm query cost",
-		subtitle: "MRR over 15 probes · mixed 10k corpus · index built once at load",
+		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · index built once at load`,
 		axis: "Warm duration: index pre-built. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs query latency, index prebuilt",
-		desc:
-			"Scatter plot of eleven configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against query milliseconds with indexes prebuilt, on a log scale, on the mixed 10k corpus. " +
-			"The Pareto frontier runs fuzzysort (0.54 MRR at 0.15 ms) to krino (0.80 at 0.21 ms) to krino (acronym) (0.84 at 0.22 ms). Krino owns the accurate end of the frontier; fuzzysort is cheaper per query and far less accurate, and every other configuration, including Fuse.js, is dominated.",
+		tail:
+			"Krino owns the accurate end of the frontier; the cheaper points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
 	},
 	total: {
 		file: "pareto-total",
@@ -46,12 +62,11 @@ const METRICS = {
 		X1: 60,
 		ticks: [0.2, 0.5, 1, 2, 5, 10, 20, 50],
 		heading: "Ranking quality vs. cold search cost",
-		subtitle: "MRR over 15 probes · mixed 10k corpus · index built per search",
+		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · index built per search`,
 		axis: "Cold duration: index + one query. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs total cost (index + one query)",
-		desc:
-			"Scatter plot of eleven configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against total milliseconds for one cold search (index build plus one query) on a log scale, on the mixed 10k corpus. " +
-			"The Pareto frontier runs uFuzzy, uFuzzy (all opts), krino, krino (acronym) — the two krino configurations share one pooled build cost and differ only in query time; fuzzysort's hidden prepare cache moves it off this frontier, and Fuse.js is dominated — krino (acronym) is more accurate and ~10× cheaper.",
+		tail:
+			"The no-index engines own the cheapest cold one-shots; the two Krino configurations share one pooled build cost and differ only in query time, fuzzysort's hidden prepare cache moves it off this frontier, and Fuse.js is dominated.",
 	},
 };
 
@@ -63,21 +78,22 @@ const DARK = {
 	surface: "#1a1a19", ink: "#ffffff", ink2: "#c3c2b7", muted: "#898781",
 	grid: "#2c2c2a", axis: "#383835", krino: "#3987e5", frontier: "#199e70", dom: "#8f8d86",
 };
+type Palette = typeof LIGHT;
 
 const W = 820, H = 524, ML = 66, MR = 30, MT = 62;
 const plotW = W - ML - MR, plotH = 372; // plot bottom fixed at y=434
 const Y0 = 0.1, Y1 = 0.92;
 const lx = Math.log10;
-const Y = (mrr) => MT + ((Y1 - mrr) / (Y1 - Y0)) * plotH;
-const f = (v) => Number(v.toFixed(1));
+const Y = (mrr: number): number => MT + ((Y1 - mrr) / (Y1 - Y0)) * plotH;
+const f = (v: number): number => Number(v.toFixed(1));
 const DOT_R = 6.5;
 const yTicks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
 const tnum = 'font-variant-numeric="tabular-nums"';
 
 // Non-dominated set: sweep by cost ascending, keep strict MRR improvements.
-const frontierOf = (pts) => {
+const frontierOf = <T extends { mrr: number; ms: number }>(pts: T[]): T[] => {
 	const sorted = [...pts].sort((a, b) => a.ms - b.ms || b.mrr - a.mrr);
-	const out = [];
+	const out: T[] = [];
 	let best = -1;
 	for (const p of sorted) {
 		if (p.mrr > best) {
@@ -88,20 +104,30 @@ const frontierOf = (pts) => {
 	return out;
 };
 
-function render(C, M, metric) {
-	const X = (ms) => ML + ((lx(ms) - lx(M.X0)) / (lx(M.X1) - lx(M.X0))) * plotW;
-	const pts = DATA.map((d) => ({
-		...d,
+const render = (C: Palette, metric: Metric, data: Point[], probes: number): string => {
+	const M = METRICS[metric];
+	const X = (ms: number): number => ML + ((lx(ms) - lx(M.X0)) / (lx(M.X1) - lx(M.X0))) * plotW;
+	const pts = data.map((d) => ({
+		n: displayName(d.name),
+		mrr: d.mrr,
 		ms: d[metric],
 		x: f(X(d[metric])),
 		y: f(Y(d.mrr)),
-		l: d.lab[metric],
+		l: PLACEMENT[d.name]?.[metric] ?? FALLBACK,
+		isKrino: d.name.startsWith("krino"),
 	}));
 	const front = frontierOf(pts);
 	const onFrontier = new Set(front.map((p) => p.n));
-	const color = (p) => (p.n.startsWith("krino") ? C.krino : onFrontier.has(p.n) ? C.frontier : C.dom);
-	const emphasized = (p) => p.n.startsWith("krino") || onFrontier.has(p.n);
+	const color = (p: (typeof pts)[number]): string =>
+		p.isKrino ? C.krino : onFrontier.has(p.n) ? C.frontier : C.dom;
+	const emphasized = (p: (typeof pts)[number]): boolean => p.isKrino || onFrontier.has(p.n);
 	const frontierPath = front.map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`).join(" ");
+	const desc =
+		`Scatter plot of ${data.length} configurations of eight JavaScript fuzzy search libraries comparing MRR ` +
+		`(how highly each ranks the queried item) against ${metric === "query" ? "query milliseconds with indexes prebuilt" : "total milliseconds for one cold search (index build plus one query)"}, ` +
+		`on a log scale, on the mixed 10k corpus over ${probes} probes. ` +
+		`The Pareto frontier runs ${front.map((p) => `${p.n} (${p.mrr.toFixed(2)} MRR at ${p.ms.toFixed(2)} ms)`).join(" to ")}. ` +
+		M.tail;
 
 	const grid = [
 		...M.ticks.map((t) => `<line x1="${f(X(t))}" y1="${MT}" x2="${f(X(t))}" y2="${MT + plotH}" stroke="${C.grid}"/>`),
@@ -146,7 +172,7 @@ function render(C, M, metric) {
 
 	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" role="img" aria-labelledby="${M.file}-title ${M.file}-desc">
   <title id="${M.file}-title">${M.title}</title>
-  <desc id="${M.file}-desc">${M.desc}</desc>
+  <desc id="${M.file}-desc">${desc}</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="${C.muted}"/>
@@ -154,7 +180,7 @@ function render(C, M, metric) {
   </defs>
   <rect x="0" y="0" width="${W}" height="${H}" fill="${C.surface}"/>
   <text x="${ML}" y="28" fill="${C.ink}" font-size="18" font-weight="600">${M.heading}</text>
-  <text x="${ML}" y="47" fill="${C.ink2}" font-size="13">${M.subtitle}</text>
+  <text x="${ML}" y="47" fill="${C.ink2}" font-size="13">${M.subtitle(probes)}</text>
   <g>
     ${grid}
   </g>
@@ -179,11 +205,24 @@ function render(C, M, metric) {
   ${legend}
 </svg>
 `;
-}
+};
 
-for (const [metric, M] of Object.entries(METRICS)) {
-	writeFileSync(new URL(`./${M.file}-light.svg`, import.meta.url), render(LIGHT, M, metric));
-	writeFileSync(new URL(`./${M.file}-dark.svg`, import.meta.url), render(DARK, M, metric));
-	const front = frontierOf(DATA.map((d) => ({ n: d.n, mrr: d.mrr, ms: d[metric] })));
-	console.log(`${M.file}: frontier = ${front.map((p) => p.n).join(" -> ")}`);
-}
+/** Both charts draw the mixed 10k scorecard, the same numbers the doc's table shows. */
+export const renderPareto = (artifact: Artifact): void => {
+	const scorecard = artifact.scorecard.corpora.mixed;
+	if (!scorecard?.length) throw new Error("no mixed scorecard — run the quality stage first");
+	const data: Point[] = scorecard.map((r) => ({
+		name: r.library,
+		mrr: r.mrr,
+		query: r.queryMs,
+		total: r.totalMs,
+	}));
+	const probes = artifact.probes.mixed?.length ?? 0;
+	for (const metric of Object.keys(METRICS) as Metric[]) {
+		const { file } = METRICS[metric];
+		writeFileSync(new URL(`./${file}-light.svg`, import.meta.url), render(LIGHT, metric, data, probes));
+		writeFileSync(new URL(`./${file}-dark.svg`, import.meta.url), render(DARK, metric, data, probes));
+		const front = frontierOf(data.map((d) => ({ n: displayName(d.name), mrr: d.mrr, ms: d[metric] })));
+		console.error(`${file}: frontier = ${front.map((p) => p.n).join(" -> ")}`);
+	}
+};

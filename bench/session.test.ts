@@ -6,15 +6,15 @@
  * Each step is timed at its correct cache state: `reset` (untimed) replays the
  * PREVIOUS prefix before every sample, so step k measures exactly "the user has
  * typed k-1 and presses the next key". Step 1 resets with a cache bust.
- * Prints the markdown table for docs/benchmarks.md ("A frontend session").
- *   pnpm --filter=krino-bench exec vitest run session --disable-console-intercept
  */
+import { writeFileSync } from "node:fs";
 import uFuzzy from "@leeoniya/ufuzzy";
 import createMicrofuzz from "@nozbe/microfuzz";
 import Fuse from "fuse.js";
 import fuzzysort from "fuzzysort";
 import { expect, it } from "vitest";
 import { createFuzzySearch } from "krino";
+import { type SessionRow, ensureRawDir, rawFile } from "./artifact.ts";
 import { CORPORA } from "./corpus";
 
 const SIZE = 100_000;
@@ -72,9 +72,7 @@ it("frontend session: three successive queries at 100k", { timeout: 60_000 }, ()
 		{ name: "fuse.js (all opts)", run: (q) => fuseAll.search(q).length },
 	];
 
-	console.log(`\nsteps: ${steps.map((s) => `\`${s}\``).join(" -> ")} (${SIZE} items, mixed corpus)\n`);
-	console.log("| Library            | " + steps.map((s) => `\`${s}\``.padStart(8)).join(" | ") + " |  session |");
-	console.log("|--------------------|" + steps.map(() => "---------:").join("|") + "|---------:|");
+	const rows: SessionRow[] = [];
 	for (const { name, run, stateful } of libs) {
 		const stepMs = steps.map((q, k) => {
 			const reset = stateful
@@ -84,11 +82,15 @@ it("frontend session: three successive queries at 100k", { timeout: 60_000 }, ()
 				: undefined;
 			return timeQuery(() => run(q), reset);
 		});
-		const session = stepMs.reduce((a, b) => a + b, 0);
-		expect(session).toBeGreaterThan(0);
-		console.log(
-			`| ${name.padEnd(18)} | ${stepMs.map((m) => m.toFixed(2).padStart(8)).join(" | ")} | ${session.toFixed(2).padStart(8)} |`,
-		);
+		const sessionMs = stepMs.reduce((a, b) => a + b, 0);
+		expect(sessionMs).toBeGreaterThan(0);
+		rows.push({ library: name, stepMs, sessionMs });
 	}
 	expect(sink).toBeGreaterThan(0);
+
+	ensureRawDir();
+	writeFileSync(
+		rawFile("session.json"),
+		JSON.stringify({ size: SIZE, corpus: "mixed", steps, rows }, null, "\t"),
+	);
 });

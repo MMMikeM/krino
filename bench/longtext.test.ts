@@ -12,12 +12,11 @@
  * slice (no substring anywhere), so any hit would be the fuzzy tier
  * assembling a junk chain. Present-word probes (sampled from inside each
  * slice) must always match — `contains` needs no fuzzy assembly.
- *
- * Prints markdown for docs/benchmarks.md ("Matching inside long text").
- *   pnpm --filter=krino-bench exec vitest run longtext --disable-console-intercept
  */
+import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { fuzzyMatch, normalizeText, splitWords } from "krino";
+import { type LongtextRow, ensureRawDir, rawFile } from "./artifact.ts";
 import { CORPORA } from "./corpus";
 
 const DOC_LENGTHS = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
@@ -67,9 +66,7 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 		}
 		expect(absent.length).toBe(ABSENT_PROBES);
 
-		const rows: string[] = [];
-		rows.push("| doc chars | junk rate | present hits | miss ms |");
-		rows.push("|----------:|----------:|-------------:|--------:|");
+		const rows: LongtextRow[] = [];
 
 		for (const len of DOC_LENGTHS) {
 			const doc = fullDoc.slice(0, len);
@@ -91,11 +88,17 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 			let i = 0;
 			const missMs = timeQuery(() => (fuzzyMatch(doc, absent[i++ % ABSENT_PROBES] as string) ? 1 : 0));
 
-			rows.push(
-				`| ${String(len).padStart(9)} | ${((100 * junk) / ABSENT_PROBES).toFixed(0).padStart(8)}% | ${String(presentHits).padStart(4)}/${present.length} | ${missMs.toFixed(3).padStart(7)} |`,
-			);
+			rows.push({
+				docChars: len,
+				junkRate: junk / ABSENT_PROBES,
+				presentHits,
+				presentProbes: present.length,
+				missMs,
+			});
 		}
-		console.log(`\n${rows.join("\n")}\n`);
 		sink += fullDoc.length;
+
+		ensureRawDir();
+		writeFileSync(rawFile("longtext.json"), JSON.stringify({ rows }, null, "\t"));
 	});
 });
