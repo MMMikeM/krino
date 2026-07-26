@@ -4,24 +4,26 @@
  * multiset, so the field sits inside the mask gate but fails every tier. The
  * rescue detects the swap, reruns the ladder with the corrected query, and
  * returns the underlying tier's result demoted by a penalty under the
- * "transposed" tier. It fires only where everything else failed, so existing
+ * "corrected" tier. It fires only where everything else failed, so existing
  * matches can never change.
  */
 import { describe, expect, it } from "vitest";
 import { createFuzzySearch, fuzzyMatch } from "../src/index";
 
-describe("transposed tier", () => {
+describe("the adjacent-swap rescue", () => {
 	it("rescues an adjacent-swap typo to the corrected tier plus penalty", () => {
 		// corrected "generic" is an exact hit (0) → 0 + 2.1
 		const result = fuzzyMatch("generic", "geenric");
-		expect(result?.tier).toBe("transposed");
+		expect(result?.tier).toBe("corrected");
+		expect(result?.corrected).toBe("generic");
 		expect(result?.score).toBeCloseTo(2.1);
 	});
 
 	it("rescues into whatever tier the corrected query earns", () => {
 		// corrected "generic" is a prefix (0.5) of the field → 0.5 + 2.1
 		const result = fuzzyMatch("generic gasket", "geenric");
-		expect(result?.tier).toBe("transposed");
+		expect(result?.tier).toBe("corrected");
+		expect(result?.corrected).toBe("generic");
 		expect(result?.score).toBeCloseTo(2.6);
 	});
 
@@ -52,14 +54,15 @@ describe("transposed tier", () => {
 			"geenric",
 		);
 		expect(results[0]?.item).toBe("generic gasket");
-		expect(results[0]?.fields[0]?.tier).toBe("transposed");
+		expect(results[0]?.fields[0]?.tier).toBe("corrected");
 	});
 
 	it("real-word neighbours match with the penalty visible", () => {
 		// "trial" ↔ "trail" are mutual transpositions of real words; the rescue
 		// finds it, and the penalty keeps it below every true tier hit.
 		const result = fuzzyMatch("trial", "trail");
-		expect(result?.tier).toBe("transposed");
+		expect(result?.tier).toBe("corrected");
+		expect(result?.corrected).toBe("trial");
 		expect(result!.score).toBeCloseTo(2.1); // corrected exact + penalty
 	});
 });

@@ -29,9 +29,25 @@ type FunnelRow = {
 const pct = (part: number, whole: number): string =>
 	whole === 0 ? "-" : `${((100 * part) / whole).toFixed(1)}%`;
 
-// Tiers produced by a one-edit rescue: these match a *corrected* query, so they
-// legitimately bypass the original query's regex gate.
-const RESCUE_TIERS = new Set<string>(["transposed", "inserted", "deleted", "substituted"]);
+// One tier covers every one-edit correction, so the edit itself is derived from
+// the corrected query rather than read off a label. The mask invariant below is
+// about which edit fired, and this is what keeps it assertable.
+const editKind = (query: string, corrected: string): string => {
+	const q = normalizeText(query);
+	const c = normalizeText(corrected);
+	if (c.length === q.length - 1) return "inserted";
+	if (c.length === q.length + 1) return "deleted";
+	if (c.length !== q.length) return "unknown";
+	const diff: number[] = [];
+	for (let k = 0; k < q.length; k++) if (q[k] !== c[k]) diff.push(k);
+	if (diff.length === 1) return "substituted";
+	const swapped =
+		diff.length === 2 &&
+		diff[1] === diff[0] + 1 &&
+		q[diff[0]] === c[diff[1]] &&
+		q[diff[1]] === c[diff[0]];
+	return swapped ? "transposed" : "unknown";
+};
 
 describe("pre-filter funnel", () => {
 	for (const { name, build, queries } of CORPORA)
@@ -67,7 +83,7 @@ describe("pre-filter funnel", () => {
 					if (result) {
 						// A one-edit rescue matches a *corrected* query, so its hits
 						// legitimately bypass the original query's gates.
-						if (RESCUE_TIERS.has(result.tier)) rescued++;
+						if (result.tier === "corrected") rescued++;
 						else matched++;
 						// The mask must never reject anything the full matcher accepts.
 						expect(maskOk).toBe(true);
@@ -78,7 +94,9 @@ describe("pre-filter funnel", () => {
 						// dropped keystroke only shrinks it, so those still need
 						// every class present.
 						if (missingClasses !== 0) {
-							expect(["substituted", "inserted"]).toContain(result.tier);
+							expect(["substituted", "inserted"]).toContain(
+								editKind(query, result.corrected as string),
+							);
 						}
 					}
 					if (!maskOk) continue;

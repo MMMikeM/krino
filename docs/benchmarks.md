@@ -53,8 +53,8 @@ An "(all opts)" row in the corpus tables shares its base library's size, deps, a
 Krino's opt-in row is labelled **(acronym)** instead: `acronym: true` is its only matching opt-in, so the honest name is the specific one.
 The specific opt-ins the "(all opts)" rows switch on, and where output shapes differ:
 
-- `Krino`: Typos 🟢 is the always-on one-edit rescue, the `transposed`, `inserted`, `deleted` and `substituted` tiers, i.e. Damerau-Levenshtein distance 1, not general edit distance
-- `uFuzzy`: folds diacritics via `latinize()`, matches multi-word via `outOfOrder`, and runs its one-typo `SingleError` mode with all four edits, the closest config to Krino's one-edit tiers
+- `Krino`: Typos 🟢 is the always-on one-edit rescue, reported as the `corrected` tier — a swap, an extra character, a missing one or a wrong one, i.e. Damerau-Levenshtein distance 1, not general edit distance
+- `uFuzzy`: folds diacritics via `latinize()`, matches multi-word via `outOfOrder`, and runs its one-typo `SingleError` mode with all four edits, the closest config to Krino's one-edit rescue
 - `Fuse.js`: returns `ranges` via `includeMatches`, folds diacritics via `ignoreDiacritics`, matches multi-word via token search
 - `fast-fuzzy`: its `ranges` are one span (`index` + `length`), not per-character, and its default normalization doesn't strip accents
 - `fuzzy`: its "ranges" are a pre-wrapped string, not numeric indices

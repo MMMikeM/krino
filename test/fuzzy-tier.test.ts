@@ -106,7 +106,7 @@ describe("chunk assembly reconsiders its first choice", () => {
 	// needlessly expensive assemblies.
 
 	describe("finds the intended word past a decoy initial", () => {
-		// These land on the "deleted" tier rather than "fuzzy", and that is the
+		// These land on the "corrected" tier rather than "fuzzy", and that is the
 		// point: retrying the first chunk is what produces the clean two-chunk
 		// assembly, and a two-chunk assembly split by one character is exactly
 		// what the dropped-keystroke rescue recognises. Without the retry the
@@ -114,7 +114,8 @@ describe("chunk assembly reconsiders its first choice", () => {
 		// for the rescue to read.
 		it("matches inside the intended word past an earlier word-initial", () => {
 			const r = fuzzyMatch("Tasty Silk Towels", "towls");
-			expect(r?.tier).toBe("deleted");
+			expect(r?.tier).toBe("corrected");
+			expect(r?.corrected).toBe("towels");
 			expect(r?.score).toBeCloseTo(3.1); // boundary (1) + typo penalty (2.1)
 			expect(r?.ranges).toEqual([[11, 16]]);
 		});
@@ -202,7 +203,7 @@ describe("chunk assembly reconsiders its first choice", () => {
 			// the price of holding the junk rate at zero.
 			expect(fuzzyMatch("Tasty Tidy Trim Tall Towels", "towls")).toBeNull();
 			// Three decoys is still within it.
-			expect(fuzzyMatch("Tasty Tidy Trim Towels", "towls")?.tier).toBe("deleted");
+			expect(fuzzyMatch("Tasty Tidy Trim Towels", "towls")?.tier).toBe("corrected");
 		});
 
 		it("leaves the documented long-text hazard scored exactly as before", () => {

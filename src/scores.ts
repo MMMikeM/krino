@@ -17,8 +17,8 @@ export const SCORES = {
 	CONTAINS: 2,
 } as const;
 
-// Added to the corrected query's score when a one-edit rescue fires (tiers
-// "transposed", "inserted", "deleted", "substituted").
+// Added to the corrected query's score when a one-edit rescue fires (tier
+// "corrected").
 //
 // Sized so the BEST possible correction — a corrected exact hit, 0 + 2.1 —
 // still sorts below the WEAKEST genuine tier, CONTAINS (2). A correction is a
@@ -30,7 +30,7 @@ export const SCORES = {
 // Rescued scores therefore land at 2.1 and up, overlapping the fuzzy band
 // numerically; the tier field is what tells them apart.
 //
-// One penalty for all four kinds: they are the same edit distance, and pricing
-// them differently would rank a swapped keystroke above a dropped one on no
-// evidence.
+// One penalty for every kind of edit: they are the same edit distance, and
+// pricing them differently would rank a swapped keystroke above a dropped one
+// on no evidence.
 export const TYPO_PENALTY = 2.1;

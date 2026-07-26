@@ -94,12 +94,9 @@ Lower is better. Each match reports a numeric `score` (for sorting) and a catego
 | 1.8   | `acronym`          | word initials (opt-in via `acronym: true`) |
 | 2     | `contains`         | contains query anywhere                    |
 | > 2   | `fuzzy`            | fuzzy chain (fewer chunks = better)        |
-| +2.1  | `transposed`       | adjacent-swap typo (`geenric`)             |
-| +2.1  | `inserted`         | one character too many (`generric`)        |
-| +2.1  | `deleted`          | one character missing (`genric`)           |
-| +2.1  | `substituted`      | one character wrong (`genaric`)            |
+| +2.1  | `corrected`        | one-character typo fixed (`genric`)        |
 
-The four typo tiers score as the corrected query's tier + 2.1, which puts even a corrected exact hit above `contains` (2).
+A `corrected` match scores as the corrected query's tier + 2.1, which puts even a corrected exact hit above `contains` (2).
 A correction is a guess at what you meant; a substring match is something you actually typed, so the literal hit always ranks first.
 `score <= SCORES.CONTAINS` is therefore exactly "the query text appears here", and filtering to it opts out of typo matching entirely.
 
@@ -108,6 +105,13 @@ Import `SCORES` for thresholds and `atBest` values; or read `tier` directly:
 ```typescript
 results.filter((r) => r.score <= SCORES.CONTAINS); // drop fuzzy chains and deep rescues
 results.filter((r) => r.fields[0]?.tier !== "fuzzy"); // drop fuzzy chains only, categorically
+```
+
+A `corrected` match carries the fixed query, so you can say what you searched for:
+
+```typescript
+const top = results[0]?.fields[0];
+if (top?.tier === "corrected") notice(`Showing results for ${top.corrected}`);
 ```
 
 `atBest` shifts `score` but never `tier`, so tier filters stay reliable on demoted fields (a body-field prefix hit can report `score: 2.5, tier: "prefix"`).
@@ -179,9 +183,14 @@ type Range = [number, number]; // [start, end] inclusive
 type Tier =
   | "exact" | "normalized-exact" | "prefix" | "boundary-exact"
   | "boundary" | "multi-word" | "acronym" | "contains"
-  | "fuzzy" | "transposed";
+  | "fuzzy" | "corrected";
 
-type MatchResult = { score: number; tier: Tier; ranges: Range[] };
+type MatchResult = {
+  score: number;
+  tier: Tier;
+  corrected?: string;    // the fixed query, when tier is "corrected"
+  ranges: Range[];
+};
 
 type FieldSpec<T> = {
   text: (item: T) => string | null;

@@ -15,10 +15,8 @@ export type HighlightRanges = Range[];
  * apart — so `score <= SCORES.CONTAINS` is the test for "the user's text
  * actually appears here", and filtering to it is how you opt out of guessing.
  *
- * The last four name a single-character correction the *query* needed, not the
- * field: `transposed` swapped an adjacent pair ("geenric"), `inserted` had one
- * character too many ("generric"), `deleted` was missing one ("genric"),
- * `substituted` had one wrong ("genaric").
+ * `corrected` names a single-character fix the *query* needed, not the field;
+ * `MatchResult.corrected` carries the fixed query.
  */
 export type Tier =
 	| "exact"
@@ -30,10 +28,7 @@ export type Tier =
 	| "acronym"
 	| "contains"
 	| "fuzzy"
-	| "transposed"
-	| "inserted"
-	| "deleted"
-	| "substituted";
+	| "corrected";
 
 /**
  * The result of matching one string against a query.
@@ -42,6 +37,9 @@ export type Tier =
 export type MatchResult = {
 	score: number;
 	tier: Tier;
+	/** The query with its one mistyped character fixed, in the caller's own
+	 *  casing. Present only when `tier` is `"corrected"`. */
+	corrected?: string;
 	ranges: HighlightRanges;
 };
 

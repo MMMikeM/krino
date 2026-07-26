@@ -1,20 +1,21 @@
 /**
- * The one-edit typo tiers, exercised through the primitive. `transposed` (an
- * adjacent swap) has its own file; this covers the two kinds added alongside it:
- * - `inserted` — the query has one character too many ("generric").
- * - `deleted`  — the query is missing one ("genric").
+ * One-edit typo rescues, exercised through the primitive. Every kind reports the
+ * `corrected` tier and carries the fixed query; the adjacent swap has its own
+ * file, and this covers a query with one character too many ("generric"), one
+ * missing ("genric"), and one wrong ("genaric").
  *
- * All four share one penalty over whatever tier the *corrected* query earns,
- * sized so that even the best correction sorts below the weakest genuine tier:
- * a certain match always beats a speculative one.
+ * They share one penalty over whatever tier the *corrected* query earns, sized
+ * so that even the best correction sorts below the weakest genuine tier: a
+ * certain match always beats a speculative one.
  */
 import { describe, expect, it } from "vitest";
 import { createFuzzySearch, fuzzyMatch, SCORES } from "../src/index";
 
-describe("deleted: the query is missing a character", () => {
+describe("a query missing a character", () => {
 	it("a dropped keystroke in an otherwise exact word", () => {
 		const r = fuzzyMatch("generic", "genric");
-		expect(r?.tier).toBe("deleted");
+		expect(r?.tier).toBe("corrected");
+		expect(r?.corrected).toBe("generic");
 		expect(r?.score).toBeCloseTo(2.1); // exact (0) + penalty
 		expect(r?.ranges).toEqual([[0, 6]]);
 	});
@@ -42,9 +43,14 @@ describe("deleted: the query is missing a character", () => {
 		expect(fuzzyMatch("the", "hte")).toBeNull(); // transposed, for comparison
 		expect(fuzzyMatch("South Raven, Bangladesh", "soth")).toMatchObject({
 			score: 2.6,
-			tier: "deleted",
+			tier: "corrected",
+			corrected: "south",
 		});
-		expect(fuzzyMatch("Small Silk Chair", "smll")).toMatchObject({ score: 2.6, tier: "deleted" });
+		expect(fuzzyMatch("Small Silk Chair", "smll")).toMatchObject({
+			score: 2.6,
+			tier: "corrected",
+			corrected: "small",
+		});
 	});
 
 	describe("a skipped separator is not a typo", () => {
@@ -64,17 +70,18 @@ describe("deleted: the query is missing a character", () => {
 	});
 });
 
-describe("inserted: the query has one character too many", () => {
+describe("a query with one character too many", () => {
 	it("a doubled keystroke in an otherwise exact word", () => {
 		const r = fuzzyMatch("generic", "generric");
-		expect(r?.tier).toBe("inserted");
+		expect(r?.tier).toBe("corrected");
+		expect(r?.corrected).toBe("generic");
 		expect(r?.score).toBeCloseTo(2.1);
 		expect(r?.ranges).toEqual([[0, 6]]);
 	});
 
 	it("recovers a doubled keystroke anywhere in the query", () => {
-		expect(fuzzyMatch("ergonomic", "ergonomiic")?.tier).toBe("inserted");
-		expect(fuzzyMatch("administrator", "administtrator")?.tier).toBe("inserted");
+		expect(fuzzyMatch("ergonomic", "ergonomiic")?.corrected).toBe("ergonomic");
+		expect(fuzzyMatch("administrator", "administtrator")?.corrected).toBe("administrator");
 	});
 
 	it("scores off the corrected query's tier inside a longer field", () => {
@@ -88,28 +95,29 @@ describe("inserted: the query has one character too many", () => {
 		// character can only shrink the query's mask, so the drop family is what
 		// explains it — not a substitution.
 		const r = fuzzyMatch("generic", "genexric");
-		expect(r?.tier).toBe("inserted");
+		expect(r?.tier).toBe("corrected");
 		expect(r?.score).toBeCloseTo(2.1);
 	});
 });
 
-describe("substituted: the query has one wrong character", () => {
+describe("a query with one wrong character", () => {
 	it("a mistyped character in an otherwise exact word", () => {
 		const r = fuzzyMatch("generic", "genaric");
-		expect(r?.tier).toBe("substituted");
+		expect(r?.tier).toBe("corrected");
+		expect(r?.corrected).toBe("generic");
 		expect(r?.score).toBeCloseTo(2.1);
 		expect(r?.ranges).toEqual([[0, 6]]);
 	});
 
 	it("works when the wrong character is absent from the field entirely", () => {
 		// The case the mask gate used to reject outright.
-		expect(fuzzyMatch("ergonomic", "ergonomiq")?.tier).toBe("substituted");
+		expect(fuzzyMatch("ergonomic", "ergonomiq")?.corrected).toBe("ergonomic");
 	});
 
 	it("finds the window when the surviving half is the second one", () => {
 		// The pigeonhole split means the *first* half is damaged here, so the
 		// anchor has to come from the back half of the query.
-		expect(fuzzyMatch("ergonomic", "ergonomic".replace("e", "z"))?.tier).toBe("substituted");
+		expect(fuzzyMatch("ergonomic", "ergonomic".replace("e", "z"))?.corrected).toBe("ergonomic");
 	});
 
 	it("applies a length floor that scales with the field", () => {
@@ -118,7 +126,7 @@ describe("substituted: the query has one wrong character", () => {
 		// offers. So the floor is a function of field length, not a constant —
 		// six characters is specific enough to identify a short label, and pure
 		// noise inside a document.
-		expect(fuzzyMatch("wooden", "woaden")?.tier).toBe("substituted");
+		expect(fuzzyMatch("wooden", "woaden")?.corrected).toBe("wooden");
 
 		const document = `${"lorem ipsum dolor sit amet ".repeat(60)}wooden`;
 		expect(document.length).toBeGreaterThan(1024);
@@ -133,22 +141,26 @@ describe("the rescue takes the cheapest explanation", () => {
 	it("a decoy chain does not pre-empt a clean one-edit reading", () => {
 		expect(fuzzyMatch("Small Bronze Ball", "smaall")).toMatchObject({
 			score: 2.6,
-			tier: "inserted",
+			tier: "corrected",
+			corrected: "small",
 		});
 		expect(fuzzyMatch("Rustic Plastic Bike", "rusttic")).toMatchObject({
 			score: 2.6,
-			tier: "inserted",
+			tier: "corrected",
+			corrected: "rustic",
 		});
 		expect(fuzzyMatch("Bradford Barrows III", "bradi")).toMatchObject({
 			score: 2.6,
-			tier: "inserted",
+			tier: "corrected",
+			corrected: "brad",
 		});
 	});
 
 	it("prefers a boundary variant over a mid-word one enumerated earlier", () => {
 		expect(fuzzyMatch("zzenerric generic", "generric")).toMatchObject({
 			score: 3.0,
-			tier: "inserted",
+			tier: "corrected",
+			corrected: "generic",
 			ranges: [[10, 16]],
 		});
 	});
@@ -156,7 +168,8 @@ describe("the rescue takes the cheapest explanation", () => {
 	it("prefers a prefix substitution window over a mid-word one found first", () => {
 		expect(fuzzyMatch("gxnaric xgeneric", "genaric")).toMatchObject({
 			score: 2.6,
-			tier: "substituted",
+			tier: "corrected",
+			corrected: "gxnaric",
 			ranges: [[0, 6]],
 		});
 	});
@@ -164,7 +177,7 @@ describe("the rescue takes the cheapest explanation", () => {
 	it("prefers a substitution window the chain would have hidden", () => {
 		expect(fuzzyMatch("xgeneric gxnaric", "genaric")).toMatchObject({
 			score: 3.0,
-			tier: "substituted",
+			tier: "corrected",
 		});
 	});
 });
@@ -208,8 +221,8 @@ describe("the relaxed mask gate matches what a rescue can explain", () => {
 	});
 
 	it("one character longer, and both agree it can", () => {
-		expect(fuzzyMatch("genes", "genxs")?.tier).toBe("substituted");
-		expect(createFuzzySearch(["genes"])("genxs")[0]?.fields[0]?.tier).toBe("substituted");
+		expect(fuzzyMatch("genes", "genxs")?.tier).toBe("corrected");
+		expect(createFuzzySearch(["genes"])("genxs")[0]?.fields[0]?.tier).toBe("corrected");
 	});
 
 	it("a multi-word query keeps the strict gate in both", () => {
@@ -235,7 +248,7 @@ describe("a certain match always beats a speculative one", () => {
 	// Sized any lower and a one-character guess about what the user meant
 	// outranks a literal substring they actually typed, which measurably sank
 	// infix ranking (MRR 0.973 → 0.906 at a 0.9 penalty).
-	it("every typo tier scores above SCORES.CONTAINS", () => {
+	it("every one-edit correction scores above SCORES.CONTAINS", () => {
 		for (const [field, query] of [
 			["generic", "genric"], // deleted
 			["generic", "generric"], // inserted
@@ -262,7 +275,7 @@ describe("a certain match always beats a speculative one", () => {
 		// is not a valid superset — and every query is typed through 4.
 		const search = createFuzzySearch(["Ergonomic Granite Hat"]);
 		search("ergq");
-		expect(search("ergqnomic")[0]?.fields[0]?.tier).toBe("substituted");
+		expect(search("ergqnomic")[0]?.fields[0]?.tier).toBe("corrected");
 	});
 
 	it("a corrected hit still beats no hit at all", () => {
@@ -271,6 +284,7 @@ describe("a certain match always beats a speculative one", () => {
 		const search = createFuzzySearch(["Silk Towels", "Cotton Rug"]);
 		const results = search("towles");
 		expect(results[0]?.item).toBe("Silk Towels");
-		expect(results[0]?.fields[0]?.tier).toBe("transposed");
+		expect(results[0]?.fields[0]?.tier).toBe("corrected");
+		expect(results[0]?.fields[0]?.corrected).toBe("towels");
 	});
 });

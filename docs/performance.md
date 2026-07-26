@@ -130,7 +130,7 @@ collision can only cause a false *pass* (weaker filter), never a false reject �
 asserted per query in `bench/funnel.test.ts` (mask never rejects an item the
 full matcher accepts).
 
-**Amended by the `substituted` tier** (see below): a substitution typo can cost
+**Amended by the substitution rescue** (see below): a substitution typo can cost
 the query exactly one character class, so for queries a rescue could fire on the
 test tolerates one missing class — `missing & (missing - 1)`, where
 `missing = queryMask & ~fieldMask`. Still monotone under query extension, so the
@@ -236,9 +236,10 @@ word, ±5% on an 8k-char single field) while returning ~1,070 more matches at 10
 widening what reaches the chain re-opens the same hazard, and the density floor
 will not catch it on its own. Re-run the long-text guard, not just the unit tests.
 
-### One-edit typo tiers — DONE, at a real query-time cost
+### One-edit typo rescues — DONE, at a real query-time cost
 
-Three tiers added alongside `transposed`: `inserted`, `deleted`, `substituted`.
+Three rescue families added alongside the adjacent swap: an extra character, a
+missing one, and a wrong one. All four report the `corrected` tier.
 Two structural notes worth keeping.
 
 **Rank, not recall, is the metric.** Match-set size barely matters; what matters
@@ -273,11 +274,11 @@ long text junked 30 probes. `minTypoQueryLength(fieldLength)` gets both.
 | ---------------------------- | ------- | ---------- |
 | baseline                     | 94.8 ms | 28.0 ms    |
 | + chunk-start retry          | 95.7 ms | 28.0 ms    |
-| + `inserted` / `deleted`     | 113 ms  | 28.9 ms    |
+| + extra / missing character  | 113 ms  | 28.9 ms    |
 | + relaxed mask gate          | 166 ms  | 46.9 ms    |
 | + substitution rescue        | 202 ms  | 73.6 ms    |
 
-`substituted` is the expensive one, and nearly all of it is the **relaxed mask
+The substitution rescue is the expensive one, and nearly all of it is the **relaxed mask
 gate** rather than the matcher: tolerating one missing character class is what
 makes a substitution reachable at all, and it widens the survivor set that the
 library's whole speed story depends on rejecting. Skipping the relaxation for

@@ -10,7 +10,7 @@ import { isBoundaryChar, splitWords, wordChar } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
 import { buildFuzzyGate, buildPresenceGate, charMask, escapeRegex, maskIsExact } from "./gates";
 import { SCORES, TYPO_PENALTY } from "./scores";
-import type { HighlightRanges, MatchResult, Range, Tier } from "./types";
+import type { HighlightRanges, MatchResult, Range } from "./types";
 
 // Query-derived state, built once per query and reused across every field.
 export type PreparedQuery = {
@@ -43,7 +43,7 @@ export type PreparedQuery = {
 type RescueVariant = {
 	text: string;
 	rawText: string;
-	tier: Tier;
+	shortens: boolean;
 	prepared: PreparedQuery | null;
 };
 
@@ -230,12 +230,16 @@ const rescueWith = (
 	normalizedField: string,
 	fieldMask: number,
 	prepared: PreparedQuery,
-	tier: Tier,
 	acronym: boolean,
 ): MatchResult | null => {
 	const result = matchField(field, normalizedField, fieldMask, prepared, acronym, true);
 	return result && result.score <= SCORES.CONTAINS
-		? { score: result.score + TYPO_PENALTY, tier, ranges: result.ranges }
+		? {
+				score: result.score + TYPO_PENALTY,
+				tier: "corrected",
+				corrected: prepared.query,
+				ranges: result.ranges,
+			}
 		: null;
 };
 
@@ -249,20 +253,25 @@ const buildRescueVariants = (query: string, normalizedQuery: string): RescueVari
 	const seen = new Set<string>();
 	const variants: RescueVariant[] = [];
 	const aligned = offsetsAligned(query, normalizedQuery);
-	const add = (j: number, edit: (s: string, j: number) => string, tier: Tier): void => {
+	const add = (j: number, edit: (s: string, j: number) => string): void => {
 		const text = edit(normalizedQuery, j);
 		if (seen.has(text)) return;
 		seen.add(text);
-		variants.push({ text, rawText: aligned ? edit(query, j) : text, tier, prepared: null });
+		variants.push({
+			text,
+			rawText: aligned ? edit(query, j) : text,
+			shortens: text.length < normalizedQuery.length,
+			prepared: null,
+		});
 	};
 	// Adjacent swap: "geenric" → "generic". An identity swap is not a variant.
 	for (let j = 0; j < normalizedQuery.length - 1; j++) {
-		if (normalizedQuery[j] !== normalizedQuery[j + 1]) add(j, swapAt, "transposed");
+		if (normalizedQuery[j] !== normalizedQuery[j + 1]) add(j, swapAt);
 	}
 	// One character too many: "generric" → "generic". Dropping either half of a
 	// repeated pair yields the same string, which the dedupe collapses.
 	if (normalizedQuery.length >= MIN_TYPO_QUERY_LENGTH) {
-		for (let j = 0; j < normalizedQuery.length; j++) add(j, dropAt, "inserted");
+		for (let j = 0; j < normalizedQuery.length; j++) add(j, dropAt);
 	}
 	return variants;
 };
@@ -307,15 +316,12 @@ const typoRescue = (
 		for (const variant of q.rescueVariants as RescueVariant[]) {
 			// Only a drop shortens the query, so only it answers to the
 			// field-length floor; a swap stays on MIN_RESCUE_QUERY_LENGTH.
-			if (variant.tier === "inserted" && q.normalizedQuery.length < floor) continue;
+			if (variant.shortens && q.normalizedQuery.length < floor) continue;
 			if (!normalizedField.includes(variant.text)) continue;
 			const prepared = (variant.prepared ??= prepareQuery(variant.rawText, variant.text));
 			// Enumeration order is by edit position, which says nothing about how
 			// well each variant reads, so the family is priced before one is taken.
-			best = cheaper(
-				best,
-				rescueWith(field, normalizedField, fieldMask, prepared, variant.tier, acronym),
-			);
+			best = cheaper(best, rescueWith(field, normalizedField, fieldMask, prepared, acronym));
 			// A corrected exact hit is every rescue's floor: unbeatable.
 			if (best !== null && best.score <= TYPO_PENALTY) return best;
 		}
@@ -382,10 +388,7 @@ const substitutionRescue = (
 	let best: MatchResult | null = null;
 	for (const corrected of substitutedWindows(normalizedField, normalizedQuery)) {
 		const prepared = prepareRescue(q, rawSubstitution(q, corrected), corrected);
-		best = cheaper(
-			best,
-			rescueWith(field, normalizedField, fieldMask, prepared, "substituted", acronym),
-		);
+		best = cheaper(best, rescueWith(field, normalizedField, fieldMask, prepared, acronym));
 		if (best !== null && best.score <= TYPO_PENALTY) break;
 	}
 	return best;
@@ -425,7 +428,7 @@ const missingCharRescue = (
 	// The first chunk's length is where the query dropped the gap character.
 	const raw = rawInsertion(q, normalizedField[endA + 1], endA - startA + 1);
 	const prepared = prepareRescue(q, raw ?? corrected, corrected);
-	return rescueWith(field, normalizedField, fieldMask, prepared, "deleted", acronym);
+	return rescueWith(field, normalizedField, fieldMask, prepared, acronym);
 };
 
 export const matchField = (
