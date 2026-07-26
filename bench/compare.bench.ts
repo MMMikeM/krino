@@ -13,34 +13,23 @@
  *   Natural-language names share far fewer prefixes than a combinatorial
  *   word-grid, so they don't flatter trie-based libs (fast-fuzzy). Corpus shape
  *   still moves the numbers — don't read them as universal.
- * - Each lib with optional features gets a second "(all opts)" line: every
- *   opt-in switched on (diacritic folding, multi-word, ranges/highlight
- *   output) INCLUDING typo modes, which krino now matches.
- *
- *   This used to exclude typo modes, because krino couldn't reciprocate them.
- *   krino now does one-edit matching (transposed / inserted / deleted /
- *   substituted) and can't switch it off, so excluding them would have made
- *   every cell a comparison between engines doing different jobs — in krino's
- *   favour. In practice only uFuzzy was actually held back: Fuse (Bitap at
- *   threshold 0.4) and fast-fuzzy (edit distance) were always typo-tolerant
- *   here, which is why they were already flagged above as doing more work.
- *   uFuzzy's "(all opts)" row now enables SingleError with all four edits, the
- *   closest match to krino's one-edit tiers.
- *
+ * - Every configuration comes from configs.ts, so a row timed here is a row
+ *   ranked in hits.test.ts. Base rows are library defaults; each lib with
+ *   optional features gets a second "(all opts)" line with every opt-in
+ *   switched on (diacritic folding, multi-word, ranges/highlight output)
+ *   INCLUDING typo modes, which krino carries always-on and cannot disable.
  *   Expect the typo-tolerant rows to return far more rows than the literal
  *   ones (the hits table measures 3–10× the true hit count); rank/MRR, not raw
  *   count, is what makes those rows comparable.
  * The point is positioning, not a leaderboard. Run: `pnpm bench`.
  */
-import uFuzzy from "@leeoniya/ufuzzy";
 import createMicrofuzz from "@nozbe/microfuzz";
 import { Searcher } from "fast-fuzzy";
 import Fuse from "fuse.js";
-import { filter as fuzzyFilter } from "fuzzy";
 import fuzzysort from "fuzzysort";
-import { matchSorter } from "match-sorter";
 import { bench, describe } from "vitest";
 import { createFuzzySearch } from "krino";
+import { FUSE_BASE, configs } from "./configs.ts";
 import { CORPORA } from "./corpus";
 
 // Calibrated sampling: aim for ~300 ms of samples per cell, floored at 5
@@ -95,78 +84,21 @@ for (const { name: corpusName, build, queries: QUERIES } of CORPORA)
 for (const size of [10000, 100000]) {
 	if (!wants(corpusName, size)) continue;
 	const list = build(size);
-	const mikro = createFuzzySearch(list); // prebuilt index
-	const microfuzz = createMicrofuzz(list); // prebuilt index (the parent lib)
-	const fastFuzzy = new Searcher(list); // prebuilt index
-	const fuse = new Fuse(list, { ignoreLocation: true, threshold: 0.4 });
-	const uf = new uFuzzy();
-
-	// "(all opts)" variants — every opt-in on, typo modes included. Cached prep
-	// (latinized haystack, prebuilt indexes) stays outside the query loop, same
-	// as the base lines.
-	const mikroAll = createFuzzySearch(list, [{ text: (x: string) => x, acronym: true }]);
-	const microfuzzAll = createMicrofuzz(list, { strategy: "aggressive" });
-	const fastFuzzyAll = new Searcher(list, { returnMatchData: true });
-	const fuseAll = new Fuse(list, {
-		ignoreLocation: true,
-		threshold: 0.4,
-		ignoreDiacritics: true,
-		includeMatches: true,
-		useExtendedSearch: true,
-	});
-	const latinized = uFuzzy.latinize(list);
-	const OUT_OF_ORDER = 1;
-	// SingleError with all four edits enabled — the closest uFuzzy config to
-	// krino's one-edit tiers (transposed / inserted / deleted / substituted).
-	const ufAll = new uFuzzy({ intraMode: 1, intraIns: 1, intraSub: 1, intraTrn: 1, intraDel: 1 });
+	// Cached prep (latinized haystack, prebuilt indexes) stays outside the query
+	// loop, for every configuration alike.
+	const all = configs(list);
 
 	describe(`[${corpusName}] query ${size} items × ${QUERIES.length} queries`, () => {
-		cbench("krino", () => {
-			for (const q of QUERIES) sink += mikro(q).length;
-		});
-		cbench("krino (acronym)", () => {
-			for (const q of QUERIES) sink += mikroAll(q).length;
-		});
-		cbench("@nozbe/microfuzz", () => {
-			for (const q of QUERIES) sink += microfuzz(q).length;
-		});
-		cbench("@nozbe/microfuzz (all opts)", () => {
-			for (const q of QUERIES) sink += microfuzzAll(q).length;
-		});
-		cbench("fuzzy", () => {
-			for (const q of QUERIES) sink += fuzzyFilter(q, list).length;
-		});
-		cbench("fuzzy (all opts)", () => {
-			for (const q of QUERIES) sink += fuzzyFilter(q, list, { pre: "<", post: ">" }).length;
-		});
-		cbench("fuzzysort", () => {
-			for (const q of QUERIES) sink += fuzzysort.go(q, list).length;
-		});
-		cbench("match-sorter", () => {
-			for (const q of QUERIES) sink += matchSorter(list, q).length;
-		});
-		cbench("fast-fuzzy", () => {
-			for (const q of QUERIES) sink += fastFuzzy.search(q).length;
-		});
-		cbench("fast-fuzzy (all opts)", () => {
-			for (const q of QUERIES) sink += fastFuzzyAll.search(q).length;
-		});
-		cbench("uFuzzy", () => {
-			for (const q of QUERIES) sink += uf.search(list, q)[0]?.length ?? 0;
-		});
-		cbench("uFuzzy (all opts)", () => {
-			for (const q of QUERIES)
-				sink += ufAll.search(latinized, uFuzzy.latinize([q])[0], OUT_OF_ORDER)[0]?.length ?? 0;
-		});
-		cbench("fuse.js", () => {
-			for (const q of QUERIES) sink += fuse.search(q).length;
-		});
-		cbench("fuse.js (all opts)", () => {
-			for (const q of QUERIES) sink += fuseAll.search(q).length;
-		});
+		for (const config of all) {
+			cbench(config.name, () => {
+				for (const q of QUERIES) sink += config.count(q);
+			});
+		}
 	});
 
 	// Build cost barely differs between corpora — measure it once, on mixed.
+	// Constructors only: hits.test.ts measures time-to-ready instead, which for
+	// the lazy preparers is a different number.
 	if (corpusName === "mixed") {
 		describe(`build index (${size} items)`, () => {
 			cbench("krino createFuzzySearch", () => {
@@ -179,7 +111,7 @@ for (const size of [10000, 100000]) {
 				new Searcher(list);
 			});
 			cbench("fuse.js new Fuse", () => {
-				new Fuse(list, { ignoreLocation: true, threshold: 0.4 });
+				new Fuse(list, FUSE_BASE);
 			});
 			// fuzzysort has no constructor; this is the prepare-all pass its
 			// first go() runs lazily and caches process-wide (see hits.test.ts).

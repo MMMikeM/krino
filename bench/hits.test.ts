@@ -11,26 +11,18 @@
  *   the rigorous vitest-bench numbers).
  */
 import { writeFileSync } from "node:fs";
-import uFuzzy from "@leeoniya/ufuzzy";
-import createMicrofuzz from "@nozbe/microfuzz";
-import { Searcher } from "fast-fuzzy";
-import Fuse from "fuse.js";
-import { filter as fuzzyFilter } from "fuzzy";
-import fuzzysort from "fuzzysort";
-import { matchSorter } from "match-sorter";
 import { describe, expect, it } from "vitest";
-import { createFuzzySearch } from "krino";
 import { type ProbeTable, type ScorecardRow, ensureRawDir, rawFile } from "./artifact.ts";
+import { type Config, type Probe, configByName, configs } from "./configs.ts";
 import { CORPORA } from "./corpus";
 
 const SIZE = 10_000;
 
 type Outcome = { count: number; rank: number | null };
-type Runner = (query: string, source: string | null) => Outcome;
 
-const outcome = (ranked: string[], source: string | null): Outcome => ({
-	count: ranked.length,
-	rank: source == null ? null : ranked.indexOf(source) + 1 || null,
+const outcome = ({ count, ranked }: Probe, source: string | null): Outcome => ({
+	count,
+	rank: source == null || ranked == null ? null : ranked.indexOf(source) + 1 || null,
 });
 
 const cell = ({ count, rank }: Outcome, source: string | null): string => {
@@ -76,93 +68,21 @@ const timeQuery = (run: () => number, reset?: () => void): number => {
 
 describe("bench validity: per-library match counts and source rank", () => {
 	for (const { name, build, specs } of CORPORA) {
-		// The per-cell timing loops (~100 ms × 11 configs × 10 queries) outgrow the
+		// The per-cell timing loops (~100 ms × 14 configs × 15 queries) outgrow the
 		// default 5 s test timeout.
-		it(`[${name}] every library matches the plain-word query`, { timeout: 30_000 }, () => {
+		it(`[${name}] every library matches the plain-word query`, { timeout: 60_000 }, () => {
 			const list = build(SIZE);
-			const uf = new uFuzzy();
-			// SingleError with all four edits — uFuzzy's closest config to krino's
-			// one-edit tiers. Held off until krino could reciprocate; it now can.
-			const ufAll = new uFuzzy({ intraMode: 1, intraIns: 1, intraSub: 1, intraTrn: 1, intraDel: 1 });
-			const latinized = uFuzzy.latinize(list);
-			const krino = createFuzzySearch(list);
-			const krinoAcronym = createFuzzySearch(list, [{ text: (x: string) => x, acronym: true }]);
-			const microfuzz = createMicrofuzz(list);
-			const fastFuzzy = new Searcher(list);
-			const fuse = new Fuse(list, { ignoreLocation: true, threshold: 0.4 });
-			const fuseAll = new Fuse(list, {
-				ignoreLocation: true,
-				threshold: 0.4,
-				ignoreDiacritics: true,
-				includeMatches: true,
-				useExtendedSearch: true,
-			});
-
-			// uFuzzy's ranked order needs search() info; it's null above the
-			// info threshold, where only the count survives.
-			const uFuzzyRun = (
-				haystack: string[],
-				needle: string,
-				source: string | null,
-				instance: uFuzzy = uf,
-				outOfOrder?: number,
-			): Outcome => {
-				const [idxs, info, order] = instance.search(haystack, needle, outOfOrder);
-				if (!idxs?.length) return { count: 0, rank: null };
-				if (!info || !order) return { count: idxs.length, rank: null };
-				const ranked = order.map((o) => list[info.idx[o]]);
-				return outcome(ranked, source);
-			};
-
-			const runners: Record<string, Runner> = {
-				krino: (q, src) => outcome(krino(q).map((r) => r.item), src),
-				"krino (acronym)": (q, src) => outcome(krinoAcronym(q).map((r) => r.item), src),
-				"@nozbe/microfuzz": (q, src) =>
-					outcome(
-						microfuzz(q)
-							.sort((a, b) => a.score - b.score)
-							.map((r) => r.item),
-						src,
-					),
-				fuzzysort: (q, src) => outcome(fuzzysort.go(q, list).map((r) => r.target), src),
-				"match-sorter": (q, src) => outcome(matchSorter(list, q), src),
-				"fast-fuzzy": (q, src) => outcome(fastFuzzy.search(q), src),
-				uFuzzy: (q, src) => uFuzzyRun(list, q, src),
-				"uFuzzy (all opts)": (q, src) =>
-					uFuzzyRun(latinized, uFuzzy.latinize([q])[0], src, ufAll, 1),
-				"fuse.js": (q, src) => outcome(fuse.search(q).map((r) => r.item), src),
-				"fuse.js (all opts)": (q, src) => outcome(fuseAll.search(q).map((r) => r.item), src),
-				fuzzy: (q, src) => outcome(fuzzyFilter(q, list).map((r) => r.original ?? r.string), src),
-			};
-
-			// Raw search calls only — no rank extraction or sorting overhead —
-			// mirroring what the vitest benches time.
-			const timers: Record<string, (q: string) => number> = {
-				krino: (q) => krino(q).length,
-				"krino (acronym)": (q) => krinoAcronym(q).length,
-				"@nozbe/microfuzz": (q) => microfuzz(q).length,
-				fuzzysort: (q) => fuzzysort.go(q, list).length,
-				"match-sorter": (q) => matchSorter(list, q).length,
-				"fast-fuzzy": (q) => fastFuzzy.search(q).length,
-				uFuzzy: (q) => uf.search(list, q)[0]?.length ?? 0,
-				"uFuzzy (all opts)": (q) =>
-					ufAll.search(latinized, uFuzzy.latinize([q])[0], 1)[0]?.length ?? 0,
-				"fuse.js": (q) => fuse.search(q).length,
-				"fuse.js (all opts)": (q) => fuseAll.search(q).length,
-				fuzzy: (q) => fuzzyFilter(q, list).length,
-			};
+			const all = configs(list);
 
 			// Cache busts for searchers with cross-query state: a throwaway query
 			// no test query extends, so the next timed call is a full cold scan.
 			const CACHE_BUST = "zzzzzz";
-			const resets: Record<string, () => void> = {
-				krino: () => {
-					sink += krino(CACHE_BUST).length;
-				},
-				"krino (acronym)": () => {
-					sink += krinoAcronym(CACHE_BUST).length;
-				},
-			};
+			const resetFor = (config: Config): (() => void) | undefined =>
+				config.stateful
+					? () => {
+							sink += config.count(CACHE_BUST);
+						}
+					: undefined;
 
 			// One-time index cost per configuration (0 for the libraries that keep
 			// no index — their preparation happens inside every query above).
@@ -175,35 +95,12 @@ describe("bench validity: per-library match counts and source rank", () => {
 			// ~87× a steady query at 10k), so its cell times an explicit
 			// prepare-all loop — the same work go() does lazily, but repeatable,
 			// where the one-shot lazy fill would be visible only once per process.
-			// uFuzzy (all opts) counts latinizing the haystack — real preparation
-			// that normally hides as "no index", and the config that competes on
-			// the total column, so it has to carry it.
-			// Consume a constructed object so creation can't be elided.
-			const consume = (o: object): number => o.constructor.name.length;
 			const firstQuery = specs[0]?.query ?? "steel";
-			const indexers: Record<string, () => number> = {
-				krino: () => consume(createFuzzySearch(list)),
-				"krino (acronym)": () => consume(createFuzzySearch(list, [{ text: (x: string) => x, acronym: true }])),
-				"@nozbe/microfuzz": () => createMicrofuzz(list)(firstQuery).length,
-				"fast-fuzzy": () => consume(new Searcher(list)),
-				"fuse.js": () => consume(new Fuse(list, { ignoreLocation: true, threshold: 0.4 })),
-				"fuse.js (all opts)": () =>
-					consume(
-						new Fuse(list, {
-							ignoreLocation: true,
-							threshold: 0.4,
-							ignoreDiacritics: true,
-							includeMatches: true,
-							useExtendedSearch: true,
-						}),
-					),
-				"uFuzzy (all opts)": () => uFuzzy.latinize(list).length,
-				fuzzysort: () => {
-					let n = 0;
-					for (const s of list) n += fuzzysort.prepare(s).target.length;
-					return n;
-				},
-			};
+			const indexers: Record<string, () => number> = Object.fromEntries(
+				all
+					.filter((c): c is Config & { index: NonNullable<Config["index"]> } => c.index != null)
+					.map((c) => [c.name, () => (c.index as (q: string) => number)(firstQuery)]),
+			);
 			// Builds are allocation-heavy, so sequential per-config windows pick
 			// up order-dependent GC debt: one configuration's garbage is
 			// collected inside the next one's timed window (observed as a
@@ -253,17 +150,19 @@ describe("bench validity: per-library match counts and source rank", () => {
 				indexMs.krino = indexMs["krino (acronym)"] = (indexMs.krino + indexMs["krino (acronym)"]) / 2;
 			}
 			// index = build + first − second: subtract one steady-state search of
-			// the same query (on the long-lived searcher) so microfuzz's cell is
-			// preparation only, not preparation + one query.
-			indexMs["@nozbe/microfuzz"] = Math.max(
-				0,
-				(indexMs["@nozbe/microfuzz"] ?? 0) - timeQuery(() => microfuzz(firstQuery).length),
-			);
+			// the same query (on the long-lived searcher) so a deferred preparer's
+			// cell is preparation only, not preparation + one query.
+			for (const config of all.filter((c) => c.deferredIndex)) {
+				indexMs[config.name] = Math.max(
+					0,
+					(indexMs[config.name] ?? 0) - timeQuery(() => config.count(firstQuery)),
+				);
+			}
 
 			// One full warm pass over every lib × query before any timing —
 			// early cells otherwise pay the whole process's JIT warmup.
-			for (const warm of Object.values(timers)) {
-				for (const { query } of specs) sink += warm(query);
+			for (const config of all) {
+				for (const { query } of specs) sink += config.count(query);
 			}
 
 			// Per-lib aggregates: reciprocal ranks (miss = 0) over the scored
@@ -274,9 +173,10 @@ describe("bench validity: per-library match counts and source rank", () => {
 			const rows = specs.map(({ query, kind, source }) => {
 				const row: Record<string, string> = { kind, query };
 				const cells: ProbeTable["cells"] = {};
-				for (const [lib, run] of Object.entries(runners)) {
-					const ms = timeQuery(() => timers[lib](query), resets[lib]);
-					const { count, rank } = run(query, source);
+				for (const config of all) {
+					const lib = config.name;
+					const ms = timeQuery(() => config.count(query), resetFor(config));
+					const { count, rank } = outcome(config.probe(query), source);
 					const s = (scores[lib] ??= { rrs: [], times: [] });
 					s.times.push(ms);
 					if (source != null) {
@@ -340,18 +240,22 @@ describe("bench validity: per-library match counts and source rank", () => {
 			ensureRawDir();
 			writeFileSync(rawFile(`hits-${RUN}.json`), JSON.stringify(runOut, null, "\t"));
 
+			const countFor = (lib: string, query: string, source: string | null): number =>
+				outcome(configByName(all, lib).probe(query), source).count;
+
 			// Every benched lib must find something for a plain corpus word —
 			// otherwise its speed numbers time a no-op.
 			const plainWord = specs[0];
-			for (const [lib, run] of Object.entries(runners)) {
+			for (const config of all) {
 				expect(
-					run(plainWord.query, plainWord.source).count,
-					`${lib} found nothing for "${plainWord.query}"`,
+					countFor(config.name, plainWord.query, plainWord.source),
+					`${config.name} found nothing for "${plainWord.query}"`,
 				).toBeGreaterThan(0);
 			}
 
+			const krino = configByName(all, "krino");
 			for (const { query, kind, source } of specs) {
-				const { count, rank } = runners.krino(query, source);
+				const { count, rank } = outcome(krino.probe(query), source);
 				if (kind === "miss") {
 					expect(count, `krino matched garbage "${query}"`).toBe(0);
 				} else if (!kind.startsWith("scatter")) {
@@ -371,13 +275,13 @@ describe("bench validity: per-library match counts and source rank", () => {
 			const accentProbe = specs.find((s) => s.kind === "accent-stripped");
 			if (accentProbe) {
 				const { query, source } = accentProbe;
-				expect(runners.krino(query, source).count).toBeGreaterThan(0);
-				expect(runners["uFuzzy (all opts)"](query, source).count).toBeGreaterThanOrEqual(
-					runners.uFuzzy(query, source).count,
-				);
-				expect(runners["fuse.js (all opts)"](query, source).count).toBeGreaterThanOrEqual(
-					runners["fuse.js"](query, source).count,
-				);
+				expect(countFor("krino", query, source)).toBeGreaterThan(0);
+				for (const lib of ["uFuzzy", "fuse.js"]) {
+					expect(
+						countFor(`${lib} (all opts)`, query, source),
+						`${lib} (all opts) found less than its non-folding base`,
+					).toBeGreaterThanOrEqual(countFor(lib, query, source));
+				}
 			}
 		});
 	}

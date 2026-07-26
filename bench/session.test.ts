@@ -8,13 +8,9 @@
  * typed k-1 and presses the next key". Step 1 resets with a cache bust.
  */
 import { writeFileSync } from "node:fs";
-import uFuzzy from "@leeoniya/ufuzzy";
-import createMicrofuzz from "@nozbe/microfuzz";
-import Fuse from "fuse.js";
-import fuzzysort from "fuzzysort";
 import { expect, it } from "vitest";
-import { createFuzzySearch } from "krino";
 import { type SessionRow, ensureRawDir, rawFile } from "./artifact.ts";
+import { configByName, configs } from "./configs.ts";
 import { CORPORA } from "./corpus";
 
 const SIZE = 100_000;
@@ -50,30 +46,15 @@ it("frontend session: three successive queries at 100k", { timeout: 60_000 }, ()
 	const word = mixed.specs[1].query;
 	const steps = [3, 4, 5].map((k) => word.slice(0, k));
 
-	const krino = createFuzzySearch(list);
-	const microfuzz = createMicrofuzz(list);
-	const latinized = uFuzzy.latinize(list);
-	const ufAll = new uFuzzy({ intraMode: 1, intraIns: 1, intraSub: 1, intraTrn: 1, intraDel: 1 });
-	const fuseAll = new Fuse(list, {
-		ignoreLocation: true,
-		threshold: 0.4,
-		ignoreDiacritics: true,
-		includeMatches: true,
-		useExtendedSearch: true,
-	});
-
-	// stateful: true wires the typing-cache state (reset replays the previous
-	// prefix); stateless libraries just run cold every sample.
-	const libs: Array<{ name: string; run: (q: string) => number; stateful?: boolean }> = [
-		{ name: "krino", run: (q) => krino(q).length, stateful: true },
-		{ name: "@nozbe/microfuzz", run: (q) => microfuzz(q).length },
-		{ name: "fuzzysort", run: (q) => fuzzysort.go(q, list).length },
-		{ name: "uFuzzy (all opts)", run: (q) => ufAll.search(latinized, uFuzzy.latinize([q])[0], 1)[0]?.length ?? 0 },
-		{ name: "fuse.js (all opts)", run: (q) => fuseAll.search(q).length },
-	];
+	// A configuration's `stateful` flag wires the typing-cache state (reset
+	// replays the previous prefix); stateless libraries just run cold every
+	// sample.
+	const all = configs(list);
+	const libs = ["krino", "@nozbe/microfuzz", "fuzzysort", "uFuzzy (all opts)", "fuse.js (all opts)"]
+		.map((lib) => configByName(all, lib));
 
 	const rows: SessionRow[] = [];
-	for (const { name, run, stateful } of libs) {
+	for (const { name, count: run, stateful } of libs) {
 		const stepMs = steps.map((q, k) => {
 			const reset = stateful
 				? () => {

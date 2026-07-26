@@ -190,18 +190,36 @@ const scorecardTable = (a: Artifact, corpus: string): string => {
 	);
 };
 
-// The subset the docs show. match-sorter and fuzzy track the microfuzz row
-// closely enough that including them only costs readability; the artifact keeps
-// their cells.
-const PROBE_LIBRARIES = [
-	"krino",
-	"krino (acronym)",
-	"@nozbe/microfuzz",
-	"fast-fuzzy",
-	"fuse.js",
-	"fuzzysort",
-	"uFuzzy",
+// The subset the docs show, each library at its defaults. match-sorter and
+// fuzzy track the microfuzz row closely enough that including them only costs
+// readability; the artifact keeps their cells.
+const PROBE_LIBRARIES: Array<{ base: string; opts?: string }> = [
+	{ base: "krino", opts: "krino (acronym)" },
+	{ base: "@nozbe/microfuzz", opts: "@nozbe/microfuzz (all opts)" },
+	{ base: "fast-fuzzy", opts: "fast-fuzzy (all opts)" },
+	{ base: "fuse.js", opts: "fuse.js (all opts)" },
+	{ base: "fuzzysort" },
+	{ base: "uFuzzy", opts: "uFuzzy (all opts)" },
 ];
+
+// The scorecard's MRR@10 contribution: what a picker showing ten results sees.
+// Rank 142 and rank 145 are both "not found", and the difference between them
+// is not a row.
+const reciprocalRank = (cell: ProbeTable["cells"][string]): number =>
+	cell.rank && cell.rank <= 10 ? 1 / cell.rank : 0;
+
+/**
+ * Rows for one probe: every library at its base configuration, joined by its
+ * opt-in configuration only where the opt-ins moved the source's rank within
+ * the top ten. A widened table therefore always means the opt-ins changed
+ * whether, or where, a picker would show the item.
+ */
+const probeRows = (probe: ProbeTable): string[] =>
+	PROBE_LIBRARIES.flatMap(({ base, opts }) =>
+		opts && reciprocalRank(probe.cells[base]) !== reciprocalRank(probe.cells[opts])
+			? [base, opts]
+			: [base],
+	);
 
 const rankCell = (cell: ProbeTable["cells"][string]): string =>
 	cell.count === 0 ? "—" : String(cell.rank ?? "✗");
@@ -209,7 +227,7 @@ const rankCell = (cell: ProbeTable["cells"][string]): string =>
 const probeTable = (probe: ProbeTable): string =>
 	mdTable(
 		["Library", "rank", "matches", "query ms", "total ms"],
-		PROBE_LIBRARIES.map((lib) => {
+		probeRows(probe).map((lib) => {
 			const cell = probe.cells[lib];
 			return [
 				displayName(lib),
@@ -233,7 +251,7 @@ const missTable = (probes: ProbeTable[]): string => {
 	if (!miss || !reference) throw new Error("probe set is missing the miss or long-word query");
 	return mdTable(
 		["Library", "matches", "query ms", `vs \`${reference.query}\``],
-		PROBE_LIBRARIES.map((lib) => [
+		probeRows(miss).map((lib) => [
 			displayName(lib),
 			String(miss.cells[lib].count),
 			miss.cells[lib].queryMs.toFixed(3),
