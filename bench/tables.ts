@@ -47,6 +47,7 @@ const BUILD_COLUMNS: Array<[library: string, label: string]> = [
 	["fast-fuzzy", "fast-fuzzy"],
 	["fuse.js", "Fuse.js"],
 	["fuzzysort", "fuzzysort (lazy)"],
+	["uFuzzy (all opts)", "uFuzzy (all opts)"],
 ];
 
 const buildTable = (a: Artifact): string => {

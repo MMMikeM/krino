@@ -1,7 +1,27 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { type LibraryMeta, META, baseName } from "./libraries.ts";
 
-export type Cell = { ms: number; sd: number };
+/**
+ * One benchmarked cell, per query. `ms` is the published number and is the
+ * MEDIAN: timing noise is one-sided — scheduler and GC interruptions only ever
+ * add time — so a mean averages the spikes in where a median rejects them, the
+ * same reasoning hits.test.ts applies to its own cells. The rest is kept
+ * because a cell's own spread is what says whether a gap between two cells
+ * means anything: at 100k the samples within a single cell have spanned more
+ * than the contamination guard's threshold.
+ */
+export type Cell = {
+	ms: number;
+	mean: number;
+	sd: number;
+	min: number;
+	max: number;
+	p75: number;
+	p99: number;
+	/** Relative margin of error, percent, as tinybench reports it. */
+	rme: number;
+	samples: number;
+};
 export type ScorecardRow = {
 	library: string;
 	mrr: number;
@@ -28,7 +48,7 @@ export type LongtextRow = {
 export type Artifact = {
 	method: Record<string, unknown>;
 	libraries: Record<string, LibraryMeta>;
-	/** corpus → library → list size → per-query mean/sd. */
+	/** corpus → library → list size → per-query timing, `ms` being the median. */
 	speed: Record<string, Record<string, Record<string, Cell>>>;
 	/** library → list size → one-time build ms. */
 	build: Record<string, Record<string, number>>;
@@ -44,7 +64,8 @@ export const rawFile = (name: string): URL => new URL(name, RAW_DIR);
 
 const METHOD = {
 	size: "esbuild --bundle --minify (tree-shaken to primary API) | gzip",
-	speed: "vitest bench, per-query mean ± sd; rel = time relative to krino (100%), lower is faster",
+	speed:
+		"vitest bench; ms is the per-query median of the cell's samples, with mean/sd/min/max/p75/p99/rme/samples kept alongside; rel = time relative to krino (100%), lower is faster",
 	quality:
 		"time-boxed median per cell, median across N fresh processes; MRR@10 over the scored probes",
 	corpora: {
@@ -87,9 +108,21 @@ const BUILD_NAMES: Record<string, string> = {
 	"fast-fuzzy new Searcher": "fast-fuzzy",
 	"fuse.js new Fuse": "fuse.js",
 	"fuzzysort prepare (lazy)": "fuzzysort",
+	"uFuzzy (all opts) latinize": "uFuzzy (all opts)",
 };
 
-type VitestBench = { name: string; mean: number; sd: number };
+type VitestBench = {
+	name: string;
+	mean: number;
+	sd: number;
+	median: number;
+	min: number;
+	max: number;
+	p75: number;
+	p99: number;
+	rme: number;
+	sampleCount: number;
+};
 type VitestRaw = { files?: Array<{ groups?: Array<{ fullName?: string; name?: string; benchmarks?: VitestBench[] }> }> };
 
 export const reduceBenchRun = (
@@ -103,10 +136,18 @@ export const reduceBenchRun = (
 			const query = label.match(/\[(\w+)\] query (\d+) items × (\d+) queries/);
 			if (query) {
 				const [, corpus, size, perSample] = query;
+				const per = Number(perSample);
 				for (const b of group.benchmarks ?? []) {
 					((speed[corpus] ??= {})[b.name] ??= {})[size] = {
-						ms: b.mean / Number(perSample),
-						sd: b.sd / Number(perSample),
+						ms: b.median / per,
+						mean: b.mean / per,
+						sd: b.sd / per,
+						min: b.min / per,
+						max: b.max / per,
+						p75: b.p75 / per,
+						p99: b.p99 / per,
+						rme: b.rme,
+						samples: b.sampleCount,
 					};
 				}
 				continue;
@@ -122,8 +163,18 @@ export const reduceBenchRun = (
 	return { speed, build };
 };
 
+/**
+ * A configuration's own build cost, falling back to its base library's.
+ *
+ * Most "(all opts)" rows construct the same thing as their base — Fuse's index,
+ * microfuzz's, fast-fuzzy's trie all measure the same either way — so sharing
+ * the base cell is right. uFuzzy is the exception and needs its own: the base
+ * configuration keeps no index at all, while `uFuzzy (all opts)` latinizes the
+ * whole haystack. Resolving that through `baseName` charged it nothing and made
+ * its total column the query alone.
+ */
 export const indexMsFor = (artifact: Artifact, library: string, size: string): number | null =>
-	artifact.build[baseName(library)]?.[size] ?? null;
+	artifact.build[library]?.[size] ?? artifact.build[baseName(library)]?.[size] ?? null;
 
 /**
  * Sizes below this are measured but never published: sub-millisecond cells sit

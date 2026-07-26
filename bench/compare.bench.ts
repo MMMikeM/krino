@@ -23,6 +23,7 @@
  *   count, is what makes those rows comparable.
  * The point is positioning, not a leaderboard. Run: `pnpm bench`.
  */
+import uFuzzy from "@leeoniya/ufuzzy";
 import createMicrofuzz from "@nozbe/microfuzz";
 import { Searcher } from "fast-fuzzy";
 import Fuse from "fuse.js";
@@ -32,12 +33,12 @@ import { createFuzzySearch } from "krino";
 import { FUSE_BASE, configs } from "./configs.ts";
 import { CORPORA } from "./corpus";
 
-// Calibrated sampling: aim for ~300 ms of samples per cell, floored at 5
+// Calibrated sampling: aim for ~1 s of samples per cell, floored at 5
 // iterations and capped at 20 — fast cells stop at 20 samples instead of
-// burning 300 ms, slow cells (Fuse/fast-fuzzy at 100k) stop at 5. tinybench's
+// burning the budget, slow cells (Fuse/fast-fuzzy at 100k) stop at 5. tinybench's
 // `time` and `iterations` are both floors, so the cap is implemented by probing
 // each cell once (the probe doubles as warmup) and pinning `iterations`.
-const TARGET_MS = 300;
+const TARGET_MS = 1000;
 const calibrated = (fn: () => void): { time: number; iterations: number; warmupTime: number; warmupIterations: number } => {
 	const t0 = performance.now();
 	fn();
@@ -117,6 +118,12 @@ for (const size of [10000, 100000]) {
 			// first go() runs lazily and caches process-wide (see hits.test.ts).
 			cbench("fuzzysort prepare (lazy)", () => {
 				for (const s of list) sink += fuzzysort.prepare(s).target.length;
+			});
+			// Base uFuzzy keeps no index, but its (all opts) configuration
+			// latinizes the whole haystack once. That is a build, and leaving it
+			// unmeasured made the row's total column its query alone.
+			cbench("uFuzzy (all opts) latinize", () => {
+				sink += uFuzzy.latinize(list).length;
 			});
 		});
 	}
