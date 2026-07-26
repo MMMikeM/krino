@@ -9,15 +9,39 @@ import { wordChar } from "./boundaries";
 
 export const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+// Mirrors WORD_CLASS in boundaries.ts. Kept as a class body rather than reusing
+// `wordChar` because this one goes inside a lookbehind in a larger pattern.
+const WORD_CLASS = "[\\p{L}\\p{N}_]";
+
 /**
- * A cheap native gate for the fuzzy tier: the query's characters, in order, with
- * anything between. A fuzzy match requires the query to be a subsequence of the
- * field, so a field that fails this test can never match — skip the expensive
- * hand-rolled matcher. For single-word queries every earlier tier needs the same
- * property, so it doubles as the front gate of the whole ladder.
+ * A cheap native gate for the fuzzy tier: the query's characters in order, with
+ * anything between, anchored at a placement the chunk assembler would actually
+ * try. A fuzzy match requires the query to be a subsequence of the field, and
+ * `fuzzyChainMatch` only starts a chain where `admitsChunk` holds for the first
+ * chunk — the placement either opens a word or runs the query's first three
+ * characters consecutively. Every earlier tier satisfies one of those too
+ * (contains/prefix/exact run the query outright, acronym lands on initials), so
+ * for single-word queries this gates the whole ladder.
+ *
+ * Requiring the anchor cuts a third of the fields that reach the ladder and
+ * cannot false-reject: a field with no admissible first placement has no chain
+ * to assemble (@see docs/benchmarks.md).
+ *
+ * Monotone under query extension, which is what lets the survivor cache in
+ * search.ts reuse the previous keystroke's survivors: extending the query
+ * lengthens the subsequence and never changes the first three characters, so
+ * both branches only ever admit fewer fields.
  */
-export const buildFuzzyGate = (normalizedQuery: string): RegExp =>
-	new RegExp([...normalizedQuery].map(escapeRegex).join("[^]*"));
+export const buildFuzzyGate = (normalizedQuery: string): RegExp => {
+	const chars = [...normalizedQuery].map(escapeRegex);
+	const subsequenceFrom = (i: number): string => chars.slice(i).join("[^]*");
+	const runLength = Math.min(3, chars.length);
+	const run = chars.slice(0, runLength).join("");
+	const afterRun = runLength < chars.length ? `[^]*${subsequenceFrom(runLength)}` : "";
+	// Lookbehind rather than a consuming `(?:^|non-word)`: same survivors, ~11%
+	// less scan time, and ES2018 sits inside the ES2022 target tsconfig pins.
+	return new RegExp(`(?:(?<!${WORD_CLASS})${subsequenceFrom(0)}|${run}${afterRun})`, "u");
+};
 
 /**
  * A 32-bit character-class mask (fuzzysort-style O(1) pre-gate): bits 0–25 for

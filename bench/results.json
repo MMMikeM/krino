@@ -3,7 +3,6 @@
 		"size": "esbuild --bundle --minify (tree-shaken to primary API) | gzip",
 		"speed": "vitest bench, per-query mean ± sd; rel = time relative to krino (100%), lower is faster",
 		"quality": "time-boxed median per cell, median across N fresh processes; MRR@10 over the scored probes",
-		"memory": "heapUsed + external delta across building one searcher, in a fresh process per cell, median of 3; typed arrays are external, so heapUsed alone would undercount",
 		"corpora": {
 			"ascii": "en faker locale — effectively no diacritics",
 			"mixed": "mostly en with fr/pl every 7th item — ~5% of items carry a diacritic"
@@ -135,308 +134,308 @@
 		"ascii": {
 			"krino": {
 				"10000": {
-					"ms": 0.3142467052631745,
-					"sd": 0.02667851783689894
+					"ms": 0.26067756666666864,
+					"sd": 0.01656004407537878
 				},
 				"100000": {
-					"ms": 4.541337586666632,
-					"sd": 0.16333800965326034
+					"ms": 3.39950867999995,
+					"sd": 0.16843832390240127
 				}
 			},
 			"krino (acronym)": {
 				"10000": {
-					"ms": 0.40571109333331457,
-					"sd": 0.09425265669046855
+					"ms": 0.29633141666666535,
+					"sd": 0.04047515592959783
 				},
 				"100000": {
-					"ms": 4.493876080000094,
-					"sd": 0.2826066714010577
+					"ms": 4.010646093333489,
+					"sd": 0.09383125774384761
 				}
 			},
 			"@nozbe/microfuzz": {
 				"10000": {
-					"ms": 1.704774520000016,
-					"sd": 0.4399794820936001
+					"ms": 1.5363960133333119,
+					"sd": 0.1595630413099497
 				},
 				"100000": {
-					"ms": 15.771391573333338,
-					"sd": 0.3443483251937914
+					"ms": 17.600700160000127,
+					"sd": 0.2370363820323352
 				}
 			},
 			"@nozbe/microfuzz (all opts)": {
 				"10000": {
-					"ms": 1.8385413466666554,
-					"sd": 0.5647538111525582
+					"ms": 1.591096804444484,
+					"sd": 0.34213576271214247
 				},
 				"100000": {
-					"ms": 15.399099293333226,
-					"sd": 0.17448548420140114
+					"ms": 15.544085520000177,
+					"sd": 0.2321372126786517
 				}
 			},
 			"fuzzy": {
 				"10000": {
-					"ms": 2.7978149333332354,
-					"sd": 0.2676025715191663
+					"ms": 2.6955190466666923,
+					"sd": 0.10508743344787641
 				},
 				"100000": {
-					"ms": 29.953673679999966,
-					"sd": 0.35393707643821803
+					"ms": 29.274999973333422,
+					"sd": 1.132975635037847
 				}
 			},
 			"fuzzy (all opts)": {
 				"10000": {
-					"ms": 2.9889221999999913,
-					"sd": 0.10358512221886892
+					"ms": 2.660372973333142,
+					"sd": 0.12124230584084836
 				},
 				"100000": {
-					"ms": 30.11593225333335,
-					"sd": 0.997747304143908
+					"ms": 29.16802692000007,
+					"sd": 0.26896001277414616
 				}
 			},
 			"fuzzysort": {
 				"10000": {
-					"ms": 0.6879732916666399,
-					"sd": 0.2036067260950281
+					"ms": 0.4324777111112376,
+					"sd": 0.04762311372857695
 				},
 				"100000": {
-					"ms": 7.0640864933336465,
-					"sd": 0.38677770992324406
+					"ms": 5.5957601866666415,
+					"sd": 0.34863610399896516
 				}
 			},
 			"match-sorter": {
 				"10000": {
-					"ms": 3.4732355866665605,
-					"sd": 0.04719522430051614
+					"ms": 3.257584613333456,
+					"sd": 0.09337100192783408
 				},
 				"100000": {
-					"ms": 33.662598133333375,
-					"sd": 0.2784127734522208
+					"ms": 33.59324511999982,
+					"sd": 0.2219225960765982
 				}
 			},
 			"fast-fuzzy": {
 				"10000": {
-					"ms": 9.675128480000033,
-					"sd": 0.18526983470795091
+					"ms": 8.398870306666456,
+					"sd": 0.2204314170008995
 				},
 				"100000": {
-					"ms": 85.40033061333331,
-					"sd": 0.5131543237812519
+					"ms": 84.2412839066668,
+					"sd": 1.199007661349348
 				}
 			},
 			"fast-fuzzy (all opts)": {
 				"10000": {
-					"ms": 9.334053840000125,
-					"sd": 0.6209485931841794
+					"ms": 8.692411893333388,
+					"sd": 1.028808194049322
 				},
 				"100000": {
-					"ms": 87.3225833333336,
-					"sd": 1.9968344991533404
+					"ms": 84.34097183999992,
+					"sd": 1.1809557992071207
 				}
 			},
 			"uFuzzy": {
 				"10000": {
-					"ms": 0.22613363000001604,
-					"sd": 0.00385537213522702
+					"ms": 0.24424529999996594,
+					"sd": 0.04848159061700342
 				},
 				"100000": {
-					"ms": 2.329886541666565,
-					"sd": 0.0657521728130295
+					"ms": 2.3466405499999383,
+					"sd": 0.09402885877485086
 				}
 			},
 			"uFuzzy (all opts)": {
 				"10000": {
-					"ms": 0.2910576233333753,
-					"sd": 0.012287145653861641
+					"ms": 0.296978336666701,
+					"sd": 0.008771243907176356
 				},
 				"100000": {
-					"ms": 2.7769493523810524,
-					"sd": 0.09734115749052567
+					"ms": 2.7623472476192372,
+					"sd": 0.05100836066021483
 				}
 			},
 			"fuse.js": {
 				"10000": {
-					"ms": 17.744916120000127,
-					"sd": 0.42805187821204815
+					"ms": 17.75869577333331,
+					"sd": 0.04497058382987469
 				},
 				"100000": {
-					"ms": 182.54719388000007,
-					"sd": 2.096637819844252
+					"ms": 176.26991905333338,
+					"sd": 3.1639081160639955
 				}
 			},
 			"fuse.js (all opts)": {
 				"10000": {
-					"ms": 21.291104773333256,
-					"sd": 0.32673020362107125
+					"ms": 19.68102796000011,
+					"sd": 0.0620442645858893
 				},
 				"100000": {
-					"ms": 205.95464830666646,
-					"sd": 2.728543698484685
+					"ms": 208.49287452000019,
+					"sd": 0.8565929500508841
 				}
 			}
 		},
 		"mixed": {
 			"krino": {
 				"10000": {
-					"ms": 0.28711574333351264,
-					"sd": 0.07576729925582634
+					"ms": 0.23956803666679966,
+					"sd": 0.02697052829259165
 				},
 				"100000": {
-					"ms": 2.698377314285331,
-					"sd": 0.18713641172471782
+					"ms": 2.164115199999651,
+					"sd": 0.32674672730682963
 				}
 			},
 			"krino (acronym)": {
 				"10000": {
-					"ms": 0.2999093700004353,
-					"sd": 0.07921937566311024
+					"ms": 0.18653258000005735,
+					"sd": 0.010357041940086272
 				},
 				"100000": {
-					"ms": 2.7546018000000103,
-					"sd": 0.09243656217249771
+					"ms": 2.1099018285713447,
+					"sd": 0.15121501946649218
 				}
 			},
 			"@nozbe/microfuzz": {
 				"10000": {
-					"ms": 1.498847803921329,
-					"sd": 0.30217194108376516
+					"ms": 1.4361233833333245,
+					"sd": 0.16336291308964507
 				},
 				"100000": {
-					"ms": 15.228369920000356,
-					"sd": 0.10293384766104267
+					"ms": 15.474085866667252,
+					"sd": 0.213714146701098
 				}
 			},
 			"@nozbe/microfuzz (all opts)": {
 				"10000": {
-					"ms": 1.4546356313722664,
-					"sd": 0.14897378593882402
+					"ms": 1.461686029166473,
+					"sd": 0.12086118597176006
 				},
 				"100000": {
-					"ms": 15.765985106667115,
-					"sd": 0.21896046396144728
+					"ms": 15.37861791999972,
+					"sd": 0.06472385153778902
 				}
 			},
 			"fuzzy": {
 				"10000": {
-					"ms": 2.9449116761901504,
-					"sd": 0.12664956455571552
+					"ms": 2.9195731916666166,
+					"sd": 0.07912744511969684
 				},
 				"100000": {
-					"ms": 30.577672626666025,
-					"sd": 0.3631885403252689
+					"ms": 29.93522381333324,
+					"sd": 0.26174991946738063
 				}
 			},
 			"fuzzy (all opts)": {
 				"10000": {
-					"ms": 3.0381090571433083,
-					"sd": 0.2539227412597187
+					"ms": 2.9642123083339054,
+					"sd": 0.10919189615033005
 				},
 				"100000": {
-					"ms": 32.06790338666644,
-					"sd": 0.24866380604556987
+					"ms": 31.610552226666673,
+					"sd": 0.7485170815428467
 				}
 			},
 			"fuzzysort": {
 				"10000": {
-					"ms": 0.38708590000003046,
-					"sd": 0.2348504900126608
+					"ms": 0.37601816078440253,
+					"sd": 0.02943510179893073
 				},
 				"100000": {
-					"ms": 5.694415626667129,
-					"sd": 1.0886427735705406
+					"ms": 4.694010426666742,
+					"sd": 0.26172409425887766
 				}
 			},
 			"match-sorter": {
 				"10000": {
-					"ms": 3.673472559999985,
-					"sd": 0.10010936685856461
+					"ms": 3.5754401866664796,
+					"sd": 0.06385743342311252
 				},
 				"100000": {
-					"ms": 38.592259653333265,
-					"sd": 0.7093117535084649
+					"ms": 37.38387606666656,
+					"sd": 0.5531773067103857
 				}
 			},
 			"fast-fuzzy": {
 				"10000": {
-					"ms": 7.704399373333435,
-					"sd": 0.27794954248243514
+					"ms": 7.331035346666273,
+					"sd": 0.19130890944842613
 				},
 				"100000": {
-					"ms": 84.45763465333341,
-					"sd": 1.7409569110531689
+					"ms": 86.92515802666622,
+					"sd": 0.8778708467380246
 				}
 			},
 			"fast-fuzzy (all opts)": {
 				"10000": {
-					"ms": 7.817488786665878,
-					"sd": 0.19099213499605422
+					"ms": 8.12119621333317,
+					"sd": 0.33619781251020114
 				},
 				"100000": {
-					"ms": 82.45976656000053,
-					"sd": 0.8655763040116519
+					"ms": 81.69332498666715,
+					"sd": 0.29732537230041267
 				}
 			},
 			"uFuzzy": {
 				"10000": {
-					"ms": 0.24531374666645814,
-					"sd": 0.004002582915470928
+					"ms": 0.24542390000007194,
+					"sd": 0.010756813022901875
 				},
 				"100000": {
-					"ms": 2.405503971428732,
-					"sd": 0.16424925745146693
+					"ms": 2.3784550761900998,
+					"sd": 0.02510071288099751
 				}
 			},
 			"uFuzzy (all opts)": {
 				"10000": {
-					"ms": 0.3108311166667651,
-					"sd": 0.007033658618696284
+					"ms": 0.31513653999990004,
+					"sd": 0.015428632695761653
 				},
 				"100000": {
-					"ms": 2.9954874888887084,
-					"sd": 0.09636249790052741
+					"ms": 2.9062536857143555,
+					"sd": 0.13736440743346134
 				}
 			},
 			"fuse.js": {
 				"10000": {
-					"ms": 17.535098639999827,
-					"sd": 0.09835733689627939
+					"ms": 16.861308959999977,
+					"sd": 0.2193252103749558
 				},
 				"100000": {
-					"ms": 175.07084977333278,
-					"sd": 2.6927987775443287
+					"ms": 183.82356758666688,
+					"sd": 1.2831049626014404
 				}
 			},
 			"fuse.js (all opts)": {
 				"10000": {
-					"ms": 18.816428346666505,
-					"sd": 0.1356969677315769
+					"ms": 19.204798813333422,
+					"sd": 0.23527385494021805
 				},
 				"100000": {
-					"ms": 193.42882569333383,
-					"sd": 3.4880759780607957
+					"ms": 194.94681387999987,
+					"sd": 1.828216687061971
 				}
 			}
 		}
 	},
 	"build": {
 		"krino": {
-			"10000": 4.724554923076469,
-			"100000": 37.957452571426984
+			"10000": 2.878802000003186,
+			"100000": 36.48092485714005
 		},
 		"@nozbe/microfuzz": {
-			"10000": 10.692386700000498,
-			"100000": 90.64275880000787
+			"10000": 11.76841940000013,
+			"100000": 89.00308300000033
 		},
 		"fast-fuzzy": {
-			"10000": 36.629710999998494,
-			"100000": 767.8700788000017
+			"10000": 41.768620400008516,
+			"100000": 604.2352636000026
 		},
 		"fuse.js": {
-			"10000": 1.147306750001735,
-			"100000": 10.024976923072245
+			"10000": 1.1415449499967507,
+			"100000": 11.946201538470072
 		},
 		"fuzzysort": {
-			"10000": 11.155198050002218,
-			"100000": 92.41359099998371
+			"10000": 10.798327399995468,
+			"100000": 96.70653959999326
 		}
 	},
 	"scorecard": {
@@ -446,200 +445,200 @@
 				{
 					"library": "krino (acronym)",
 					"mrr": 0.77,
-					"indexMs": 1.497,
-					"queryMs": 0.305,
-					"totalMs": 1.802
+					"indexMs": 1.505,
+					"queryMs": 0.257,
+					"totalMs": 1.762
 				},
 				{
 					"library": "krino",
 					"mrr": 0.73,
-					"indexMs": 1.497,
-					"queryMs": 0.276,
-					"totalMs": 1.7730000000000001
+					"indexMs": 1.505,
+					"queryMs": 0.239,
+					"totalMs": 1.7439999999999998
 				},
 				{
 					"library": "fuse.js",
 					"mrr": 0.61,
-					"indexMs": 0.947,
-					"queryMs": 18.065,
-					"totalMs": 19.012
+					"indexMs": 0.912,
+					"queryMs": 17.612,
+					"totalMs": 18.523999999999997
 				},
 				{
 					"library": "fuse.js (all opts)",
 					"mrr": 0.61,
-					"indexMs": 0.873,
-					"queryMs": 20.422,
-					"totalMs": 21.295
+					"indexMs": 0.867,
+					"queryMs": 20.528,
+					"totalMs": 21.395
 				},
 				{
 					"library": "@nozbe/microfuzz",
 					"mrr": 0.6,
-					"indexMs": 7.904,
-					"queryMs": 1.069,
-					"totalMs": 8.972999999999999
+					"indexMs": 7.7,
+					"queryMs": 1.061,
+					"totalMs": 8.761
 				},
 				{
 					"library": "@nozbe/microfuzz (all opts)",
 					"mrr": 0.6,
-					"indexMs": 8.01,
-					"queryMs": 1.065,
-					"totalMs": 9.075
+					"indexMs": 8.304,
+					"queryMs": 1.061,
+					"totalMs": 9.365
 				},
 				{
 					"library": "fuzzy",
 					"mrr": 0.43,
 					"indexMs": 0,
-					"queryMs": 2.51,
-					"totalMs": 2.51
+					"queryMs": 2.501,
+					"totalMs": 2.501
 				},
 				{
 					"library": "fuzzy (all opts)",
 					"mrr": 0.43,
 					"indexMs": 0,
-					"queryMs": 2.561,
-					"totalMs": 2.561
+					"queryMs": 2.546,
+					"totalMs": 2.546
 				},
 				{
 					"library": "uFuzzy (all opts)",
 					"mrr": 0.4,
-					"indexMs": 0.739,
-					"queryMs": 0.264,
-					"totalMs": 1.0030000000000001
+					"indexMs": 0.712,
+					"queryMs": 0.262,
+					"totalMs": 0.974
 				},
 				{
 					"library": "fast-fuzzy (all opts)",
 					"mrr": 0.4,
-					"indexMs": 39.016,
-					"queryMs": 8.266,
-					"totalMs": 47.282
+					"indexMs": 38.569,
+					"queryMs": 7.679,
+					"totalMs": 46.248000000000005
 				},
 				{
 					"library": "fast-fuzzy",
 					"mrr": 0.4,
-					"indexMs": 39.541,
-					"queryMs": 9.609,
-					"totalMs": 49.15
+					"indexMs": 38.94,
+					"queryMs": 8.513,
+					"totalMs": 47.452999999999996
 				},
 				{
 					"library": "match-sorter",
 					"mrr": 0.31,
 					"indexMs": 0,
-					"queryMs": 2.794,
-					"totalMs": 2.794
+					"queryMs": 2.74,
+					"totalMs": 2.74
 				},
 				{
 					"library": "fuzzysort",
 					"mrr": 0.29,
-					"indexMs": 11.17,
-					"queryMs": 0.178,
-					"totalMs": 11.348
+					"indexMs": 7.573,
+					"queryMs": 0.185,
+					"totalMs": 7.758
 				},
 				{
 					"library": "uFuzzy",
 					"mrr": 0.11,
 					"indexMs": 0,
-					"queryMs": 0.183,
-					"totalMs": 0.183
+					"queryMs": 0.188,
+					"totalMs": 0.188
 				}
 			],
 			"mixed": [
 				{
 					"library": "krino (acronym)",
 					"mrr": 0.84,
-					"indexMs": 1.422,
-					"queryMs": 0.181,
-					"totalMs": 1.603
+					"indexMs": 1.346,
+					"queryMs": 0.157,
+					"totalMs": 1.5030000000000001
 				},
 				{
 					"library": "krino",
 					"mrr": 0.8,
-					"indexMs": 1.422,
-					"queryMs": 0.17,
-					"totalMs": 1.5919999999999999
+					"indexMs": 1.346,
+					"queryMs": 0.152,
+					"totalMs": 1.498
 				},
 				{
 					"library": "fuse.js",
 					"mrr": 0.75,
-					"indexMs": 0.625,
-					"queryMs": 16.836,
-					"totalMs": 17.461
+					"indexMs": 0.612,
+					"queryMs": 16.742,
+					"totalMs": 17.354
 				},
 				{
 					"library": "fuse.js (all opts)",
 					"mrr": 0.75,
-					"indexMs": 0.586,
-					"queryMs": 18.973,
-					"totalMs": 19.558999999999997
+					"indexMs": 0.576,
+					"queryMs": 18.699,
+					"totalMs": 19.275000000000002
 				},
 				{
 					"library": "@nozbe/microfuzz (all opts)",
 					"mrr": 0.59,
-					"indexMs": 8.277,
-					"queryMs": 1.092,
-					"totalMs": 9.369
+					"indexMs": 8.03,
+					"queryMs": 1.087,
+					"totalMs": 9.116999999999999
 				},
 				{
 					"library": "@nozbe/microfuzz",
 					"mrr": 0.59,
-					"indexMs": 9.48,
-					"queryMs": 1.086,
-					"totalMs": 10.566
+					"indexMs": 8.59,
+					"queryMs": 1.082,
+					"totalMs": 9.672
 				},
 				{
 					"library": "fast-fuzzy (all opts)",
 					"mrr": 0.55,
-					"indexMs": 30.476,
-					"queryMs": 7.922,
-					"totalMs": 38.397999999999996
+					"indexMs": 30.027,
+					"queryMs": 7.27,
+					"totalMs": 37.297
 				},
 				{
 					"library": "fast-fuzzy",
 					"mrr": 0.55,
-					"indexMs": 32.557,
-					"queryMs": 7.929,
-					"totalMs": 40.486000000000004
+					"indexMs": 30.742,
+					"queryMs": 7.159,
+					"totalMs": 37.901
 				},
 				{
 					"library": "fuzzysort",
 					"mrr": 0.54,
-					"indexMs": 7.868,
-					"queryMs": 0.155,
-					"totalMs": 8.023
+					"indexMs": 7.505,
+					"queryMs": 0.154,
+					"totalMs": 7.659
 				},
 				{
 					"library": "uFuzzy (all opts)",
 					"mrr": 0.49,
-					"indexMs": 0.635,
-					"queryMs": 0.265,
-					"totalMs": 0.9
+					"indexMs": 0.636,
+					"queryMs": 0.263,
+					"totalMs": 0.899
 				},
 				{
 					"library": "fuzzy",
 					"mrr": 0.45,
 					"indexMs": 0,
-					"queryMs": 2.576,
-					"totalMs": 2.576
+					"queryMs": 2.56,
+					"totalMs": 2.56
 				},
 				{
 					"library": "fuzzy (all opts)",
 					"mrr": 0.45,
 					"indexMs": 0,
-					"queryMs": 2.629,
-					"totalMs": 2.629
+					"queryMs": 2.591,
+					"totalMs": 2.591
 				},
 				{
 					"library": "match-sorter",
 					"mrr": 0.41,
 					"indexMs": 0,
-					"queryMs": 2.993,
-					"totalMs": 2.993
+					"queryMs": 2.947,
+					"totalMs": 2.947
 				},
 				{
 					"library": "uFuzzy",
 					"mrr": 0.14,
 					"indexMs": 0,
-					"queryMs": 0.192,
-					"totalMs": 0.192
+					"queryMs": 0.19,
+					"totalMs": 0.19
 				}
 			]
 		}
@@ -654,86 +653,86 @@
 					"krino": {
 						"count": 102,
 						"rank": 1,
-						"queryMs": 0.413,
-						"totalMs": 1.919
+						"queryMs": 0.357,
+						"totalMs": 1.868
 					},
 					"krino (acronym)": {
 						"count": 102,
 						"rank": 1,
-						"queryMs": 0.405,
-						"totalMs": 1.919
+						"queryMs": 0.355,
+						"totalMs": 1.86
 					},
 					"@nozbe/microfuzz": {
 						"count": 102,
 						"rank": 1,
-						"queryMs": 1.026,
-						"totalMs": 8.922
+						"queryMs": 1.032,
+						"totalMs": 8.713
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 102,
 						"rank": 1,
-						"queryMs": 1.02,
-						"totalMs": 9.081
+						"queryMs": 1.024,
+						"totalMs": 9.327
 					},
 					"fuzzy": {
 						"count": 102,
 						"rank": 1,
-						"queryMs": 2.554,
-						"totalMs": 2.554
+						"queryMs": 2.564,
+						"totalMs": 2.564
 					},
 					"fuzzy (all opts)": {
 						"count": 102,
 						"rank": 1,
-						"queryMs": 2.614,
-						"totalMs": 2.614
+						"queryMs": 2.604,
+						"totalMs": 2.604
 					},
 					"fuzzysort": {
 						"count": 102,
 						"rank": 46,
-						"queryMs": 0.224,
-						"totalMs": 11.396
+						"queryMs": 0.205,
+						"totalMs": 7.79
 					},
 					"match-sorter": {
 						"count": 102,
 						"rank": 14,
-						"queryMs": 2.916,
-						"totalMs": 2.916
+						"queryMs": 2.8,
+						"totalMs": 2.8
 					},
 					"fast-fuzzy": {
 						"count": 179,
 						"rank": 42,
-						"queryMs": 9.693,
-						"totalMs": 49.408
+						"queryMs": 8.598,
+						"totalMs": 47.257
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 179,
 						"rank": 42,
-						"queryMs": 8.528,
-						"totalMs": 47.785
+						"queryMs": 7.613,
+						"totalMs": 46.24
 					},
 					"uFuzzy": {
 						"count": 102,
 						"rank": 14,
-						"queryMs": 0.261,
-						"totalMs": 0.261
+						"queryMs": 0.25,
+						"totalMs": 0.25
 					},
 					"uFuzzy (all opts)": {
 						"count": 102,
 						"rank": 14,
 						"queryMs": 0.326,
-						"totalMs": 1.055
+						"totalMs": 1.038
 					},
 					"fuse.js": {
 						"count": 176,
 						"rank": 1,
-						"queryMs": 17.454,
-						"totalMs": 18.42
+						"queryMs": 16.829,
+						"totalMs": 17.762
 					},
 					"fuse.js (all opts)": {
 						"count": 176,
 						"rank": 1,
-						"queryMs": 22.768,
-						"totalMs": 23.64
+						"queryMs": 22.679,
+						"totalMs": 23.531
 					}
 				}
 			},
@@ -745,86 +744,86 @@
 					"krino": {
 						"count": 12,
 						"rank": 2,
-						"queryMs": 0.303,
-						"totalMs": 1.8
+						"queryMs": 0.283,
+						"totalMs": 1.783
 					},
 					"krino (acronym)": {
 						"count": 12,
 						"rank": 2,
-						"queryMs": 0.305,
-						"totalMs": 1.803
+						"queryMs": 0.284,
+						"totalMs": 1.787
 					},
 					"@nozbe/microfuzz": {
 						"count": 19,
 						"rank": 2,
-						"queryMs": 0.967,
-						"totalMs": 8.857
+						"queryMs": 0.938,
+						"totalMs": 8.638
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 19,
 						"rank": 2,
-						"queryMs": 0.959,
-						"totalMs": 8.976
+						"queryMs": 0.935,
+						"totalMs": 9.235
 					},
 					"fuzzy": {
 						"count": 19,
 						"rank": 2,
-						"queryMs": 2.518,
-						"totalMs": 2.518
+						"queryMs": 2.495,
+						"totalMs": 2.495
 					},
 					"fuzzy (all opts)": {
 						"count": 19,
 						"rank": 2,
-						"queryMs": 2.497,
-						"totalMs": 2.497
+						"queryMs": 2.505,
+						"totalMs": 2.505
 					},
 					"fuzzysort": {
 						"count": 19,
 						"rank": 10,
-						"queryMs": 0.137,
-						"totalMs": 11.307
+						"queryMs": 0.152,
+						"totalMs": 7.736
 					},
 					"match-sorter": {
 						"count": 19,
 						"rank": 4,
-						"queryMs": 2.728,
-						"totalMs": 2.728
+						"queryMs": 2.658,
+						"totalMs": 2.658
 					},
 					"fast-fuzzy": {
 						"count": 74,
 						"rank": 5,
-						"queryMs": 8.5,
-						"totalMs": 47.839
+						"queryMs": 7.673,
+						"totalMs": 46.531
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 74,
 						"rank": 5,
-						"queryMs": 7.421,
-						"totalMs": 45.787
+						"queryMs": 6.878,
+						"totalMs": 45.447
 					},
 					"uFuzzy": {
 						"count": 12,
 						"rank": 4,
-						"queryMs": 0.198,
-						"totalMs": 0.198
+						"queryMs": 0.208,
+						"totalMs": 0.208
 					},
 					"uFuzzy (all opts)": {
 						"count": 12,
 						"rank": 4,
-						"queryMs": 0.222,
-						"totalMs": 0.954
+						"queryMs": 0.226,
+						"totalMs": 0.937
 					},
 					"fuse.js": {
 						"count": 74,
 						"rank": 11,
-						"queryMs": 13.791,
-						"totalMs": 14.717
+						"queryMs": 12.692,
+						"totalMs": 13.612
 					},
 					"fuse.js (all opts)": {
 						"count": 74,
 						"rank": 11,
-						"queryMs": 19.118,
-						"totalMs": 19.996
+						"queryMs": 18.458,
+						"totalMs": 19.335
 					}
 				}
 			},
@@ -836,86 +835,86 @@
 					"krino": {
 						"count": 8,
 						"rank": 1,
-						"queryMs": 0.072,
-						"totalMs": 1.57
+						"queryMs": 0.08,
+						"totalMs": 1.58
 					},
 					"krino (acronym)": {
 						"count": 8,
 						"rank": 1,
-						"queryMs": 0.072,
-						"totalMs": 1.569
+						"queryMs": 0.079,
+						"totalMs": 1.582
 					},
 					"@nozbe/microfuzz": {
 						"count": 9,
 						"rank": 1,
-						"queryMs": 1.037,
-						"totalMs": 8.941
+						"queryMs": 1.02,
+						"totalMs": 8.709
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 9,
 						"rank": 1,
-						"queryMs": 1.004,
-						"totalMs": 9.051
+						"queryMs": 1.006,
+						"totalMs": 9.295
 					},
 					"fuzzy": {
 						"count": 9,
 						"rank": 1,
-						"queryMs": 2.469,
-						"totalMs": 2.469
+						"queryMs": 2.415,
+						"totalMs": 2.415
 					},
 					"fuzzy (all opts)": {
 						"count": 9,
 						"rank": 1,
-						"queryMs": 2.499,
-						"totalMs": 2.499
+						"queryMs": 2.451,
+						"totalMs": 2.451
 					},
 					"fuzzysort": {
 						"count": 10,
 						"rank": 5,
-						"queryMs": 0.162,
-						"totalMs": 11.332
+						"queryMs": 0.151,
+						"totalMs": 7.743
 					},
 					"match-sorter": {
 						"count": 9,
 						"rank": 7,
-						"queryMs": 2.539,
-						"totalMs": 2.539
+						"queryMs": 2.443,
+						"totalMs": 2.443
 					},
 					"fast-fuzzy": {
 						"count": 135,
 						"rank": 5,
-						"queryMs": 12.062,
-						"totalMs": 51.452
+						"queryMs": 10.188,
+						"totalMs": 49.031
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 135,
 						"rank": 5,
-						"queryMs": 11.3,
-						"totalMs": 49.629
+						"queryMs": 9.596,
+						"totalMs": 48.174
 					},
 					"uFuzzy": {
 						"count": 8,
 						"rank": 7,
-						"queryMs": 0.165,
-						"totalMs": 0.165
+						"queryMs": 0.16,
+						"totalMs": 0.16
 					},
 					"uFuzzy (all opts)": {
 						"count": 8,
 						"rank": 7,
-						"queryMs": 0.245,
-						"totalMs": 0.986
+						"queryMs": 0.24,
+						"totalMs": 0.953
 					},
 					"fuse.js": {
 						"count": 135,
 						"rank": 1,
-						"queryMs": 36.707,
-						"totalMs": 37.654
+						"queryMs": 35.311,
+						"totalMs": 36.218
 					},
 					"fuse.js (all opts)": {
 						"count": 8,
 						"rank": 1,
-						"queryMs": 22.857,
-						"totalMs": 23.735
+						"queryMs": 22.595,
+						"totalMs": 23.46
 					}
 				}
 			},
@@ -927,86 +926,86 @@
 					"krino": {
 						"count": 8,
 						"rank": 1,
-						"queryMs": 0.059,
-						"totalMs": 1.559
+						"queryMs": 0.053,
+						"totalMs": 1.562
 					},
 					"krino (acronym)": {
 						"count": 8,
 						"rank": 1,
-						"queryMs": 0.059,
-						"totalMs": 1.559
+						"queryMs": 0.053,
+						"totalMs": 1.563
 					},
 					"@nozbe/microfuzz": {
 						"count": 8,
 						"rank": 1,
-						"queryMs": 1.059,
-						"totalMs": 8.955
+						"queryMs": 1.064,
+						"totalMs": 8.764
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 8,
 						"rank": 1,
-						"queryMs": 1.048,
-						"totalMs": 9.074
+						"queryMs": 1.056,
+						"totalMs": 9.357
 					},
 					"fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.418,
-						"totalMs": 2.418
+						"queryMs": 2.462,
+						"totalMs": 2.462
 					},
 					"fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.472,
-						"totalMs": 2.472
+						"queryMs": 2.501,
+						"totalMs": 2.501
 					},
 					"fuzzysort": {
 						"count": 10,
 						"rank": 5,
-						"queryMs": 0.128,
-						"totalMs": 11.298
+						"queryMs": 0.146,
+						"totalMs": 7.717
 					},
 					"match-sorter": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.508,
-						"totalMs": 2.508
+						"queryMs": 2.511,
+						"totalMs": 2.511
 					},
 					"fast-fuzzy": {
 						"count": 120,
 						"rank": 33,
-						"queryMs": 11.243,
-						"totalMs": 50.633
+						"queryMs": 10.342,
+						"totalMs": 49.186
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 120,
 						"rank": 33,
-						"queryMs": 10.101,
-						"totalMs": 49.267
+						"queryMs": 9.367,
+						"totalMs": 47.936
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.161,
-						"totalMs": 0.161
+						"queryMs": 0.182,
+						"totalMs": 0.182
 					},
 					"uFuzzy (all opts)": {
 						"count": 8,
 						"rank": 7,
-						"queryMs": 0.243,
-						"totalMs": 0.986
+						"queryMs": 0.245,
+						"totalMs": 0.967
 					},
 					"fuse.js": {
 						"count": 120,
 						"rank": 1,
-						"queryMs": 36.713,
-						"totalMs": 37.679
+						"queryMs": 35.501,
+						"totalMs": 36.409
 					},
 					"fuse.js (all opts)": {
 						"count": 8,
 						"rank": 1,
-						"queryMs": 19.014,
-						"totalMs": 19.864
+						"queryMs": 18.676,
+						"totalMs": 19.552
 					}
 				}
 			},
@@ -1018,86 +1017,86 @@
 					"krino": {
 						"count": 2,
 						"rank": 1,
-						"queryMs": 0.271,
-						"totalMs": 1.767
+						"queryMs": 0.257,
+						"totalMs": 1.764
 					},
 					"krino (acronym)": {
 						"count": 2,
 						"rank": 1,
-						"queryMs": 0.281,
-						"totalMs": 1.773
+						"queryMs": 0.263,
+						"totalMs": 1.774
 					},
 					"@nozbe/microfuzz": {
 						"count": 16,
 						"rank": 1,
-						"queryMs": 0.941,
-						"totalMs": 8.837
+						"queryMs": 0.943,
+						"totalMs": 8.628
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 16,
 						"rank": 1,
-						"queryMs": 0.935,
-						"totalMs": 8.952
+						"queryMs": 0.941,
+						"totalMs": 9.252
 					},
 					"fuzzy": {
 						"count": 16,
 						"rank": 1,
-						"queryMs": 2.451,
-						"totalMs": 2.451
+						"queryMs": 2.476,
+						"totalMs": 2.476
 					},
 					"fuzzy (all opts)": {
 						"count": 16,
 						"rank": 1,
-						"queryMs": 2.525,
-						"totalMs": 2.525
+						"queryMs": 2.508,
+						"totalMs": 2.508
 					},
 					"fuzzysort": {
 						"count": 16,
 						"rank": 1,
-						"queryMs": 0.134,
-						"totalMs": 11.287
+						"queryMs": 0.14,
+						"totalMs": 7.696
 					},
 					"match-sorter": {
 						"count": 16,
 						"rank": 1,
-						"queryMs": 2.708,
-						"totalMs": 2.708
+						"queryMs": 2.709,
+						"totalMs": 2.709
 					},
 					"fast-fuzzy": {
 						"count": 478,
 						"rank": 1,
-						"queryMs": 8.893,
-						"totalMs": 48.283
+						"queryMs": 8.135,
+						"totalMs": 46.856
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 478,
 						"rank": 1,
-						"queryMs": 7.591,
-						"totalMs": 46.147
+						"queryMs": 6.879,
+						"totalMs": 45.416
 					},
 					"uFuzzy": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.22,
-						"totalMs": 0.22
+						"queryMs": 0.223,
+						"totalMs": 0.223
 					},
 					"uFuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.231,
-						"totalMs": 0.968
+						"queryMs": 0.243,
+						"totalMs": 0.956
 					},
 					"fuse.js": {
 						"count": 475,
 						"rank": 1,
-						"queryMs": 11.773,
-						"totalMs": 12.726
+						"queryMs": 12.167,
+						"totalMs": 13.075
 					},
 					"fuse.js (all opts)": {
 						"count": 475,
 						"rank": 1,
-						"queryMs": 17.898,
-						"totalMs": 18.771
+						"queryMs": 18.095,
+						"totalMs": 18.971
 					}
 				}
 			},
@@ -1109,86 +1108,86 @@
 					"krino": {
 						"count": 31,
 						"rank": 3,
-						"queryMs": 0.57,
-						"totalMs": 2.079
+						"queryMs": 0.475,
+						"totalMs": 1.98
 					},
 					"krino (acronym)": {
 						"count": 31,
 						"rank": 3,
-						"queryMs": 0.623,
-						"totalMs": 2.127
+						"queryMs": 0.494,
+						"totalMs": 2.015
 					},
 					"@nozbe/microfuzz": {
 						"count": 98,
 						"rank": 3,
-						"queryMs": 1.068,
-						"totalMs": 8.971
+						"queryMs": 1.081,
+						"totalMs": 8.789
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 98,
 						"rank": 3,
-						"queryMs": 1.071,
-						"totalMs": 9.129
+						"queryMs": 1.08,
+						"totalMs": 9.384
 					},
 					"fuzzy": {
 						"count": 98,
 						"rank": 2,
-						"queryMs": 2.482,
-						"totalMs": 2.482
+						"queryMs": 2.478,
+						"totalMs": 2.478
 					},
 					"fuzzy (all opts)": {
 						"count": 98,
 						"rank": 2,
-						"queryMs": 2.536,
-						"totalMs": 2.536
+						"queryMs": 2.525,
+						"totalMs": 2.525
 					},
 					"fuzzysort": {
 						"count": 98,
 						"rank": 6,
-						"queryMs": 0.233,
-						"totalMs": 11.397
+						"queryMs": 0.238,
+						"totalMs": 7.816
 					},
 					"match-sorter": {
 						"count": 98,
 						"rank": 25,
-						"queryMs": 2.779,
-						"totalMs": 2.779
+						"queryMs": 2.822,
+						"totalMs": 2.822
 					},
 					"fast-fuzzy": {
 						"count": 641,
 						"rank": 6,
-						"queryMs": 8.678,
-						"totalMs": 48.219
+						"queryMs": 7.722,
+						"totalMs": 46.551
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 641,
 						"rank": 6,
-						"queryMs": 7.863,
-						"totalMs": 46.424
+						"queryMs": 7.242,
+						"totalMs": 45.623
 					},
 					"uFuzzy": {
 						"count": 28,
 						"rank": 10,
-						"queryMs": 0.207,
-						"totalMs": 0.207
+						"queryMs": 0.208,
+						"totalMs": 0.208
 					},
 					"uFuzzy (all opts)": {
 						"count": 31,
 						"rank": 10,
-						"queryMs": 0.298,
-						"totalMs": 1.037
+						"queryMs": 0.297,
+						"totalMs": 1.015
 					},
 					"fuse.js": {
 						"count": 628,
 						"rank": 2,
-						"queryMs": 11.725,
-						"totalMs": 12.639
+						"queryMs": 12.25,
+						"totalMs": 13.144
 					},
 					"fuse.js (all opts)": {
 						"count": 628,
 						"rank": 2,
-						"queryMs": 17.808,
-						"totalMs": 18.686
+						"queryMs": 18.12,
+						"totalMs": 18.988
 					}
 				}
 			},
@@ -1200,86 +1199,86 @@
 					"krino": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.196,
-						"totalMs": 1.693
+						"queryMs": 0.165,
+						"totalMs": 1.676
 					},
 					"krino (acronym)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.199,
-						"totalMs": 1.696
+						"queryMs": 0.169,
+						"totalMs": 1.679
 					},
 					"@nozbe/microfuzz": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 1.14,
-						"totalMs": 9.045
+						"queryMs": 1.132,
+						"totalMs": 8.817
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 1.134,
-						"totalMs": 9.144
+						"queryMs": 1.136,
+						"totalMs": 9.445
 					},
 					"fuzzy": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 2.592,
-						"totalMs": 2.592
+						"queryMs": 2.59,
+						"totalMs": 2.59
 					},
 					"fuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 2.656,
-						"totalMs": 2.656
+						"queryMs": 2.665,
+						"totalMs": 2.665
 					},
 					"fuzzysort": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.114,
-						"totalMs": 11.285
+						"queryMs": 0.135,
+						"totalMs": 7.693
 					},
 					"match-sorter": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 2.889,
-						"totalMs": 2.889
+						"queryMs": 2.893,
+						"totalMs": 2.893
 					},
 					"fast-fuzzy": {
 						"count": 11,
 						"rank": 1,
-						"queryMs": 9.102,
-						"totalMs": 49.008
+						"queryMs": 8.247,
+						"totalMs": 47.058
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 11,
 						"rank": 1,
-						"queryMs": 8.054,
-						"totalMs": 47.247
+						"queryMs": 7.642,
+						"totalMs": 45.963
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.179,
-						"totalMs": 0.179
+						"queryMs": 0.178,
+						"totalMs": 0.178
 					},
 					"uFuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.291,
-						"totalMs": 1.03
+						"queryMs": 0.292,
+						"totalMs": 1.007
 					},
 					"fuse.js": {
 						"count": 9,
 						"rank": 1,
-						"queryMs": 17.773,
-						"totalMs": 18.726
+						"queryMs": 17.804,
+						"totalMs": 18.738
 					},
 					"fuse.js (all opts)": {
 						"count": 9,
 						"rank": 1,
-						"queryMs": 23.375,
-						"totalMs": 24.293
+						"queryMs": 22.745,
+						"totalMs": 23.61
 					}
 				}
 			},
@@ -1291,62 +1290,62 @@
 					"krino": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.32,
-						"totalMs": 1.813
+						"queryMs": 0.269,
+						"totalMs": 1.774
 					},
 					"krino (acronym)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.322,
-						"totalMs": 1.818
+						"queryMs": 0.276,
+						"totalMs": 1.781
 					},
 					"@nozbe/microfuzz": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 1.162,
-						"totalMs": 9.053
+						"queryMs": 1.154,
+						"totalMs": 8.84
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 1.165,
-						"totalMs": 9.165
+						"queryMs": 1.152,
+						"totalMs": 9.455
 					},
 					"fuzzy": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 2.499,
-						"totalMs": 2.499
+						"queryMs": 2.469,
+						"totalMs": 2.469
 					},
 					"fuzzy (all opts)": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 2.568,
-						"totalMs": 2.568
+						"queryMs": 2.532,
+						"totalMs": 2.532
 					},
 					"fuzzysort": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 0.151,
-						"totalMs": 11.329
+						"queryMs": 0.169,
+						"totalMs": 7.734
 					},
 					"match-sorter": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 2.825,
-						"totalMs": 2.825
+						"queryMs": 2.842,
+						"totalMs": 2.842
 					},
 					"fast-fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 8.358,
-						"totalMs": 47.592
+						"queryMs": 7.875,
+						"totalMs": 46.747
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 7.088,
-						"totalMs": 45.621
+						"queryMs": 6.457,
+						"totalMs": 45.187
 					},
 					"uFuzzy": {
 						"count": 0,
@@ -1357,20 +1356,20 @@
 					"uFuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.267,
-						"totalMs": 1.006
+						"queryMs": 0.27,
+						"totalMs": 0.986
 					},
 					"fuse.js": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 12.803,
-						"totalMs": 13.75
+						"queryMs": 12.458,
+						"totalMs": 13.377
 					},
 					"fuse.js (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 17.853,
-						"totalMs": 18.725
+						"queryMs": 18.002,
+						"totalMs": 18.866
 					}
 				}
 			},
@@ -1382,86 +1381,86 @@
 					"krino": {
 						"count": 5,
 						"rank": null,
-						"queryMs": 0.895,
-						"totalMs": 2.43
+						"queryMs": 0.741,
+						"totalMs": 2.226
 					},
 					"krino (acronym)": {
 						"count": 5,
 						"rank": null,
-						"queryMs": 0.955,
-						"totalMs": 2.476
+						"queryMs": 0.751,
+						"totalMs": 2.249
 					},
 					"@nozbe/microfuzz": {
 						"count": 122,
 						"rank": 95,
-						"queryMs": 1.145,
-						"totalMs": 9.049
+						"queryMs": 1.15,
+						"totalMs": 8.847
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 122,
 						"rank": 95,
-						"queryMs": 1.143,
-						"totalMs": 9.177
+						"queryMs": 1.148,
+						"totalMs": 9.452
 					},
 					"fuzzy": {
 						"count": 122,
 						"rank": 81,
-						"queryMs": 2.476,
-						"totalMs": 2.476
+						"queryMs": 2.48,
+						"totalMs": 2.48
 					},
 					"fuzzy (all opts)": {
 						"count": 122,
 						"rank": 81,
-						"queryMs": 2.557,
-						"totalMs": 2.557
+						"queryMs": 2.546,
+						"totalMs": 2.546
 					},
 					"fuzzysort": {
 						"count": 122,
 						"rank": 19,
 						"queryMs": 0.28,
-						"totalMs": 11.459
+						"totalMs": 7.869
 					},
 					"match-sorter": {
 						"count": 122,
 						"rank": 4,
-						"queryMs": 2.815,
-						"totalMs": 2.815
+						"queryMs": 2.838,
+						"totalMs": 2.838
 					},
 					"fast-fuzzy": {
 						"count": 489,
 						"rank": null,
-						"queryMs": 8.75,
-						"totalMs": 48.47
+						"queryMs": 8.141,
+						"totalMs": 47.104
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 489,
 						"rank": null,
-						"queryMs": 7.716,
-						"totalMs": 46.615
+						"queryMs": 7.315,
+						"totalMs": 45.74
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.186,
-						"totalMs": 0.186
+						"queryMs": 0.188,
+						"totalMs": 0.188
 					},
 					"uFuzzy (all opts)": {
 						"count": 2,
 						"rank": null,
 						"queryMs": 0.299,
-						"totalMs": 1.033
+						"totalMs": 1.02
 					},
 					"fuse.js": {
 						"count": 477,
 						"rank": null,
-						"queryMs": 11.893,
-						"totalMs": 12.82
+						"queryMs": 11.615,
+						"totalMs": 12.522
 					},
 					"fuse.js (all opts)": {
 						"count": 477,
 						"rank": null,
-						"queryMs": 18.226,
-						"totalMs": 19.076
+						"queryMs": 17.552,
+						"totalMs": 18.428
 					}
 				}
 			},
@@ -1473,86 +1472,86 @@
 					"krino": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.127,
-						"totalMs": 1.626
+						"queryMs": 0.111,
+						"totalMs": 1.618
 					},
 					"krino (acronym)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.129,
-						"totalMs": 1.626
+						"queryMs": 0.112,
+						"totalMs": 1.62
 					},
 					"@nozbe/microfuzz": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 1.123,
-						"totalMs": 9.018
+						"queryMs": 1.119,
+						"totalMs": 8.813
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 1.116,
-						"totalMs": 9.122
+						"queryMs": 1.125,
+						"totalMs": 9.429
 					},
 					"fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.495,
-						"totalMs": 2.495
+						"queryMs": 2.489,
+						"totalMs": 2.489
 					},
 					"fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.578,
-						"totalMs": 2.578
+						"queryMs": 2.552,
+						"totalMs": 2.552
 					},
 					"fuzzysort": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.126,
-						"totalMs": 11.304
+						"queryMs": 0.123,
+						"totalMs": 7.693
 					},
 					"match-sorter": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.916,
-						"totalMs": 2.916
+						"queryMs": 2.798,
+						"totalMs": 2.798
 					},
 					"fast-fuzzy": {
 						"count": 44,
 						"rank": 1,
-						"queryMs": 11.686,
-						"totalMs": 51.077
+						"queryMs": 9.168,
+						"totalMs": 47.942
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 44,
 						"rank": 1,
-						"queryMs": 9.612,
-						"totalMs": 48.636
+						"queryMs": 8.631,
+						"totalMs": 47.106
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.164,
-						"totalMs": 0.164
+						"queryMs": 0.172,
+						"totalMs": 0.172
 					},
 					"uFuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.276,
-						"totalMs": 1.015
+						"queryMs": 0.283,
+						"totalMs": 0.995
 					},
 					"fuse.js": {
 						"count": 44,
 						"rank": 1,
-						"queryMs": 23.226,
-						"totalMs": 24.179
+						"queryMs": 23.04,
+						"totalMs": 23.973
 					},
 					"fuse.js (all opts)": {
 						"count": 44,
 						"rank": 1,
-						"queryMs": 29.223,
-						"totalMs": 30.073
+						"queryMs": 28.959,
+						"totalMs": 29.836
 					}
 				}
 			},
@@ -1564,62 +1563,62 @@
 					"krino": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.125,
+						"queryMs": 0.113,
 						"totalMs": 1.62
 					},
 					"krino (acronym)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.127,
-						"totalMs": 1.626
+						"queryMs": 0.112,
+						"totalMs": 1.624
 					},
 					"@nozbe/microfuzz": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 1.159,
-						"totalMs": 9.078
+						"queryMs": 1.112,
+						"totalMs": 8.795
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 1.137,
-						"totalMs": 9.15
+						"queryMs": 1.113,
+						"totalMs": 9.417
 					},
 					"fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.521,
-						"totalMs": 2.521
+						"queryMs": 2.481,
+						"totalMs": 2.481
 					},
 					"fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.599,
-						"totalMs": 2.599
+						"queryMs": 2.562,
+						"totalMs": 2.562
 					},
 					"fuzzysort": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.126,
-						"totalMs": 11.272
+						"queryMs": 0.123,
+						"totalMs": 7.715
 					},
 					"match-sorter": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.837,
-						"totalMs": 2.837
+						"queryMs": 2.792,
+						"totalMs": 2.792
 					},
 					"fast-fuzzy": {
 						"count": 11,
 						"rank": 1,
-						"queryMs": 10.252,
-						"totalMs": 49.778
+						"queryMs": 9.141,
+						"totalMs": 47.957
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 11,
 						"rank": 1,
-						"queryMs": 8.962,
-						"totalMs": 48.096
+						"queryMs": 7.916,
+						"totalMs": 46.433
 					},
 					"uFuzzy": {
 						"count": 0,
@@ -1630,20 +1629,20 @@
 					"uFuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.27,
-						"totalMs": 1.009
+						"queryMs": 0.269,
+						"totalMs": 0.982
 					},
 					"fuse.js": {
 						"count": 10,
 						"rank": 1,
-						"queryMs": 24.016,
-						"totalMs": 24.969
+						"queryMs": 23.73,
+						"totalMs": 24.637
 					},
 					"fuse.js (all opts)": {
 						"count": 10,
 						"rank": 1,
-						"queryMs": 29.179,
-						"totalMs": 30.098
+						"queryMs": 29.258,
+						"totalMs": 30.134
 					}
 				}
 			},
@@ -1655,86 +1654,86 @@
 					"krino": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.065,
-						"totalMs": 1.559
+						"queryMs": 0.059,
+						"totalMs": 1.564
 					},
 					"krino (acronym)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.067,
-						"totalMs": 1.562
+						"queryMs": 0.06,
+						"totalMs": 1.568
 					},
 					"@nozbe/microfuzz": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 1.135,
-						"totalMs": 9.039
+						"queryMs": 1.116,
+						"totalMs": 8.818
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 1.133,
-						"totalMs": 9.14
+						"queryMs": 1.118,
+						"totalMs": 9.428
 					},
 					"fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.536,
-						"totalMs": 2.536
+						"queryMs": 2.485,
+						"totalMs": 2.485
 					},
 					"fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.613,
-						"totalMs": 2.613
+						"queryMs": 2.55,
+						"totalMs": 2.55
 					},
 					"fuzzysort": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.119,
-						"totalMs": 11.288
+						"queryMs": 0.114,
+						"totalMs": 7.674
 					},
 					"match-sorter": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.881,
-						"totalMs": 2.881
+						"queryMs": 2.838,
+						"totalMs": 2.838
 					},
 					"fast-fuzzy": {
 						"count": 15,
 						"rank": 1,
-						"queryMs": 10.969,
-						"totalMs": 50.522
+						"queryMs": 8.831,
+						"totalMs": 47.966
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 15,
 						"rank": 1,
-						"queryMs": 8.878,
-						"totalMs": 48.082
+						"queryMs": 8.351,
+						"totalMs": 46.591
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.163,
-						"totalMs": 0.163
+						"queryMs": 0.158,
+						"totalMs": 0.158
 					},
 					"uFuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.285,
-						"totalMs": 1.028
+						"queryMs": 0.279,
+						"totalMs": 0.994
 					},
 					"fuse.js": {
 						"count": 14,
 						"rank": 1,
-						"queryMs": 21.626,
-						"totalMs": 22.573
+						"queryMs": 22.676,
+						"totalMs": 23.57
 					},
 					"fuse.js (all opts)": {
 						"count": 14,
 						"rank": 1,
-						"queryMs": 27.888,
-						"totalMs": 28.766
+						"queryMs": 28.368,
+						"totalMs": 29.232
 					}
 				}
 			},
@@ -1746,86 +1745,86 @@
 					"krino": {
 						"count": 31,
 						"rank": 3,
-						"queryMs": 0.17,
-						"totalMs": 1.665
+						"queryMs": 0.139,
+						"totalMs": 1.645
 					},
 					"krino (acronym)": {
 						"count": 32,
 						"rank": 1,
-						"queryMs": 0.256,
-						"totalMs": 1.75
+						"queryMs": 0.17,
+						"totalMs": 1.68
 					},
 					"@nozbe/microfuzz": {
 						"count": 232,
 						"rank": 2,
-						"queryMs": 1.067,
-						"totalMs": 8.962
+						"queryMs": 1.069,
+						"totalMs": 8.753
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 232,
 						"rank": 2,
-						"queryMs": 1.066,
-						"totalMs": 9.065
+						"queryMs": 1.065,
+						"totalMs": 9.369
 					},
 					"fuzzy": {
 						"count": 232,
 						"rank": 81,
-						"queryMs": 2.579,
-						"totalMs": 2.579
+						"queryMs": 2.481,
+						"totalMs": 2.481
 					},
 					"fuzzy (all opts)": {
 						"count": 232,
 						"rank": 81,
-						"queryMs": 2.619,
-						"totalMs": 2.619
+						"queryMs": 2.528,
+						"totalMs": 2.528
 					},
 					"fuzzysort": {
 						"count": 232,
 						"rank": 3,
-						"queryMs": 0.252,
-						"totalMs": 11.396
+						"queryMs": 0.242,
+						"totalMs": 7.829
 					},
 					"match-sorter": {
 						"count": 232,
 						"rank": 2,
-						"queryMs": 2.937,
-						"totalMs": 2.937
+						"queryMs": 2.844,
+						"totalMs": 2.844
 					},
 					"fast-fuzzy": {
 						"count": 1508,
 						"rank": null,
-						"queryMs": 9.171,
-						"totalMs": 49.224
+						"queryMs": 8.465,
+						"totalMs": 47.404
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 1508,
 						"rank": null,
-						"queryMs": 8.448,
-						"totalMs": 47.074
+						"queryMs": 7.136,
+						"totalMs": 45.705
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.178,
-						"totalMs": 0.178
+						"queryMs": 0.188,
+						"totalMs": 0.188
 					},
 					"uFuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.184,
-						"totalMs": 0.923
+						"queryMs": 0.193,
+						"totalMs": 0.909
 					},
 					"fuse.js": {
 						"count": 1484,
 						"rank": null,
-						"queryMs": 7.393,
-						"totalMs": 8.322
+						"queryMs": 7.38,
+						"totalMs": 8.287
 					},
 					"fuse.js (all opts)": {
 						"count": 1484,
 						"rank": null,
-						"queryMs": 13.348,
-						"totalMs": 14.266
+						"queryMs": 13.829,
+						"totalMs": 14.706
 					}
 				}
 			},
@@ -1837,86 +1836,86 @@
 					"krino": {
 						"count": 392,
 						"rank": 1,
-						"queryMs": 0.518,
-						"totalMs": 2.015
+						"queryMs": 0.458,
+						"totalMs": 1.97
 					},
 					"krino (acronym)": {
 						"count": 392,
 						"rank": 1,
-						"queryMs": 0.751,
-						"totalMs": 2.239
+						"queryMs": 0.635,
+						"totalMs": 2.14
 					},
 					"@nozbe/microfuzz": {
 						"count": 601,
 						"rank": 1,
-						"queryMs": 1.128,
-						"totalMs": 9.032
+						"queryMs": 1.118,
+						"totalMs": 8.816
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 601,
 						"rank": 1,
-						"queryMs": 1.132,
-						"totalMs": 9.154
+						"queryMs": 1.126,
+						"totalMs": 9.423
 					},
 					"fuzzy": {
 						"count": 590,
 						"rank": null,
-						"queryMs": 2.731,
-						"totalMs": 2.731
+						"queryMs": 2.71,
+						"totalMs": 2.71
 					},
 					"fuzzy (all opts)": {
 						"count": 590,
 						"rank": null,
-						"queryMs": 2.825,
-						"totalMs": 2.825
+						"queryMs": 2.79,
+						"totalMs": 2.79
 					},
 					"fuzzysort": {
 						"count": 601,
 						"rank": 11,
-						"queryMs": 0.418,
-						"totalMs": 11.587
+						"queryMs": 0.412,
+						"totalMs": 7.993
 					},
 					"match-sorter": {
 						"count": 601,
 						"rank": 7,
-						"queryMs": 3.012,
-						"totalMs": 3.012
+						"queryMs": 2.968,
+						"totalMs": 2.968
 					},
 					"fast-fuzzy": {
 						"count": 296,
 						"rank": 289,
-						"queryMs": 7.74,
-						"totalMs": 47.248
+						"queryMs": 6.904,
+						"totalMs": 45.499
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 296,
 						"rank": 289,
-						"queryMs": 7.228,
-						"totalMs": 45.887
+						"queryMs": 6.509,
+						"totalMs": 44.829
 					},
 					"uFuzzy": {
 						"count": 23,
 						"rank": null,
-						"queryMs": 0.247,
-						"totalMs": 0.247
+						"queryMs": 0.249,
+						"totalMs": 0.249
 					},
 					"uFuzzy (all opts)": {
 						"count": 57,
 						"rank": 11,
-						"queryMs": 0.28,
-						"totalMs": 1.02
+						"queryMs": 0.275,
+						"totalMs": 0.991
 					},
 					"fuse.js": {
 						"count": 296,
 						"rank": 273,
-						"queryMs": 7.776,
-						"totalMs": 8.723
+						"queryMs": 7.689,
+						"totalMs": 8.583
 					},
 					"fuse.js (all opts)": {
 						"count": 296,
 						"rank": 21,
-						"queryMs": 13.372,
-						"totalMs": 14.291
+						"queryMs": 13.217,
+						"totalMs": 14.081
 					}
 				}
 			},
@@ -1928,86 +1927,86 @@
 					"krino": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.024,
-						"totalMs": 1.521
+						"queryMs": 0.023,
+						"totalMs": 1.528
 					},
 					"krino (acronym)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.024,
-						"totalMs": 1.521
+						"queryMs": 0.023,
+						"totalMs": 1.53
 					},
 					"@nozbe/microfuzz": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.837,
-						"totalMs": 8.741
+						"queryMs": 0.839,
+						"totalMs": 8.541
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.839,
-						"totalMs": 8.855
+						"queryMs": 0.837,
+						"totalMs": 9.134
 					},
 					"fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.346,
-						"totalMs": 2.346
+						"queryMs": 2.322,
+						"totalMs": 2.322
 					},
 					"fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.358,
-						"totalMs": 2.358
+						"queryMs": 2.34,
+						"totalMs": 2.34
 					},
 					"fuzzysort": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.119,
-						"totalMs": 11.261
+						"queryMs": 0.118,
+						"totalMs": 7.701
 					},
 					"match-sorter": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.58,
-						"totalMs": 2.58
+						"queryMs": 2.552,
+						"totalMs": 2.552
 					},
 					"fast-fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 7.546,
-						"totalMs": 47.394
+						"queryMs": 6.432,
+						"totalMs": 45.371
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 6.315,
-						"totalMs": 45.544
+						"queryMs": 5.849,
+						"totalMs": 44.312
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.128,
-						"totalMs": 0.128
+						"queryMs": 0.136,
+						"totalMs": 0.136
 					},
 					"uFuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.204,
-						"totalMs": 0.938
+						"queryMs": 0.205,
+						"totalMs": 0.92
 					},
 					"fuse.js": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 11.878,
-						"totalMs": 12.793
+						"queryMs": 11.421,
+						"totalMs": 12.354
 					},
 					"fuse.js (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 17.043,
-						"totalMs": 17.961
+						"queryMs": 17.13,
+						"totalMs": 17.986
 					}
 				}
 			}
@@ -2021,86 +2020,86 @@
 					"krino": {
 						"count": 76,
 						"rank": 1,
-						"queryMs": 0.197,
-						"totalMs": 1.623
+						"queryMs": 0.177,
+						"totalMs": 1.526
 					},
 					"krino (acronym)": {
 						"count": 76,
 						"rank": 1,
-						"queryMs": 0.195,
-						"totalMs": 1.623
+						"queryMs": 0.177,
+						"totalMs": 1.523
 					},
 					"@nozbe/microfuzz": {
 						"count": 76,
 						"rank": 1,
-						"queryMs": 1.25,
-						"totalMs": 10.781
+						"queryMs": 1.267,
+						"totalMs": 9.843
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 76,
 						"rank": 1,
-						"queryMs": 1.26,
-						"totalMs": 9.543
+						"queryMs": 1.282,
+						"totalMs": 9.328
 					},
 					"fuzzy": {
 						"count": 76,
 						"rank": 1,
-						"queryMs": 2.735,
-						"totalMs": 2.735
+						"queryMs": 2.758,
+						"totalMs": 2.758
 					},
 					"fuzzy (all opts)": {
 						"count": 76,
 						"rank": 1,
-						"queryMs": 2.875,
-						"totalMs": 2.875
+						"queryMs": 2.838,
+						"totalMs": 2.838
 					},
 					"fuzzysort": {
 						"count": 76,
 						"rank": 20,
-						"queryMs": 0.154,
-						"totalMs": 8.023
+						"queryMs": 0.159,
+						"totalMs": 7.664
 					},
 					"match-sorter": {
 						"count": 76,
 						"rank": 29,
-						"queryMs": 3.323,
-						"totalMs": 3.323
+						"queryMs": 3.224,
+						"totalMs": 3.224
 					},
 					"fast-fuzzy": {
 						"count": 82,
 						"rank": 13,
-						"queryMs": 8.676,
-						"totalMs": 42.431
+						"queryMs": 8.06,
+						"totalMs": 38.605
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 82,
 						"rank": 13,
-						"queryMs": 8.733,
-						"totalMs": 40.367
+						"queryMs": 8.207,
+						"totalMs": 38.556
 					},
 					"uFuzzy": {
 						"count": 76,
 						"rank": 29,
-						"queryMs": 0.236,
-						"totalMs": 0.236
+						"queryMs": 0.23,
+						"totalMs": 0.23
 					},
 					"uFuzzy (all opts)": {
 						"count": 76,
 						"rank": 29,
-						"queryMs": 0.376,
-						"totalMs": 1.011
+						"queryMs": 0.372,
+						"totalMs": 1.008
 					},
 					"fuse.js": {
 						"count": 81,
 						"rank": 1,
-						"queryMs": 17.617,
-						"totalMs": 18.495
+						"queryMs": 18.03,
+						"totalMs": 18.642
 					},
 					"fuse.js (all opts)": {
 						"count": 81,
 						"rank": 1,
-						"queryMs": 22.739,
-						"totalMs": 23.585
+						"queryMs": 22.745,
+						"totalMs": 23.325
 					}
 				}
 			},
@@ -2112,86 +2111,86 @@
 					"krino": {
 						"count": 24,
 						"rank": 1,
-						"queryMs": 0.241,
-						"totalMs": 1.663
+						"queryMs": 0.235,
+						"totalMs": 1.59
 					},
 					"krino (acronym)": {
 						"count": 24,
 						"rank": 1,
-						"queryMs": 0.25,
-						"totalMs": 1.674
+						"queryMs": 0.238,
+						"totalMs": 1.589
 					},
 					"@nozbe/microfuzz": {
 						"count": 36,
 						"rank": 1,
-						"queryMs": 1.048,
-						"totalMs": 10.506
+						"queryMs": 1.06,
+						"totalMs": 9.652
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 36,
 						"rank": 1,
-						"queryMs": 1.044,
-						"totalMs": 9.321
+						"queryMs": 1.063,
+						"totalMs": 9.113
 					},
 					"fuzzy": {
 						"count": 36,
 						"rank": 1,
-						"queryMs": 2.605,
-						"totalMs": 2.605
+						"queryMs": 2.653,
+						"totalMs": 2.653
 					},
 					"fuzzy (all opts)": {
 						"count": 36,
 						"rank": 1,
-						"queryMs": 2.688,
-						"totalMs": 2.688
+						"queryMs": 2.68,
+						"totalMs": 2.68
 					},
 					"fuzzysort": {
 						"count": 36,
 						"rank": 2,
-						"queryMs": 0.151,
-						"totalMs": 8.025
+						"queryMs": 0.152,
+						"totalMs": 7.657
 					},
 					"match-sorter": {
 						"count": 36,
 						"rank": 2,
-						"queryMs": 3.076,
-						"totalMs": 3.076
+						"queryMs": 3.02,
+						"totalMs": 3.02
 					},
 					"fast-fuzzy": {
 						"count": 382,
 						"rank": 2,
-						"queryMs": 7.711,
-						"totalMs": 39.942
+						"queryMs": 7.271,
+						"totalMs": 38.024
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 382,
 						"rank": 2,
-						"queryMs": 7.85,
-						"totalMs": 38.402
+						"queryMs": 7.239,
+						"totalMs": 37.836
 					},
 					"uFuzzy": {
 						"count": 19,
 						"rank": 2,
-						"queryMs": 0.221,
-						"totalMs": 0.221
+						"queryMs": 0.211,
+						"totalMs": 0.211
 					},
 					"uFuzzy (all opts)": {
 						"count": 24,
 						"rank": 2,
-						"queryMs": 0.269,
-						"totalMs": 0.902
+						"queryMs": 0.267,
+						"totalMs": 0.901
 					},
 					"fuse.js": {
 						"count": 375,
 						"rank": 1,
-						"queryMs": 11.942,
-						"totalMs": 12.714
+						"queryMs": 12.114,
+						"totalMs": 12.724
 					},
 					"fuse.js (all opts)": {
 						"count": 375,
 						"rank": 1,
-						"queryMs": 18.111,
-						"totalMs": 18.696
+						"queryMs": 18.02,
+						"totalMs": 18.596
 					}
 				}
 			},
@@ -2203,86 +2202,86 @@
 					"krino": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 0.036,
-						"totalMs": 1.456
+						"queryMs": 0.033,
+						"totalMs": 1.38
 					},
 					"krino (acronym)": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 0.036,
-						"totalMs": 1.456
+						"queryMs": 0.034,
+						"totalMs": 1.381
 					},
 					"@nozbe/microfuzz": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 1.13,
-						"totalMs": 10.612
+						"queryMs": 1.123,
+						"totalMs": 9.71
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 1.131,
-						"totalMs": 9.408
+						"queryMs": 1.133,
+						"totalMs": 9.163
 					},
 					"fuzzy": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 2.622,
-						"totalMs": 2.622
+						"queryMs": 2.626,
+						"totalMs": 2.626
 					},
 					"fuzzy (all opts)": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 2.679,
-						"totalMs": 2.679
+						"queryMs": 2.696,
+						"totalMs": 2.696
 					},
 					"fuzzysort": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 0.124,
-						"totalMs": 7.989
+						"queryMs": 0.137,
+						"totalMs": 7.637
 					},
 					"match-sorter": {
 						"count": 5,
 						"rank": 2,
-						"queryMs": 2.496,
-						"totalMs": 2.496
+						"queryMs": 2.524,
+						"totalMs": 2.524
 					},
 					"fast-fuzzy": {
 						"count": 95,
 						"rank": 1,
-						"queryMs": 9.754,
-						"totalMs": 42.773
+						"queryMs": 9.202,
+						"totalMs": 39.918
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 95,
 						"rank": 1,
-						"queryMs": 10.086,
-						"totalMs": 41.649
+						"queryMs": 9.391,
+						"totalMs": 39.996
 					},
 					"uFuzzy": {
 						"count": 5,
 						"rank": 2,
-						"queryMs": 0.14,
-						"totalMs": 0.14
+						"queryMs": 0.171,
+						"totalMs": 0.171
 					},
 					"uFuzzy (all opts)": {
 						"count": 5,
 						"rank": 2,
-						"queryMs": 0.278,
-						"totalMs": 0.905
+						"queryMs": 0.281,
+						"totalMs": 0.915
 					},
 					"fuse.js": {
 						"count": 95,
 						"rank": 1,
-						"queryMs": 43.823,
-						"totalMs": 44.447
+						"queryMs": 44.26,
+						"totalMs": 44.869
 					},
 					"fuse.js (all opts)": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 29.645,
-						"totalMs": 30.208
+						"queryMs": 29.336,
+						"totalMs": 29.908
 					}
 				}
 			},
@@ -2294,86 +2293,86 @@
 					"krino": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 0.034,
-						"totalMs": 1.457
+						"queryMs": 0.032,
+						"totalMs": 1.377
 					},
 					"krino (acronym)": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 0.034,
-						"totalMs": 1.458
+						"queryMs": 0.032,
+						"totalMs": 1.377
 					},
 					"@nozbe/microfuzz": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 1.037,
-						"totalMs": 10.714
+						"queryMs": 1.055,
+						"totalMs": 9.644
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 1.036,
-						"totalMs": 9.313
+						"queryMs": 1.061,
+						"totalMs": 9.089
 					},
 					"fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.518,
-						"totalMs": 2.518
+						"queryMs": 2.553,
+						"totalMs": 2.553
 					},
 					"fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.545,
-						"totalMs": 2.545
+						"queryMs": 2.567,
+						"totalMs": 2.567
 					},
 					"fuzzysort": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 0.135,
-						"totalMs": 7.987
+						"queryMs": 0.134,
+						"totalMs": 7.635
 					},
 					"match-sorter": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.46,
-						"totalMs": 2.46
+						"queryMs": 2.462,
+						"totalMs": 2.462
 					},
 					"fast-fuzzy": {
 						"count": 76,
 						"rank": 5,
-						"queryMs": 9.446,
-						"totalMs": 42.423
+						"queryMs": 9.242,
+						"totalMs": 40.003
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 76,
 						"rank": 5,
-						"queryMs": 9.908,
-						"totalMs": 40.994
+						"queryMs": 9.209,
+						"totalMs": 39.466
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.165,
-						"totalMs": 0.165
+						"queryMs": 0.161,
+						"totalMs": 0.161
 					},
 					"uFuzzy (all opts)": {
 						"count": 5,
 						"rank": 2,
-						"queryMs": 0.292,
-						"totalMs": 0.928
+						"queryMs": 0.282,
+						"totalMs": 0.917
 					},
 					"fuse.js": {
 						"count": 76,
 						"rank": 1,
-						"queryMs": 45.176,
-						"totalMs": 45.8
+						"queryMs": 43.909,
+						"totalMs": 44.519
 					},
 					"fuse.js (all opts)": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 18.137,
-						"totalMs": 18.722
+						"queryMs": 17.619,
+						"totalMs": 18.215
 					}
 				}
 			},
@@ -2385,86 +2384,86 @@
 					"krino": {
 						"count": 16,
 						"rank": 1,
-						"queryMs": 0.232,
-						"totalMs": 1.695
+						"queryMs": 0.23,
+						"totalMs": 1.571
 					},
 					"krino (acronym)": {
 						"count": 16,
 						"rank": 1,
-						"queryMs": 0.239,
-						"totalMs": 1.68
+						"queryMs": 0.234,
+						"totalMs": 1.58
 					},
 					"@nozbe/microfuzz": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 1.197,
-						"totalMs": 10.697
+						"queryMs": 1.198,
+						"totalMs": 9.785
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 1.203,
-						"totalMs": 9.514
+						"queryMs": 1.2,
+						"totalMs": 9.23
 					},
 					"fuzzy": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 2.56,
-						"totalMs": 2.56
+						"queryMs": 2.533,
+						"totalMs": 2.533
 					},
 					"fuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 2.635,
-						"totalMs": 2.635
+						"queryMs": 2.594,
+						"totalMs": 2.594
 					},
 					"fuzzysort": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.125,
-						"totalMs": 7.998
+						"queryMs": 0.124,
+						"totalMs": 7.63
 					},
 					"match-sorter": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 3.136,
-						"totalMs": 3.136
+						"queryMs": 3.07,
+						"totalMs": 3.07
 					},
 					"fast-fuzzy": {
 						"count": 452,
 						"rank": 1,
-						"queryMs": 7.971,
-						"totalMs": 40.528
+						"queryMs": 7.269,
+						"totalMs": 37.775
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 452,
 						"rank": 1,
-						"queryMs": 7.971,
-						"totalMs": 38.476
+						"queryMs": 7.205,
+						"totalMs": 37.799
 					},
 					"uFuzzy": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.245,
-						"totalMs": 0.245
+						"queryMs": 0.238,
+						"totalMs": 0.238
 					},
 					"uFuzzy (all opts)": {
 						"count": 16,
 						"rank": 1,
-						"queryMs": 0.35,
-						"totalMs": 0.989
+						"queryMs": 0.336,
+						"totalMs": 0.972
 					},
 					"fuse.js": {
 						"count": 444,
 						"rank": 1,
-						"queryMs": 12.231,
-						"totalMs": 12.85
+						"queryMs": 11.873,
+						"totalMs": 12.483
 					},
 					"fuse.js (all opts)": {
 						"count": 452,
 						"rank": 1,
-						"queryMs": 18.971,
-						"totalMs": 19.559
+						"queryMs": 17.87,
+						"totalMs": 18.466
 					}
 				}
 			},
@@ -2476,86 +2475,86 @@
 					"krino": {
 						"count": 76,
 						"rank": 5,
-						"queryMs": 0.378,
-						"totalMs": 1.811
+						"queryMs": 0.342,
+						"totalMs": 1.685
 					},
 					"krino (acronym)": {
 						"count": 76,
 						"rank": 5,
-						"queryMs": 0.409,
-						"totalMs": 1.838
+						"queryMs": 0.372,
+						"totalMs": 1.722
 					},
 					"@nozbe/microfuzz": {
 						"count": 88,
 						"rank": 5,
-						"queryMs": 1.058,
-						"totalMs": 10.551
+						"queryMs": 1.041,
+						"totalMs": 9.627
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 88,
 						"rank": 5,
-						"queryMs": 1.063,
-						"totalMs": 9.357
+						"queryMs": 1.038,
+						"totalMs": 9.076
 					},
 					"fuzzy": {
 						"count": 88,
 						"rank": 5,
-						"queryMs": 2.578,
-						"totalMs": 2.578
+						"queryMs": 2.517,
+						"totalMs": 2.517
 					},
 					"fuzzy (all opts)": {
 						"count": 88,
 						"rank": 5,
-						"queryMs": 2.597,
-						"totalMs": 2.597
+						"queryMs": 2.533,
+						"totalMs": 2.533
 					},
 					"fuzzysort": {
 						"count": 88,
 						"rank": 13,
-						"queryMs": 0.193,
-						"totalMs": 8.053
+						"queryMs": 0.19,
+						"totalMs": 7.673
 					},
 					"match-sorter": {
 						"count": 88,
 						"rank": 58,
-						"queryMs": 3.03,
-						"totalMs": 3.03
+						"queryMs": 2.95,
+						"totalMs": 2.95
 					},
 					"fast-fuzzy": {
 						"count": 197,
 						"rank": 14,
-						"queryMs": 7.673,
-						"totalMs": 42.49
+						"queryMs": 6.568,
+						"totalMs": 37.409
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 197,
 						"rank": 14,
-						"queryMs": 7.956,
-						"totalMs": 39.033
+						"queryMs": 6.887,
+						"totalMs": 36.913
 					},
 					"uFuzzy": {
 						"count": 76,
 						"rank": 58,
-						"queryMs": 0.243,
-						"totalMs": 0.243
+						"queryMs": 0.238,
+						"totalMs": 0.238
 					},
 					"uFuzzy (all opts)": {
 						"count": 76,
 						"rank": 58,
-						"queryMs": 0.295,
-						"totalMs": 0.924
+						"queryMs": 0.291,
+						"totalMs": 0.926
 					},
 					"fuse.js": {
 						"count": 174,
 						"rank": 5,
-						"queryMs": 11.954,
-						"totalMs": 12.578
+						"queryMs": 11.406,
+						"totalMs": 12.031
 					},
 					"fuse.js (all opts)": {
 						"count": 174,
 						"rank": 5,
-						"queryMs": 17.603,
-						"totalMs": 18.188
+						"queryMs": 17.015,
+						"totalMs": 17.591
 					}
 				}
 			},
@@ -2567,86 +2566,86 @@
 					"krino": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.187,
-						"totalMs": 1.618
+						"queryMs": 0.169,
+						"totalMs": 1.516
 					},
 					"krino (acronym)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.193,
-						"totalMs": 1.622
+						"queryMs": 0.168,
+						"totalMs": 1.517
 					},
 					"@nozbe/microfuzz": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 1.058,
-						"totalMs": 10.564
+						"queryMs": 1.038,
+						"totalMs": 9.632
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 1.053,
-						"totalMs": 9.346
+						"queryMs": 1.041,
+						"totalMs": 9.071
 					},
 					"fuzzy": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 2.664,
-						"totalMs": 2.664
+						"queryMs": 2.603,
+						"totalMs": 2.603
 					},
 					"fuzzy (all opts)": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 2.666,
-						"totalMs": 2.666
+						"queryMs": 2.63,
+						"totalMs": 2.63
 					},
 					"fuzzysort": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 0.138,
-						"totalMs": 8.029
+						"queryMs": 0.146,
+						"totalMs": 7.652
 					},
 					"match-sorter": {
 						"count": 5,
 						"rank": 1,
-						"queryMs": 3.11,
-						"totalMs": 3.11
+						"queryMs": 3.028,
+						"totalMs": 3.028
 					},
 					"fast-fuzzy": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 7.203,
-						"totalMs": 39.999
+						"queryMs": 6.451,
+						"totalMs": 37.259
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 6.993,
-						"totalMs": 38.596
+						"queryMs": 6.647,
+						"totalMs": 36.968
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.175,
-						"totalMs": 0.175
+						"queryMs": 0.184,
+						"totalMs": 0.184
 					},
 					"uFuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.235,
-						"totalMs": 0.87
+						"queryMs": 0.239,
+						"totalMs": 0.877
 					},
 					"fuse.js": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 12.248,
-						"totalMs": 12.887
+						"queryMs": 12.51,
+						"totalMs": 13.119
 					},
 					"fuse.js (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 17.599,
-						"totalMs": 18.445
+						"queryMs": 18.343,
+						"totalMs": 18.919
 					}
 				}
 			},
@@ -2658,86 +2657,86 @@
 					"krino": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.342,
-						"totalMs": 1.791
+						"queryMs": 0.314,
+						"totalMs": 1.66
 					},
 					"krino (acronym)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.349,
-						"totalMs": 1.801
+						"queryMs": 0.316,
+						"totalMs": 1.662
 					},
 					"@nozbe/microfuzz": {
 						"count": 9,
 						"rank": 1,
-						"queryMs": 1.029,
-						"totalMs": 10.517
+						"queryMs": 1.037,
+						"totalMs": 9.627
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 9,
 						"rank": 1,
 						"queryMs": 1.037,
-						"totalMs": 9.319
+						"totalMs": 9.065
 					},
 					"fuzzy": {
 						"count": 9,
 						"rank": 1,
-						"queryMs": 2.498,
-						"totalMs": 2.498
+						"queryMs": 2.514,
+						"totalMs": 2.514
 					},
 					"fuzzy (all opts)": {
 						"count": 9,
 						"rank": 1,
-						"queryMs": 2.527,
-						"totalMs": 2.527
+						"queryMs": 2.545,
+						"totalMs": 2.545
 					},
 					"fuzzysort": {
 						"count": 9,
 						"rank": 1,
-						"queryMs": 0.189,
-						"totalMs": 8.058
+						"queryMs": 0.197,
+						"totalMs": 7.702
 					},
 					"match-sorter": {
 						"count": 9,
 						"rank": 1,
-						"queryMs": 2.972,
-						"totalMs": 2.972
+						"queryMs": 2.981,
+						"totalMs": 2.981
 					},
 					"fast-fuzzy": {
 						"count": 26,
 						"rank": 1,
-						"queryMs": 6.967,
-						"totalMs": 39.522
+						"queryMs": 6.893,
+						"totalMs": 37.635
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 26,
 						"rank": 1,
-						"queryMs": 6.952,
-						"totalMs": 38.382
+						"queryMs": 6.783,
+						"totalMs": 37.288
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.118,
-						"totalMs": 0.118
+						"queryMs": 0.157,
+						"totalMs": 0.157
 					},
 					"uFuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
 						"queryMs": 0.241,
-						"totalMs": 0.877
+						"totalMs": 0.876
 					},
 					"fuse.js": {
 						"count": 26,
 						"rank": 3,
-						"queryMs": 11.837,
-						"totalMs": 12.462
+						"queryMs": 12.209,
+						"totalMs": 12.821
 					},
 					"fuse.js (all opts)": {
 						"count": 26,
 						"rank": 3,
-						"queryMs": 17.352,
-						"totalMs": 17.94
+						"queryMs": 18.125,
+						"totalMs": 18.717
 					}
 				}
 			},
@@ -2749,86 +2748,86 @@
 					"krino": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.131,
-						"totalMs": 1.551
+						"queryMs": 0.109,
+						"totalMs": 1.456
 					},
 					"krino (acronym)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.161,
-						"totalMs": 1.581
+						"queryMs": 0.116,
+						"totalMs": 1.464
 					},
 					"@nozbe/microfuzz": {
 						"count": 67,
 						"rank": 21,
-						"queryMs": 1.052,
-						"totalMs": 10.531
+						"queryMs": 1.059,
+						"totalMs": 9.639
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 67,
 						"rank": 21,
-						"queryMs": 1.061,
-						"totalMs": 9.334
+						"queryMs": 1.062,
+						"totalMs": 9.092
 					},
 					"fuzzy": {
 						"count": 67,
 						"rank": 10,
-						"queryMs": 2.529,
-						"totalMs": 2.529
+						"queryMs": 2.519,
+						"totalMs": 2.519
 					},
 					"fuzzy (all opts)": {
 						"count": 67,
 						"rank": 10,
-						"queryMs": 2.551,
-						"totalMs": 2.551
+						"queryMs": 2.554,
+						"totalMs": 2.554
 					},
 					"fuzzysort": {
 						"count": 67,
 						"rank": 1,
 						"queryMs": 0.189,
-						"totalMs": 8.049
+						"totalMs": 7.694
 					},
 					"match-sorter": {
 						"count": 67,
 						"rank": 1,
-						"queryMs": 3.03,
-						"totalMs": 3.03
+						"queryMs": 2.964,
+						"totalMs": 2.964
 					},
 					"fast-fuzzy": {
 						"count": 24,
 						"rank": null,
-						"queryMs": 6.761,
-						"totalMs": 39.319
+						"queryMs": 6.065,
+						"totalMs": 36.766
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 24,
 						"rank": null,
-						"queryMs": 6.584,
-						"totalMs": 39.407
+						"queryMs": 6.206,
+						"totalMs": 36.236
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.218,
-						"totalMs": 0.218
+						"queryMs": 0.21,
+						"totalMs": 0.21
 					},
 					"uFuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.24,
-						"totalMs": 0.882
+						"queryMs": 0.236,
+						"totalMs": 0.87
 					},
 					"fuse.js": {
 						"count": 24,
 						"rank": null,
-						"queryMs": 7.491,
-						"totalMs": 8.115
+						"queryMs": 7.616,
+						"totalMs": 8.233
 					},
 					"fuse.js (all opts)": {
 						"count": 25,
 						"rank": null,
-						"queryMs": 13.019,
-						"totalMs": 13.777
+						"queryMs": 13.158,
+						"totalMs": 13.73
 					}
 				}
 			},
@@ -2840,62 +2839,62 @@
 					"krino": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.188,
-						"totalMs": 1.617
+						"queryMs": 0.168,
+						"totalMs": 1.513
 					},
 					"krino (acronym)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.186,
-						"totalMs": 1.616
+						"queryMs": 0.167,
+						"totalMs": 1.514
 					},
 					"@nozbe/microfuzz": {
 						"count": 2,
 						"rank": null,
-						"queryMs": 1.055,
-						"totalMs": 10.549
+						"queryMs": 1.037,
+						"totalMs": 9.62
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 2,
 						"rank": null,
-						"queryMs": 1.049,
-						"totalMs": 9.309
+						"queryMs": 1.036,
+						"totalMs": 9.078
 					},
 					"fuzzy": {
 						"count": 2,
 						"rank": null,
-						"queryMs": 2.537,
-						"totalMs": 2.537
+						"queryMs": 2.526,
+						"totalMs": 2.526
 					},
 					"fuzzy (all opts)": {
 						"count": 2,
 						"rank": null,
-						"queryMs": 2.641,
-						"totalMs": 2.641
+						"queryMs": 2.544,
+						"totalMs": 2.544
 					},
 					"fuzzysort": {
 						"count": 2,
 						"rank": null,
-						"queryMs": 0.137,
-						"totalMs": 8.006
+						"queryMs": 0.146,
+						"totalMs": 7.651
 					},
 					"match-sorter": {
 						"count": 2,
 						"rank": null,
-						"queryMs": 2.97,
-						"totalMs": 2.97
+						"queryMs": 2.995,
+						"totalMs": 2.995
 					},
 					"fast-fuzzy": {
 						"count": 6,
 						"rank": 1,
-						"queryMs": 7.916,
-						"totalMs": 40.847
+						"queryMs": 7.19,
+						"totalMs": 37.92
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 6,
 						"rank": 1,
-						"queryMs": 8.328,
-						"totalMs": 38.804
+						"queryMs": 7.289,
+						"totalMs": 37.759
 					},
 					"uFuzzy": {
 						"count": 0,
@@ -2906,20 +2905,20 @@
 					"uFuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.243,
-						"totalMs": 0.872
+						"queryMs": 0.235,
+						"totalMs": 0.871
 					},
 					"fuse.js": {
 						"count": 6,
 						"rank": 1,
-						"queryMs": 16.226,
-						"totalMs": 16.87
+						"queryMs": 16.136,
+						"totalMs": 16.743
 					},
 					"fuse.js (all opts)": {
 						"count": 6,
 						"rank": 1,
-						"queryMs": 21.637,
-						"totalMs": 22.225
+						"queryMs": 21.75,
+						"totalMs": 22.342
 					}
 				}
 			},
@@ -2931,86 +2930,86 @@
 					"krino": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.187,
-						"totalMs": 1.606
+						"queryMs": 0.169,
+						"totalMs": 1.515
 					},
 					"krino (acronym)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.185,
-						"totalMs": 1.606
+						"queryMs": 0.168,
+						"totalMs": 1.514
 					},
 					"@nozbe/microfuzz": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 1.047,
-						"totalMs": 10.532
+						"queryMs": 1.025,
+						"totalMs": 9.613
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 1.043,
-						"totalMs": 9.32
+						"queryMs": 1.032,
+						"totalMs": 9.064
 					},
 					"fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.594,
-						"totalMs": 2.594
+						"queryMs": 2.493,
+						"totalMs": 2.493
 					},
 					"fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.57,
-						"totalMs": 2.57
+						"queryMs": 2.531,
+						"totalMs": 2.531
 					},
 					"fuzzysort": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.153,
-						"totalMs": 8.003
+						"queryMs": 0.148,
+						"totalMs": 7.651
 					},
 					"match-sorter": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 3.009,
-						"totalMs": 3.009
+						"queryMs": 2.999,
+						"totalMs": 2.999
 					},
 					"fast-fuzzy": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 7.74,
-						"totalMs": 39.955
+						"queryMs": 7.089,
+						"totalMs": 37.772
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 8.129,
-						"totalMs": 38.808
+						"queryMs": 7.208,
+						"totalMs": 37.443
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.188,
-						"totalMs": 0.188
+						"queryMs": 0.181,
+						"totalMs": 0.181
 					},
 					"uFuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.244,
-						"totalMs": 0.88
+						"queryMs": 0.236,
+						"totalMs": 0.873
 					},
 					"fuse.js": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 17.385,
-						"totalMs": 18.013
+						"queryMs": 16.737,
+						"totalMs": 17.349
 					},
 					"fuse.js (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 22.929,
-						"totalMs": 23.517
+						"queryMs": 22.181,
+						"totalMs": 22.773
 					}
 				}
 			},
@@ -3022,86 +3021,86 @@
 					"krino": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.066,
-						"totalMs": 1.488
+						"queryMs": 0.058,
+						"totalMs": 1.408
 					},
 					"krino (acronym)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.066,
-						"totalMs": 1.488
+						"queryMs": 0.058,
+						"totalMs": 1.407
 					},
 					"@nozbe/microfuzz": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 1.048,
-						"totalMs": 10.537
+						"queryMs": 1.032,
+						"totalMs": 9.63
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 1.045,
-						"totalMs": 9.323
+						"queryMs": 1.037,
+						"totalMs": 9.071
 					},
 					"fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.538,
-						"totalMs": 2.538
+						"queryMs": 2.536,
+						"totalMs": 2.536
 					},
 					"fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.558,
-						"totalMs": 2.558
+						"queryMs": 2.514,
+						"totalMs": 2.514
 					},
 					"fuzzysort": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.123,
-						"totalMs": 7.994
+						"queryMs": 0.119,
+						"totalMs": 7.624
 					},
 					"match-sorter": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 3.03,
-						"totalMs": 3.03
+						"queryMs": 2.972,
+						"totalMs": 2.972
 					},
 					"fast-fuzzy": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 7.906,
-						"totalMs": 40.189
+						"queryMs": 6.811,
+						"totalMs": 37.642
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 7.817,
-						"totalMs": 38.292
+						"queryMs": 6.886,
+						"totalMs": 37.24
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.18,
-						"totalMs": 0.18
+						"queryMs": 0.178,
+						"totalMs": 0.178
 					},
 					"uFuzzy (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 0.242,
-						"totalMs": 0.873
+						"queryMs": 0.234,
+						"totalMs": 0.869
 					},
 					"fuse.js": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 17.456,
-						"totalMs": 18.08
+						"queryMs": 16.408,
+						"totalMs": 17.026
 					},
 					"fuse.js (all opts)": {
 						"count": 1,
 						"rank": 1,
-						"queryMs": 23.389,
-						"totalMs": 23.951
+						"queryMs": 22.117,
+						"totalMs": 22.693
 					}
 				}
 			},
@@ -3113,86 +3112,86 @@
 					"krino": {
 						"count": 7,
 						"rank": 2,
-						"queryMs": 0.197,
-						"totalMs": 1.62
+						"queryMs": 0.131,
+						"totalMs": 1.477
 					},
 					"krino (acronym)": {
 						"count": 8,
 						"rank": 1,
-						"queryMs": 0.256,
-						"totalMs": 1.68
+						"queryMs": 0.141,
+						"totalMs": 1.491
 					},
 					"@nozbe/microfuzz": {
 						"count": 133,
 						"rank": 2,
-						"queryMs": 1.268,
-						"totalMs": 10.748
+						"queryMs": 1.251,
+						"totalMs": 9.832
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 133,
 						"rank": 2,
-						"queryMs": 1.274,
-						"totalMs": 9.623
+						"queryMs": 1.255,
+						"totalMs": 9.302
 					},
 					"fuzzy": {
 						"count": 131,
 						"rank": 24,
-						"queryMs": 2.7,
-						"totalMs": 2.7
+						"queryMs": 2.627,
+						"totalMs": 2.627
 					},
 					"fuzzy (all opts)": {
 						"count": 131,
 						"rank": 24,
-						"queryMs": 2.767,
-						"totalMs": 2.767
+						"queryMs": 2.68,
+						"totalMs": 2.68
 					},
 					"fuzzysort": {
 						"count": 133,
 						"rank": 2,
-						"queryMs": 0.234,
-						"totalMs": 8.117
+						"queryMs": 0.229,
+						"totalMs": 7.715
 					},
 					"match-sorter": {
 						"count": 133,
 						"rank": 2,
-						"queryMs": 3.251,
-						"totalMs": 3.251
+						"queryMs": 3.126,
+						"totalMs": 3.126
 					},
 					"fast-fuzzy": {
 						"count": 28,
 						"rank": null,
-						"queryMs": 7.294,
-						"totalMs": 39.769
+						"queryMs": 6.135,
+						"totalMs": 36.626
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 28,
 						"rank": null,
-						"queryMs": 6.907,
-						"totalMs": 37.52
+						"queryMs": 6.473,
+						"totalMs": 36.618
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.218,
-						"totalMs": 0.218
+						"queryMs": 0.209,
+						"totalMs": 0.209
 					},
 					"uFuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.285,
-						"totalMs": 0.921
+						"queryMs": 0.277,
+						"totalMs": 0.913
 					},
 					"fuse.js": {
 						"count": 28,
 						"rank": null,
-						"queryMs": 7.773,
-						"totalMs": 8.402
+						"queryMs": 7.607,
+						"totalMs": 8.219
 					},
 					"fuse.js (all opts)": {
 						"count": 28,
 						"rank": null,
-						"queryMs": 13.339,
-						"totalMs": 14.034
+						"queryMs": 13.233,
+						"totalMs": 13.809
 					}
 				}
 			},
@@ -3204,86 +3203,86 @@
 					"krino": {
 						"count": 7,
 						"rank": 2,
-						"queryMs": 0.106,
-						"totalMs": 1.532
+						"queryMs": 0.089,
+						"totalMs": 1.431
 					},
 					"krino (acronym)": {
 						"count": 7,
 						"rank": 2,
-						"queryMs": 0.132,
-						"totalMs": 1.56
+						"queryMs": 0.101,
+						"totalMs": 1.447
 					},
 					"@nozbe/microfuzz": {
 						"count": 70,
 						"rank": 2,
-						"queryMs": 1.059,
-						"totalMs": 10.582
+						"queryMs": 1.051,
+						"totalMs": 9.636
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 70,
 						"rank": 2,
-						"queryMs": 1.076,
-						"totalMs": 9.326
+						"queryMs": 1.048,
+						"totalMs": 9.077
 					},
 					"fuzzy": {
 						"count": 65,
 						"rank": null,
-						"queryMs": 2.684,
-						"totalMs": 2.684
+						"queryMs": 2.625,
+						"totalMs": 2.625
 					},
 					"fuzzy (all opts)": {
 						"count": 65,
 						"rank": null,
-						"queryMs": 2.713,
-						"totalMs": 2.713
+						"queryMs": 2.657,
+						"totalMs": 2.657
 					},
 					"fuzzysort": {
 						"count": 70,
 						"rank": 2,
-						"queryMs": 0.171,
-						"totalMs": 8.027
+						"queryMs": 0.17,
+						"totalMs": 7.674
 					},
 					"match-sorter": {
 						"count": 70,
 						"rank": 4,
-						"queryMs": 3.135,
-						"totalMs": 3.135
+						"queryMs": 3.011,
+						"totalMs": 3.011
 					},
 					"fast-fuzzy": {
 						"count": 82,
 						"rank": 33,
-						"queryMs": 7.344,
-						"totalMs": 39.958
+						"queryMs": 5.978,
+						"totalMs": 36.642
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 82,
 						"rank": 33,
-						"queryMs": 6.712,
-						"totalMs": 37.627
+						"queryMs": 6.123,
+						"totalMs": 36.559
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.214,
-						"totalMs": 0.214
+						"queryMs": 0.203,
+						"totalMs": 0.203
 					},
 					"uFuzzy (all opts)": {
 						"count": 4,
 						"rank": 3,
-						"queryMs": 0.244,
-						"totalMs": 0.872
+						"queryMs": 0.235,
+						"totalMs": 0.871
 					},
 					"fuse.js": {
 						"count": 74,
 						"rank": 1,
-						"queryMs": 7.597,
-						"totalMs": 8.222
+						"queryMs": 7.559,
+						"totalMs": 8.176
 					},
 					"fuse.js (all opts)": {
 						"count": 74,
 						"rank": 1,
-						"queryMs": 13.459,
-						"totalMs": 14.033
+						"queryMs": 12.888,
+						"totalMs": 13.484
 					}
 				}
 			},
@@ -3295,86 +3294,86 @@
 					"krino": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.026,
-						"totalMs": 1.448
+						"queryMs": 0.024,
+						"totalMs": 1.37
 					},
 					"krino (acronym)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.026,
-						"totalMs": 1.448
+						"queryMs": 0.024,
+						"totalMs": 1.37
 					},
 					"@nozbe/microfuzz": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.916,
-						"totalMs": 10.396
+						"queryMs": 0.925,
+						"totalMs": 9.51
 					},
 					"@nozbe/microfuzz (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.917,
-						"totalMs": 9.232
+						"queryMs": 0.928,
+						"totalMs": 8.966
 					},
 					"fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.396,
-						"totalMs": 2.396
+						"queryMs": 2.406,
+						"totalMs": 2.406
 					},
 					"fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.408,
-						"totalMs": 2.408
+						"queryMs": 2.409,
+						"totalMs": 2.409
 					},
 					"fuzzysort": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.112,
-						"totalMs": 7.994
+						"queryMs": 0.122,
+						"totalMs": 7.612
 					},
 					"match-sorter": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 2.818,
-						"totalMs": 2.818
+						"queryMs": 2.838,
+						"totalMs": 2.838
 					},
 					"fast-fuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 6.827,
-						"totalMs": 39.028
+						"queryMs": 6.382,
+						"totalMs": 37.064
 					},
 					"fast-fuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 6.463,
-						"totalMs": 36.816
+						"queryMs": 6.133,
+						"totalMs": 36.329
 					},
 					"uFuzzy": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.136,
-						"totalMs": 0.136
+						"queryMs": 0.134,
+						"totalMs": 0.134
 					},
 					"uFuzzy (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 0.214,
-						"totalMs": 0.849
+						"queryMs": 0.213,
+						"totalMs": 0.847
 					},
 					"fuse.js": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 11.826,
-						"totalMs": 12.528
+						"queryMs": 11.534,
+						"totalMs": 12.144
 					},
 					"fuse.js (all opts)": {
 						"count": 0,
 						"rank": null,
-						"queryMs": 17.645,
-						"totalMs": 18.208
+						"queryMs": 17.307,
+						"totalMs": 17.883
 					}
 				}
 			}
@@ -3392,47 +3391,47 @@
 			{
 				"library": "krino",
 				"stepMs": [
-					6.114871000000221,
-					2.3842649999996866,
-					3.3498169999998026
+					4.399190999999973,
+					2.2491060000002108,
+					2.645813999999973
 				],
-				"sessionMs": 11.84895299999971
+				"sessionMs": 9.294111000000157
 			},
 			{
 				"library": "@nozbe/microfuzz",
 				"stepMs": [
-					32.18466199999966,
-					34.873417999999674,
-					28.778128999999808
+					36.28477799999973,
+					30.384008999999878,
+					23.760961999999836
 				],
-				"sessionMs": 95.83620899999914
+				"sessionMs": 90.42974899999945
 			},
 			{
 				"library": "fuzzysort",
 				"stepMs": [
-					12.124968999999965,
-					6.579050999999708,
-					2.9563740000003236
+					11.248837000000094,
+					5.447251000000051,
+					2.709878000000117
 				],
-				"sessionMs": 21.660393999999997
+				"sessionMs": 19.405966000000262
 			},
 			{
 				"library": "uFuzzy (all opts)",
 				"stepMs": [
-					2.7915549999997893,
-					2.7092249999996056,
-					2.8016239999997197
+					2.6693900000000212,
+					2.5753780000004554,
+					2.7087469999996756
 				],
-				"sessionMs": 8.302403999999115
+				"sessionMs": 7.953515000000152
 			},
 			{
 				"library": "fuse.js (all opts)",
 				"stepMs": [
-					150.8946300000007,
-					135.9565160000002,
-					180.4953660000001
+					148.25202199999967,
+					131.10995999999977,
+					175.4852180000007
 				],
-				"sessionMs": 467.346512000001
+				"sessionMs": 454.84720000000016
 			}
 		]
 	},
@@ -3443,63 +3442,63 @@
 				"junkRate": 0,
 				"presentHits": 8,
 				"presentProbes": 8,
-				"missMs": 0.008366000000023632
+				"missMs": 0.008857000000034532
 			},
 			{
 				"docChars": 128,
 				"junkRate": 0,
 				"presentHits": 15,
 				"presentProbes": 15,
-				"missMs": 0.007163999999875159
+				"missMs": 0.008045000000038272
 			},
 			{
 				"docChars": 256,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.011943999999857624
+				"missMs": 0.015219999999999345
 			},
 			{
 				"docChars": 512,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.01445800000010422
+				"missMs": 0.025118000000020402
 			},
 			{
 				"docChars": 1024,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.04154100000005201
+				"missMs": 0.03618999999980588
 			},
 			{
 				"docChars": 2048,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.05290300000069692
+				"missMs": 0.05062799999996059
 			},
 			{
 				"docChars": 4096,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.08722899999975198
+				"missMs": 0.08565600000019913
 			},
 			{
 				"docChars": 8192,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.15478999999959342
+				"missMs": 0.1545590000005177
 			},
 			{
 				"docChars": 16384,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.3155109999997876
+				"missMs": 0.2950810000002093
 			}
 		]
 	},

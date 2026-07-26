@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 524" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" role="img" aria-labelledby="pareto-total-title pareto-total-desc">
   <title id="pareto-total-title">Fuzzy search libraries: MRR vs total cost (index + one query)</title>
-  <desc id="pareto-total-desc">Scatter plot of 14 configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against total milliseconds for one cold search (index build plus one query), on a log scale, on the mixed 10k corpus over 15 probes. The Pareto frontier runs uFuzzy (0.14 MRR at 0.19 ms) to uFuzzy (all opts) (0.49 MRR at 0.90 ms) to Krino (0.80 MRR at 1.59 ms) to Krino (acronym) (0.84 MRR at 1.60 ms). The no-index engines own the cheapest cold one-shots; the two Krino configurations share one pooled build cost and differ only in query time, fuzzysort's hidden prepare cache moves it off this frontier, and Fuse.js is dominated.</desc>
+  <desc id="pareto-total-desc">Scatter plot of 14 configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against total milliseconds for one cold search (index build plus one query), on a log scale, on the mixed 10k corpus over 15 probes. The Pareto frontier runs uFuzzy (0.14 MRR at 0.19 ms) to uFuzzy (all opts) (0.49 MRR at 0.90 ms) to Krino (0.80 MRR at 1.50 ms) to Krino (acronym) (0.84 MRR at 1.50 ms). The no-index engines own the cheapest cold one-shots; the two Krino configurations share one pooled build cost and differ only in query time, fuzzysort's hidden prepare cache moves it off this frontier, and Fuse.js is dominated.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#898781"/>
@@ -53,42 +53,42 @@
   </g>
   <text x="428" y="479" text-anchor="middle" fill="#52514e" font-size="13">Cold duration: index + one query. Log scale, lower is better</text>
   <text transform="translate(18,248) rotate(-90)" text-anchor="middle" fill="#52514e" font-size="13">Rank of queried item: 1st = 1.0, 10th = 0.1</text>
-  <path d="M95.8 415.9 L282.5 257.1 L351.4 116.4 L352.3 98.3" fill="none" stroke="#1baf7a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
+  <path d="M94.6 415.9 L282.4 257.1 L344.1 116.4 L344.5 98.3" fill="none" stroke="#1baf7a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
   <g transform="translate(78,70)">
     <line x1="34" y1="24" x2="4" y2="4" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
     <text x="40" y="20" fill="#898781" font-size="12" font-style="italic">faster &amp; more accurate</text>
   </g>
   <g>
-    <circle cx="352.3" cy="98.3" r="6.5" fill="#2a78d6" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="351.4" cy="116.4" r="6.5" fill="#2a78d6" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="640.8" cy="139.1" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="654.6" cy="139.1" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="565.6" cy="211.7" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="580.1" cy="211.7" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="736.1" cy="229.9" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="742.5" cy="229.9" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="546.9" cy="234.4" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="282.5" cy="257.1" r="6.5" fill="#1baf7a" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="409.6" cy="275.2" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="412" cy="275.2" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="427.7" cy="293.4" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="95.8" cy="415.9" r="6.5" fill="#1baf7a" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="344.5" cy="98.3" r="6.5" fill="#2a78d6" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="344.1" cy="116.4" r="6.5" fill="#2a78d6" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="640.1" cy="139.1" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="652.8" cy="139.1" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="562.3" cy="211.7" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="569.5" cy="211.7" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="732.5" cy="229.9" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="734.5" cy="229.9" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="541.3" cy="234.4" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="282.4" cy="257.1" r="6.5" fill="#1baf7a" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="408.8" cy="275.2" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="410.3" cy="275.2" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="425.8" cy="293.4" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="94.6" cy="415.9" r="6.5" fill="#1baf7a" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
   </g>
   <g>
-    <text x="365.8" y="90.3" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">Krino (acronym)</text>
-    <text x="640.8" y="124.1" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js</text>
-    <text x="337.9" y="132.4" text-anchor="end" fill="#0b0b0b" font-size="12.5" font-weight="600">Krino</text>
-    <text x="654.6" y="159.1" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js (all opts)</text>
-    <text x="579.1" y="215.7" text-anchor="start" fill="#898781" font-size="12.5">@nozbe/microfuzz (all opts)</text>
-    <text x="566.6" y="215.7" text-anchor="end" fill="#898781" font-size="12.5">@nozbe/microfuzz</text>
-    <text x="749.6" y="233.9" text-anchor="start" fill="#898781" font-size="12.5">fast-fuzzy (all opts)</text>
-    <text x="729" y="233.9" text-anchor="end" fill="#898781" font-size="12.5">fast-fuzzy</text>
-    <text x="560.4" y="238.4" text-anchor="start" fill="#898781" font-size="12.5">fuzzysort</text>
-    <text x="269" y="261.1" text-anchor="end" fill="#0b0b0b" font-size="12.5" font-weight="600">uFuzzy (all opts)</text>
-    <text x="423.1" y="265.2" text-anchor="start" fill="#898781" font-size="12.5">fuzzy</text>
-    <text x="425.5" y="279.2" text-anchor="start" fill="#898781" font-size="12.5">fuzzy (all opts)</text>
-    <text x="441.2" y="309.4" text-anchor="start" fill="#898781" font-size="12.5">match-sorter</text>
-    <text x="109.3" y="419.9" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">uFuzzy</text>
+    <text x="358" y="90.3" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">Krino (acronym)</text>
+    <text x="640.1" y="124.1" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js</text>
+    <text x="330.6" y="132.4" text-anchor="end" fill="#0b0b0b" font-size="12.5" font-weight="600">Krino</text>
+    <text x="652.8" y="159.1" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js (all opts)</text>
+    <text x="575.8" y="215.7" text-anchor="start" fill="#898781" font-size="12.5">@nozbe/microfuzz (all opts)</text>
+    <text x="556" y="215.7" text-anchor="end" fill="#898781" font-size="12.5">@nozbe/microfuzz</text>
+    <text x="746" y="233.9" text-anchor="start" fill="#898781" font-size="12.5">fast-fuzzy (all opts)</text>
+    <text x="721" y="233.9" text-anchor="end" fill="#898781" font-size="12.5">fast-fuzzy</text>
+    <text x="554.8" y="238.4" text-anchor="start" fill="#898781" font-size="12.5">fuzzysort</text>
+    <text x="268.9" y="261.1" text-anchor="end" fill="#0b0b0b" font-size="12.5" font-weight="600">uFuzzy (all opts)</text>
+    <text x="422.3" y="265.2" text-anchor="start" fill="#898781" font-size="12.5">fuzzy</text>
+    <text x="423.8" y="279.2" text-anchor="start" fill="#898781" font-size="12.5">fuzzy (all opts)</text>
+    <text x="439.3" y="309.4" text-anchor="start" fill="#898781" font-size="12.5">match-sorter</text>
+    <text x="108.1" y="419.9" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">uFuzzy</text>
   </g>
   <g>
     <line x1="66" y1="508" x2="92" y2="508" stroke="#1baf7a" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>

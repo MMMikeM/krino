@@ -169,6 +169,26 @@ describe("bench validity: per-library match counts and source rank", () => {
 			// queries, time over every query.
 			const scores: Record<string, { rrs: number[]; times: number[] }> = {};
 
+			// Query cells are NOT interleaved the way the index cells above are.
+			// Interleaving makes consecutive samples hit different libraries, so
+			// each one runs cache-cold, and at 0.15-0.3 ms per query that warm-up
+			// dominates: measured, it inflated fuzzysort 0.18 -> 0.65 ms and uFuzzy
+			// 0.18 -> 0.45 while barely touching the slow libraries, which reorders
+			// the table rather than just adding noise. A 1-40 ms index build swamps
+			// the same effect, which is why it is the right treatment there and the
+			// wrong one here. Drift across the phase is instead spread by every
+			// configuration being sampled once per query across all fifteen, and
+			// detected by the canary below.
+
+			// Drift canary: the same configuration on the same query, before and
+			// after the whole timing phase. Interleaving spreads drift evenly
+			// across configurations but cannot detect it; this does. A run that
+			// moves this far has absorbed load or thermal debt and its cells are
+			// not comparable.
+			const canaryQuery = specs[0].query;
+			const canary = configByName(all, "krino");
+			const canaryBefore = timeQuery(() => canary.count(canaryQuery), resetFor(canary));
+
 			const tables: ProbeTable[] = [];
 			const rows = specs.map(({ query, kind, source }) => {
 				const row: Record<string, string> = { kind, query };
@@ -204,6 +224,15 @@ describe("bench validity: per-library match counts and source rank", () => {
 				return row;
 			});
 			console.table(rows);
+
+			const canaryAfter = timeQuery(() => canary.count(canaryQuery), resetFor(canary));
+			const drift = Math.abs(canaryAfter - canaryBefore) / Math.min(canaryBefore, canaryAfter);
+			expect(
+				drift,
+				`[${name}] machine drifted across the timing phase: krino on "${canaryQuery}" ` +
+					`${canaryBefore.toFixed(3)} ms before, ${canaryAfter.toFixed(3)} ms after. ` +
+					"Rerun on a quiet machine; these cells are not comparable.",
+			).toBeLessThan(0.25);
 
 			// Scorecard: MRR with a top-10 cutoff (mean of 1/rank; misses and
 			// ranks outside the top 10 score 0) vs mean ms. Result-set size is

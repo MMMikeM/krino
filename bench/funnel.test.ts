@@ -98,6 +98,20 @@ describe("pre-filter funnel", () => {
 								editKind(query, result.corrected as string),
 							);
 						}
+						// The regex gate is a pre-filter, so it may only false-pass.
+						// `gatePass >= matched` below is an aggregate and can hold
+						// while individual fields are wrongly rejected; this is the
+						// per-field form. It is what licenses the gate being
+						// tighter than a bare subsequence test — it anchors at an
+						// admissible first chunk, and anything the ladder accepts
+						// has one. (A rescue matched a corrected query, so it is
+						// exempt for the same reason as the mask above.)
+						if (result.tier !== "corrected") {
+							expect(
+								gate.test(normalized[i]),
+								`gate rejected a ${result.tier} match for "${query}": ${list[i]}`,
+							).toBe(true);
+						}
 					}
 					if (!maskOk) continue;
 					maskPass++;
