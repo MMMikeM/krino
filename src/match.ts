@@ -8,6 +8,7 @@
 
 import { isBoundaryChar, splitWords, wordChar } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
+import { MISSING_CLASS_DISPATCH } from "./flags";
 import { buildFuzzyGate, buildPresenceGate, charMask, escapeRegex, maskIsExact } from "./gates";
 import { SCORES, TYPO_PENALTY } from "./scores";
 import type { HighlightRanges, MatchResult, Range } from "./types";
@@ -44,6 +45,13 @@ type RescueVariant = {
 	text: string;
 	rawText: string;
 	shortens: boolean;
+	/**
+	 * Char classes the corrected query needs. Every variant here is the query
+	 * with characters swapped or dropped, so this is a subset of the query mask
+	 * and `mask & missingClasses` is exactly "the field lacks a class this
+	 * correction requires".
+	 */
+	mask: number;
 	prepared: PreparedQuery | null;
 };
 
@@ -261,6 +269,7 @@ const buildRescueVariants = (query: string, normalizedQuery: string): RescueVari
 			text,
 			rawText: aligned ? edit(query, j) : text,
 			shortens: text.length < normalizedQuery.length,
+			mask: charMask(text),
 			prepared: null,
 		});
 	};
@@ -286,6 +295,7 @@ const typoRescue = (
 	fieldMask: number,
 	q: PreparedQuery,
 	acronym: boolean,
+	missingClasses: number,
 ): MatchResult | null => {
 	let gate = q.rescueGate;
 	if (gate === undefined) {
@@ -317,6 +327,11 @@ const typoRescue = (
 			// Only a drop shortens the query, so only it answers to the
 			// field-length floor; a swap stays on MIN_RESCUE_QUERY_LENGTH.
 			if (variant.shortens && q.normalizedQuery.length < floor) continue;
+			// A field admitted only by the relaxed mask is missing a class, and
+			// no correction that still needs that class can match it — which
+			// rules out every swap outright, since a swap keeps the query's
+			// characters. Cheaper than the substring scan it skips.
+			if (MISSING_CLASS_DISPATCH && (variant.mask & missingClasses) !== 0) continue;
 			if (!normalizedField.includes(variant.text)) continue;
 			const prepared = (variant.prepared ??= prepareQuery(variant.rawText, variant.text));
 			// Enumeration order is by edit position, which says nothing about how
@@ -457,7 +472,7 @@ export const matchField = (
 	// field never had was typed as well, "genexric"). A swap cannot, so its
 	// variants simply fail the gate.
 	if (missingClasses !== 0) {
-		return typoRescue(field, normalizedField, fieldMask, q, acronym);
+		return typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses);
 	}
 
 	// Bulk-reject remaining non-candidates before the tier ladder. Single-word
@@ -470,7 +485,9 @@ export const matchField = (
 	if (frontGate && !frontGate.test(normalizedField)) {
 		// Rescue viability was already decided above, so ineligible queries
 		// (multi-word, short) pay nothing, not even a call, on this bulk-reject path.
-		return rescuable ? typoRescue(field, normalizedField, fieldMask, q, acronym) : null;
+		return rescuable
+			? typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses)
+			: null;
 	}
 
 	if (field === query)
@@ -552,10 +569,14 @@ export const matchField = (
 		// let junk assemble out of scraps while the field literally contains the
 		// corrected word. Returning here would hide both rescues below.
 		const dropped = missingCharRescue(field, normalizedField, fieldMask, q, acronym, fuzzy[1]);
-		const corrected = rescuable ? typoRescue(field, normalizedField, fieldMask, q, acronym) : null;
+		const corrected = rescuable
+			? typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses)
+			: null;
 		return cheaper(cheaper(dropped, corrected), chain);
 	}
 	// Every tier failed (the chain can refuse via the density floor even past
 	// the gate) — last chance for the one-edit rescue.
-	return rescuable ? typoRescue(field, normalizedField, fieldMask, q, acronym) : null;
+	return rescuable
+		? typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses)
+		: null;
 };

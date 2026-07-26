@@ -5,16 +5,22 @@
  *   built on the primitive. Second arg is a `getText` fn or an array of field specs.
  */
 
+import { LAZY_FIELDS } from "./flags";
 import { charMask } from "./gates";
 import { admitsMissingClass, matchField, prepareQuery } from "./match";
-import { normalizeText } from "./normalize";
+import { normalizeText, rawCharMask } from "./normalize";
+import { SCORES } from "./scores";
 import type { FieldSpec, FuzzyResult, FuzzySearcher, MatchOptions, MatchResult } from "./types";
 
 const { MAX_SAFE_INTEGER } = Number;
 
-const sortByScore = <T>(a: FuzzyResult<T>, b: FuzzyResult<T>): number => a.score - b.score;
+// How many literal-tier hits stop the one-edit rescue from being attempted on
+// later items. Ten because that is the slice a picker shows, and the same
+// cutoff the published MRR uses; a correction that cannot reach the top ten is
+// work no caller can observe through the ranking.
+const RESCUE_BUDGET = 10;
 
-const toNullField = (): null => null;
+const sortByScore = <T>(a: FuzzyResult<T>, b: FuzzyResult<T>): number => a.score - b.score;
 
 // Shift ranges from trimmed-field space into the caller's raw string. Only
 // leading whitespace shifts offsets; matchField returns fresh Range tuples per
@@ -104,6 +110,14 @@ export function createFuzzySearch<T>(
 
 	const count = list.length;
 	const preparedFields: PreparedField[][] = [];
+	// Filled on first mask survival, indexed item-major like fieldMasks. Two flat
+	// arrays rather than objects: the survivors of one query are a few percent of
+	// the corpus, and they recur across keystrokes, so this warms to the working
+	// set instead of the whole list.
+	// oxlint-disable-next-line unicorn/no-new-array
+	const lazyRaw: (string | undefined)[] = LAZY_FIELDS ? new Array(count * specCount) : [];
+	// oxlint-disable-next-line unicorn/no-new-array
+	const lazyNorm: (string | undefined)[] = LAZY_FIELDS ? new Array(count * specCount) : [];
 	// Per-item union of field masks in a typed array, so the reject scan reads 4
 	// bytes per item instead of chasing object properties. The union can only
 	// false-pass (some field may still miss a class); matchField's per-field mask
@@ -121,16 +135,21 @@ export function createFuzzySearch<T>(
 		let union = 0;
 		for (let f = 0; f < specCount; f++) {
 			const raw = resolvedSpecs[f].text(item) || "";
-			const field = raw.trim();
-			const normalizedField = normalizeText(field);
-			const mask = charMask(normalizedField);
-			const lead = raw.length - raw.trimStart().length;
-			if (lead) (leads ??= new Int32Array(count * specCount))[i * specCount + f] = lead;
-			prepared.push({ field, normalizedField });
+			// The mask is the only thing every item needs, and it folds straight
+			// out of the raw string: no trim, no normalise, no allocation. Even
+			// `lead` waits — it is read only for items that produce a result.
+			const mask = LAZY_FIELDS ? rawCharMask(raw) : charMask(normalizeText(raw.trim()));
+			if (!LAZY_FIELDS) {
+				const lead = raw.length - raw.trimStart().length;
+				if (lead) (leads ??= new Int32Array(count * specCount))[i * specCount + f] = lead;
+				const field = raw.trim();
+				const normalizedField = normalizeText(field);
+				prepared.push({ field, normalizedField });
+			}
 			fieldMasks[i * specCount + f] = mask;
 			union |= mask;
 		}
-		preparedFields.push(prepared);
+		if (!LAZY_FIELDS) preparedFields.push(prepared);
 		unionMasks[i] = union;
 	}
 
@@ -181,6 +200,14 @@ export function createFuzzySearch<T>(
 		const survivors = (spare ??= new Int32Array(count));
 		let survivorCount = 0;
 		const results: FuzzyResult<T>[] = [];
+		// A correction scores at least TYPO_PENALTY (2.1), so it can never reach
+		// a result set that already holds RESCUE_BUDGET matches at or below
+		// SCORES.CONTAINS (2). Past that point the rescue is provably invisible
+		// work: it costs 94% of matchField calls to produce ~1% of results
+		// (@see docs/benchmarks.md). Counting literal-tier hits rather than all
+		// results is what makes it sound — `fuzzy` starts at CONTAINS and rises
+		// past 2.1, so fuzzy hits cannot crowd a correction out.
+		let literalHits = 0;
 
 		for (let k = 0; k < scanCount; k++) {
 			const i = source ? source[k] : k;
@@ -190,20 +217,35 @@ export function createFuzzySearch<T>(
 			if (rescuable ? missingClasses & (missingClasses - 1) : missingClasses) continue;
 			survivors[survivorCount++] = i;
 
-			const prepared = preparedFields[i];
 			const maskBase = i * specCount;
+			// Everything past the mask is materialised here, not at build: this
+			// item survived, so its text is finally worth paying for. Cached, so a
+			// keystroke that revisits the same survivor pays nothing.
+			if (LAZY_FIELDS && lazyNorm[maskBase] === undefined) {
+				const item = list[i];
+				for (let f = 0; f < specCount; f++) {
+					const raw = resolvedSpecs[f].text(item) || "";
+					const lead = raw.length - raw.trimStart().length;
+					if (lead) (leads ??= new Int32Array(count * specCount))[maskBase + f] = lead;
+					lazyRaw[maskBase + f] = raw.trim();
+					lazyNorm[maskBase + f] = normalizeText(lazyRaw[maskBase + f] as string);
+				}
+			}
+			const prepared = LAZY_FIELDS ? null : preparedFields[i];
 			let bestScore = MAX_SAFE_INTEGER;
 			let fields: (MatchResult | null)[] | null = null;
 
 			for (let f = 0; f < specCount; f++) {
-				const p = prepared[f];
 				const s = resolvedSpecs[f];
 				const result = matchField(
-					p.field,
-					p.normalizedField,
+					LAZY_FIELDS ? (lazyRaw[maskBase + f] as string) : (prepared as PreparedField[])[f].field,
+					LAZY_FIELDS
+						? (lazyNorm[maskBase + f] as string)
+						: (prepared as PreparedField[])[f].normalizedField,
 					fieldMasks[maskBase + f],
 					q,
 					s.acronym,
+					literalHits >= RESCUE_BUDGET,
 				);
 				if (result) {
 					// matchField returns a fresh object per call, so the atBest
@@ -214,11 +256,13 @@ export function createFuzzySearch<T>(
 						if (lead) shiftRanges(result.ranges, lead);
 					}
 					bestScore = Math.min(bestScore, result.score);
-					(fields ??= prepared.map(toNullField))[f] = result;
+					// oxlint-disable-next-line unicorn/no-new-array
+					(fields ??= new Array(specCount).fill(null))[f] = result;
 				}
 			}
 
 			if (fields) {
+				if (bestScore <= SCORES.CONTAINS) literalHits++;
 				results.push({ item: list[i], score: bestScore, fields });
 			}
 		}

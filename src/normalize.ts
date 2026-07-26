@@ -81,3 +81,43 @@ export const normalizeText = (str: string): string => {
 	for (const ch of s) out += foldChar(ch);
 	return out;
 };
+
+/**
+ * `charMask(normalizeText(raw))` without building the normalized string.
+ *
+ * The build scan needs the mask and nothing else, so folding each code point
+ * into the bits directly skips an allocation per item — at 100k items that is
+ * the whole eager index's cost, for a value most items never have read.
+ *
+ * Skipping NFC can only ADD bits (a decomposed "é" contributes its combining
+ * mark to the non-ASCII bucket where the composed form would not), and extra
+ * field bits make the gate more permissive. False-pass only, which is the rule
+ * every gate here obeys.
+ */
+export const rawCharMask = (raw: string): number => {
+	let mask = 0;
+	for (let i = 0; i < raw.length; i++) {
+		const c = raw.charCodeAt(i);
+		// ASCII by code unit, allocation-free: iterating with for..of would build
+		// a one-character string per code point, ~3M of them over a 100k corpus.
+		if (c >= 97 && c <= 122) mask |= 1 << (c - 97);
+		else if (c >= 65 && c <= 90) mask |= 1 << (c - 65);
+		else if (c >= 48 && c <= 57) mask |= 1 << (26 + (c & 3));
+		else if (c > 127) {
+			// Only here does the fold matter, and only here does it allocate:
+			// "é" contributes the letter bit for "e", not the non-ASCII bucket,
+			// so skipping the fold would DROP a bit and false-reject.
+			const cp = raw.codePointAt(i) as number;
+			if (cp > 0xffff) i++;
+			const folded = foldChar(String.fromCodePoint(cp));
+			for (let k = 0; k < folded.length; k++) {
+				const f = folded.charCodeAt(k);
+				if (f >= 97 && f <= 122) mask |= 1 << (f - 97);
+				else if (f >= 65 && f <= 90) mask |= 1 << (f - 65);
+				else if (f >= 48 && f <= 57) mask |= 1 << (26 + (f & 3));
+				else if (f > 127) mask |= 1 << (30 + (f & 1));
+			}
+		}
+	}
+	return mask;
+};
