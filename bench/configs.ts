@@ -36,10 +36,15 @@ export type Config = {
 	/** Result count only — the shape compare.bench.ts times. */
 	count: (query: string) => number;
 	probe: (query: string) => Probe;
-	/** One-time preparation, or null for the libraries that prepare inside every query. */
-	index: ((warmupQuery: string) => number) | null;
-	/** index() runs a query; callers subtract a steady-state one so the cell is preparation alone. */
-	deferredIndex?: boolean;
+	/** Constructor cost alone (plus unavoidable per-searcher preparation like uFuzzy's latinize), or null when the library has no constructor at all. */
+	index: (() => number) | null;
+	/**
+	 * A brand-new searcher with every cache empty and every lazy slice unpaid,
+	 * for cold-query timing: the first call on it is the worst case. Omitted for
+	 * libraries that keep no per-searcher or process-wide state — their cold and
+	 * warm calls are the same call.
+	 */
+	fresh?: () => (query: string) => number;
 	/** Carries cross-query state, so timing loops must bust it between samples. */
 	stateful?: boolean;
 };
@@ -76,6 +81,21 @@ const UFUZZY_ALL: uFuzzy.Options = {
 // configuration every rank it would have earned.
 const OUT_OF_ORDER = 5;
 
+// `pnpm bench --only=krino` narrows a run to the configurations whose name
+// contains one of these tokens, so a change to one library can be re-measured
+// without re-timing the other thirteen. Comma-separated, case-insensitive
+// substrings. Read here rather than passed down because every stage reaches its
+// configurations through `configs()`, and a stage that missed the filter would
+// silently measure the full matrix.
+const ONLY: string[] = (process.env.BENCH_ONLY ?? "")
+	.toLowerCase()
+	.split(",")
+	.map((t) => t.trim())
+	.filter(Boolean);
+
+const selected = (name: string): boolean =>
+	ONLY.length === 0 || ONLY.some((token) => name.toLowerCase().includes(token));
+
 // Consume a constructed object so creation can't be elided.
 const consume = (o: object): number => o.constructor.name.length;
 
@@ -84,13 +104,43 @@ const rankedOnly = (items: string[]): Probe => ({ count: items.length, ranked: i
 const byScore = <T extends { score: number }>(hits: T[]): T[] =>
 	[...hits].sort((a, b) => a.score - b.score);
 
+// uFuzzy ranks only below `infoThresh` (default 1000) and hands back bare
+// indices above it — no scores, no order, no ranges. Raised here so it does the
+// same job as every other row: left at the default, a wide query credits it for
+// a filter-only pass while everything else scores, sorts and computes ranges.
+// The throw below is the backstop, for the day this stops working.
+const RANK_EVERYTHING = 1e9;
+
+const uFuzzyRanked = (
+	instance: uFuzzy,
+	haystack: string[],
+	needle: string,
+	outOfOrder = 0,
+): [uFuzzy.SearchResult[0], uFuzzy.SearchResult[1], uFuzzy.SearchResult[2]] => {
+	const [idxs, info, order] = instance.search(haystack, needle, outOfOrder, RANK_EVERYTHING);
+	if (idxs?.length && (!info || !order)) {
+		throw new Error(
+			`uFuzzy returned ${idxs.length} UNRANKED matches for ${JSON.stringify(needle)}: above infoThresh (1000), so it skipped scoring entirely. Not comparable with a ranked result set.`,
+		);
+	}
+	return [idxs, info, order];
+};
+
+// Declining to rank is a legitimate outcome for the quality stage — it scores
+// as a miss, which is what it is. Only the speed stage must refuse it, because
+// timing a filter-only pass against a ranked one measures nothing.
 const uFuzzyProbe =
 	(list: string[], instance: uFuzzy, haystack: string[], outOfOrder?: number) =>
 	(query: string): Probe => {
 		const needle = haystack === list ? query : uFuzzy.latinize([query])[0];
-		const [idxs, info, order] = instance.search(haystack, needle, outOfOrder);
+		const [idxs, info, order] = instance.search(haystack, needle, outOfOrder, RANK_EVERYTHING);
 		if (!idxs?.length) return { count: 0, ranked: [] };
-		if (!info || !order) return { count: idxs.length, ranked: null };
+		if (!info || !order) {
+			process.stderr.write(
+				`  note: uFuzzy declined to rank ${idxs.length} matches for ${JSON.stringify(needle)} (above infoThresh) — scored as a miss\n`,
+			);
+			return { count: idxs.length, ranked: null };
+		}
 		return rankedOnly(order.map((o) => list[info.idx[o]]));
 	};
 
@@ -100,6 +150,11 @@ const uFuzzyProbe =
 type Definition = { name: string; make: () => Omit<Config, "name"> };
 
 const definitions = (list: string[]): Definition[] => [
+	// krino prepares nothing at construction: the char-class masks are built only
+	// if a query needs the one-edit rescue, and a field's text only once it
+	// survives a filter. The index cell is the constructor alone; everything the
+	// construction deferred lands in the COLD query cell, where a fresh searcher
+	// pays it — the same split every lazy preparer gets.
 	{
 		name: "krino",
 		make: () => {
@@ -108,6 +163,10 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => krino(q).length,
 				probe: (q) => rankedOnly(krino(q).map((r) => r.item)),
 				index: () => consume(createFuzzySearch(list)),
+				fresh: () => {
+					const s = createFuzzySearch(list);
+					return (q) => s(q).length;
+				},
 				stateful: true,
 			};
 		},
@@ -115,11 +174,16 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "krino (acronym)",
 		make: () => {
-			const acronym = createFuzzySearch(list, [{ text: (x: string) => x, acronym: true }]);
+			const spec = [{ text: (x: string) => x, acronym: true }];
+			const acronym = createFuzzySearch(list, spec);
 			return {
 				count: (q) => acronym(q).length,
 				probe: (q) => rankedOnly(acronym(q).map((r) => r.item)),
-				index: () => consume(createFuzzySearch(list, [{ text: (x: string) => x, acronym: true }])),
+				index: () => consume(createFuzzySearch(list, spec)),
+				fresh: () => {
+					const s = createFuzzySearch(list, spec);
+					return (q) => s(q).length;
+				},
 				stateful: true,
 			};
 		},
@@ -131,8 +195,11 @@ const definitions = (list: string[]): Definition[] => [
 			return {
 				count: (q) => microfuzz(q).length,
 				probe: (q) => rankedOnly(byScore(microfuzz(q)).map((r) => r.item)),
-				index: (warmup) => createMicrofuzz(list)(warmup).length,
-				deferredIndex: true,
+				index: () => consume(createMicrofuzz(list)),
+				fresh: () => {
+					const s = createMicrofuzz(list);
+					return (q) => s(q).length;
+				},
 			};
 		},
 	},
@@ -143,8 +210,11 @@ const definitions = (list: string[]): Definition[] => [
 			return {
 				count: (q) => aggressive(q).length,
 				probe: (q) => rankedOnly(byScore(aggressive(q)).map((r) => r.item)),
-				index: (warmup) => createMicrofuzz(list, { strategy: "aggressive" })(warmup).length,
-				deferredIndex: true,
+				index: () => consume(createMicrofuzz(list, { strategy: "aggressive" })),
+				fresh: () => {
+					const s = createMicrofuzz(list, { strategy: "aggressive" });
+					return (q) => s(q).length;
+				},
 			};
 		},
 	},
@@ -170,12 +240,13 @@ const definitions = (list: string[]): Definition[] => [
 		make: () => ({
 			count: (q) => fuzzysort.go(q, list).length,
 			probe: (q) => rankedOnly(fuzzysort.go(q, list).map((r) => r.target)),
-			// No constructor; this is the prepare-all pass its first go() runs
-			// lazily and caches process-wide.
-			index: () => {
-				let n = 0;
-				for (const s of list) n += fuzzysort.prepare(s).target.length;
-				return n;
+			// No constructor at all: the prepare-all pass its first go() runs
+			// lazily is process-wide state, so it is priced where it is paid —
+			// the cold query, via cleanup() emptying the cache.
+			index: null,
+			fresh: () => {
+				fuzzysort.cleanup();
+				return (q) => fuzzysort.go(q, list).length;
 			},
 		}),
 	},
@@ -195,6 +266,10 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => fastFuzzy.search(q).length,
 				probe: (q) => rankedOnly(fastFuzzy.search(q)),
 				index: () => consume(new Searcher(list)),
+				fresh: () => {
+					const s = new Searcher(list);
+					return (q) => s.search(q).length;
+				},
 			};
 		},
 	},
@@ -206,6 +281,10 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => withMatchData.search(q).length,
 				probe: (q) => rankedOnly(withMatchData.search(q).map((m) => m.item)),
 				index: () => consume(new Searcher(list, { returnMatchData: true })),
+				fresh: () => {
+					const s = new Searcher(list, { returnMatchData: true });
+					return (q) => s.search(q).length;
+				},
 			};
 		},
 	},
@@ -214,7 +293,7 @@ const definitions = (list: string[]): Definition[] => [
 		make: () => {
 			const uf = new uFuzzy();
 			return {
-				count: (q) => uf.search(list, q)[0]?.length ?? 0,
+				count: (q) => uFuzzyRanked(uf, list, q)[0]?.length ?? 0,
 				probe: uFuzzyProbe(list, uf, list),
 				index: null,
 			};
@@ -227,11 +306,16 @@ const definitions = (list: string[]): Definition[] => [
 			const latinized = uFuzzy.latinize(list);
 			return {
 				count: (q) =>
-					ufAll.search(latinized, uFuzzy.latinize([q])[0], OUT_OF_ORDER)[0]?.length ?? 0,
+					uFuzzyRanked(ufAll, latinized, uFuzzy.latinize([q])[0], OUT_OF_ORDER)[0]?.length ?? 0,
 				probe: uFuzzyProbe(list, ufAll, latinized, OUT_OF_ORDER),
 				// Latinizing the haystack is real preparation that normally hides as
 				// "no index", and this row competes on the total column.
 				index: () => uFuzzy.latinize(list).length,
+				fresh: () => {
+					const uf = new uFuzzy(UFUZZY_ALL);
+					const hay = uFuzzy.latinize(list);
+					return (q) => uFuzzyRanked(uf, hay, uFuzzy.latinize([q])[0], OUT_OF_ORDER)[0]?.length ?? 0;
+				},
 			};
 		},
 	},
@@ -243,6 +327,10 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => fuse.search(q).length,
 				probe: (q) => rankedOnly(fuse.search(q).map((r) => r.item)),
 				index: () => consume(new Fuse(list, FUSE_BASE)),
+				fresh: () => {
+					const s = new Fuse(list, FUSE_BASE);
+					return (q) => s.search(q).length;
+				},
 			};
 		},
 	},
@@ -254,6 +342,10 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => fuseAll.search(q).length,
 				probe: (q) => rankedOnly(fuseAll.search(q).map((r) => r.item)),
 				index: () => consume(new Fuse(list, FUSE_ALL)),
+				fresh: () => {
+					const s = new Fuse(list, FUSE_ALL);
+					return (q) => s.search(q).length;
+				},
 			};
 		},
 	},
@@ -262,10 +354,14 @@ const definitions = (list: string[]): Definition[] => [
 /** Every configuration name, in table order, without constructing anything. */
 export const CONFIG_NAMES: string[] = definitions([]).map((d) => d.name);
 
-/** Every configuration against `list`, or just the one named by `only`. */
+/**
+ * Every configuration against `list`, or just the one named by `only`.
+ * Without `only`, BENCH_ONLY narrows the set — an exact request always wins,
+ * so the per-cell harnesses keep working during a narrowed pipeline run.
+ */
 export const configs = (list: string[], only?: string): Config[] =>
 	definitions(list)
-		.filter((d) => only == null || d.name === only)
+		.filter((d) => (only == null ? selected(d.name) : d.name === only))
 		.map((d) => ({ name: d.name, ...d.make() }));
 
 export const configByName = (all: Config[], name: string): Config => {

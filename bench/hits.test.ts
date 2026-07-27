@@ -84,22 +84,16 @@ describe("bench validity: per-library match counts and source rank", () => {
 						}
 					: undefined;
 
-			// One-time index cost per configuration (0 for the libraries that keep
-			// no index — their preparation happens inside every query above).
-			// Ledger notes: microfuzz defers part of its preparation to the first
-			// search (its docs: "the first search takes ~7 ms"), so its cell is
-			// time-to-ready: build + first search, with one steady-state search
-			// subtracted below (index = build + first − second) so the cell
-			// isolates preparation. fuzzysort also preps lazily: its first go()
-			// prepares every string target and caches them process-wide (measured
-			// ~87× a steady query at 10k), so its cell times an explicit
-			// prepare-all loop — the same work go() does lazily, but repeatable,
-			// where the one-shot lazy fill would be visible only once per process.
-			const firstQuery = specs[0]?.query ?? "steel";
+			// One-time index cost per configuration: the constructor alone (— for
+			// libraries with no constructor at all). Every lazy slice — krino's
+			// deferred masks, microfuzz's first-search preparation, fuzzysort's
+			// process-wide prepare cache — is priced in the COLD query cells
+			// below, where a fresh searcher actually pays it; pricing it here too
+			// would double-count it in the total column.
 			const indexers: Record<string, () => number> = Object.fromEntries(
 				all
 					.filter((c): c is Config & { index: NonNullable<Config["index"]> } => c.index != null)
-					.map((c) => [c.name, () => (c.index as (q: string) => number)(firstQuery)]),
+					.map((c) => [c.name, c.index as () => number]),
 			);
 			// Builds are allocation-heavy, so sequential per-config windows pick
 			// up order-dependent GC debt: one configuration's garbage is
@@ -146,19 +140,22 @@ describe("bench validity: per-library match counts and source rank", () => {
 			{
 				const a = indexMin.krino;
 				const b = indexMin["krino (acronym)"];
-				expect(Math.abs(a - b) / Math.max(a, b), "krino config builds diverged").toBeLessThan(0.25);
+				// Construction allocates the survivor buffers and nothing else now
+				// that the masks are deferred, so both cells sit at the timer's
+				// floor and a *ratio* between them is pure noise. Below that floor
+				// the claim worth making is that neither config builds anything.
+				const FLOOR_MS = 0.25;
+				if (Math.max(a, b) < FLOOR_MS) {
+					expect(Math.max(a, b), "krino construction is no longer trivial").toBeLessThan(
+						FLOOR_MS,
+					);
+				} else {
+					expect(Math.abs(a - b) / Math.max(a, b), "krino config builds diverged").toBeLessThan(
+						0.25,
+					);
+				}
 				indexMs.krino = indexMs["krino (acronym)"] = (indexMs.krino + indexMs["krino (acronym)"]) / 2;
 			}
-			// index = build + first − second: subtract one steady-state search of
-			// the same query (on the long-lived searcher) so a deferred preparer's
-			// cell is preparation only, not preparation + one query.
-			for (const config of all.filter((c) => c.deferredIndex)) {
-				indexMs[config.name] = Math.max(
-					0,
-					(indexMs[config.name] ?? 0) - timeQuery(() => config.count(firstQuery)),
-				);
-			}
-
 			// One full warm pass over every lib × query before any timing —
 			// early cells otherwise pay the whole process's JIT warmup.
 			for (const config of all) {
@@ -166,8 +163,8 @@ describe("bench validity: per-library match counts and source rank", () => {
 			}
 
 			// Per-lib aggregates: reciprocal ranks (miss = 0) over the scored
-			// queries, time over every query.
-			const scores: Record<string, { rrs: number[]; times: number[] }> = {};
+			// queries, warm and cold time over every query.
+			const scores: Record<string, { rrs: number[]; times: number[]; colds: number[] }> = {};
 
 			// Query cells are NOT interleaved the way the index cells above are.
 			// Interleaving makes consecutive samples hit different libraries, so
@@ -197,28 +194,23 @@ describe("bench validity: per-library match counts and source rank", () => {
 					const lib = config.name;
 					const ms = timeQuery(() => config.count(query), resetFor(config));
 					const { count, rank } = outcome(config.probe(query), source);
-					const s = (scores[lib] ??= { rrs: [], times: [] });
+					const s = (scores[lib] ??= { rrs: [], times: [], colds: [] });
 					s.times.push(ms);
 					if (source != null) {
 						// MRR@10: a rank outside the top 10 is as invisible to a
 						// picker as a miss — both score 0.
 						s.rrs.push(rank && rank <= 10 ? 1 / rank : 0);
 					}
-					// query time against the prebuilt searcher / cold one-shot
-					// (query + one-time index) — equal for the no-index libs.
-					// total ≈ the FIRST query from cold, but the addend is a
-					// steady-state query on purpose: every one-time cost —
-					// including microfuzz's lazy first-search slice — is priced
-					// into indexMs, so timing a literal first call here would
-					// double-count the preparation.
-					const total = ms + (indexMs[lib] ?? 0);
+					// coldMs and totalMs are filled by the cold phase below, after
+					// the drift canary closes the warm timing window.
 					cells[lib] = {
 						count,
 						rank,
+						coldMs: 0,
 						queryMs: Number(ms.toFixed(3)),
-						totalMs: Number(total.toFixed(3)),
+						totalMs: 0,
 					};
-					row[lib] = `${cell({ count, rank }, source)} ${fmtMs(ms)}/${fmtMs(total)}ms`;
+					row[lib] = `${cell({ count, rank }, source)} ${fmtMs(ms)}ms`;
 				}
 				tables.push({ kind, query, source, cells });
 				return row;
@@ -234,6 +226,41 @@ describe("bench validity: per-library match counts and source rank", () => {
 					"Rerun on a quiet machine; these cells are not comparable.",
 			).toBeLessThan(0.25);
 
+			// Cold cells: the same query as the FIRST call on a brand-new
+			// searcher — every cache empty, every lazy slice unpaid, the worst
+			// case a user can hit. Construction stays outside the timed window
+			// (the index cell prices it); a configuration without per-searcher
+			// state reuses its warm cell, because cold and warm are the same
+			// call there. Runs after the drift canary so fresh-searcher builds
+			// can't leak GC debt into the warm cells.
+			const timeColdQuery = (fresh: () => (q: string) => number, query: string): number => {
+				{
+					const run = fresh();
+					sink += run(query);
+				}
+				const samples: number[] = [];
+				const budget = performance.now() + 100;
+				while (performance.now() < budget && samples.length < 25) {
+					const run = fresh();
+					const t0 = performance.now();
+					sink += run(query);
+					samples.push(performance.now() - t0);
+				}
+				samples.sort((a, b) => a - b);
+				return samples[samples.length >> 1] ?? 0;
+			};
+			for (const [i, { query }] of specs.entries()) {
+				const t = tables[i];
+				for (const config of all) {
+					const c = t.cells[config.name];
+					c.coldMs = Number(
+						(config.fresh ? timeColdQuery(config.fresh, query) : c.queryMs).toFixed(3),
+					);
+					c.totalMs = Number((c.coldMs + (indexMs[config.name] ?? 0)).toFixed(3));
+					scores[config.name].colds.push(c.coldMs);
+				}
+			}
+
 			// Scorecard: MRR with a top-10 cutoff (mean of 1/rank; misses and
 			// ranks outside the top 10 score 0) vs mean ms. Result-set size is
 			// deliberately not scored — ranked UIs slice to the top N, so a
@@ -244,13 +271,15 @@ describe("bench validity: per-library match counts and source rank", () => {
 			const scorecard = Object.entries(scores)
 				.map(([library, s]) => {
 					const queryMs = Number(mean(s.times).toFixed(3));
+					const coldMs = Number(mean(s.colds).toFixed(3));
 					const index = Number((indexMs[library] ?? 0).toFixed(3));
 					return {
 						library,
 						mrr: Number(mean(s.rrs).toFixed(2)),
 						indexMs: index,
+						coldMs,
 						queryMs,
-						totalMs: Number((index + queryMs).toFixed(3)),
+						totalMs: Number((index + coldMs).toFixed(3)),
 					};
 				})
 				.sort((a, b) => b.mrr - a.mrr);
@@ -259,7 +288,8 @@ describe("bench validity: per-library match counts and source rank", () => {
 					library: r.library,
 					MRR: r.mrr.toFixed(2),
 					"index ms": r.indexMs ? r.indexMs.toFixed(2) : "—",
-					"query ms": r.queryMs.toFixed(2),
+					"cold ms": r.coldMs.toFixed(2),
+					"warm ms": r.queryMs.toFixed(2),
 					"total ms": r.totalMs.toFixed(2),
 				})),
 			);
@@ -287,14 +317,23 @@ describe("bench validity: per-library match counts and source rank", () => {
 				const { count, rank } = outcome(krino.probe(query), source);
 				if (kind === "miss") {
 					expect(count, `krino matched garbage "${query}"`).toBe(0);
+				} else if (kind === "two-words-double-typo") {
+					// Two edits in one phrase: the one-edit rescue must refuse
+					// rather than guess. The edit-distance engines may match it;
+					// krino returning anything here means the multi-word rescue
+					// invented a correction.
+					expect(count, `krino guessed at the double typo "${query}"`).toBe(0);
 				} else if (!kind.startsWith("scatter")) {
 					// krino must surface the item each query was derived from.
-					// (Only the scatter kinds are exempt — those probe where chunk
+					// (The scatter kinds are exempt — those probe where chunk
 					// assembly legitimately gives up, and that limit is the
 					// measurement. The three single-edit typo kinds used to be
 					// exempt too, on the grounds that they break the subsequence
 					// property outright; the one-edit rescue tiers now recover all
-					// of them, so they are held to the same bar as everything else.)
+					// of them. The two-words-typo kinds joined them when
+					// multiWordRescue landed: the failing word is corrected over
+					// the fields the literal words pin down, so a typo inside a
+					// phrase is held to the same bar as everything else.)
 					expect(rank, `krino lost source of "${query}" (${kind})`).not.toBeNull();
 				}
 			}
@@ -305,7 +344,11 @@ describe("bench validity: per-library match counts and source rank", () => {
 			if (accentProbe) {
 				const { query, source } = accentProbe;
 				expect(countFor("krino", query, source)).toBeGreaterThan(0);
+				// Cross-library pairs only exist on a full run; `--only=` narrows the
+				// set, and a comparison against an absent row would assert nothing.
+				const present = new Set(all.map((c) => c.name));
 				for (const lib of ["uFuzzy", "fuse.js"]) {
+					if (!present.has(lib) || !present.has(`${lib} (all opts)`)) continue;
 					expect(
 						countFor(`${lib} (all opts)`, query, source),
 						`${lib} (all opts) found less than its non-folding base`,

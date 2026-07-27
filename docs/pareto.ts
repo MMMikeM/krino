@@ -1,7 +1,7 @@
 // Pareto-frontier charts: accuracy (MRR) vs cost, one chart per ledger.
 // - pareto-query-*.svg — query ms with the index prebuilt (frontend ledger:
 //   the index is built eagerly at load, keystrokes pay query only).
-// - pareto-total-*.svg — total ms = index + one query (backend one-shot ledger).
+// - pareto-total-*.svg — total ms = index + first (cold) query (backend one-shot ledger).
 // All styling is inlined because GitHub strips <style> blocks from SVGs.
 import { writeFileSync } from "node:fs";
 import type { Artifact } from "../bench/artifact.ts";
@@ -46,7 +46,7 @@ const METRICS: Record<Metric, {
 }> = {
 	query: {
 		file: "pareto-query",
-		X0: 0.08,
+		X0: 0.05,
 		X1: 25,
 		ticks: [0.1, 0.2, 0.5, 1, 2, 5, 10, 20],
 		heading: "Ranking quality vs. warm query cost",
@@ -63,10 +63,10 @@ const METRICS: Record<Metric, {
 		ticks: [0.2, 0.5, 1, 2, 5, 10, 20, 50],
 		heading: "Ranking quality vs. cold search cost",
 		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · index built per search`,
-		axis: "Cold duration: index + one query. Log scale, lower is better",
-		title: "Fuzzy search libraries: MRR vs total cost (index + one query)",
+		axis: "Cold start: index + first query on a fresh searcher. Log scale, lower is better",
+		title: "Fuzzy search libraries: MRR vs total cost (index + cold query)",
 		tail:
-			"The no-index engines own the cheapest cold one-shots; the two Krino configurations share one pooled build cost and differ only in query time, fuzzysort's hidden prepare cache moves it off this frontier, and Fuse.js is dominated.",
+			"The no-index engines own the cheapest cold one-shots; the two Krino configurations share one pooled build cost and differ only in query time, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
 	},
 };
 
@@ -124,7 +124,7 @@ const render = (C: Palette, metric: Metric, data: Point[], probes: number): stri
 	const frontierPath = front.map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`).join(" ");
 	const desc =
 		`Scatter plot of ${data.length} configurations of eight JavaScript fuzzy search libraries comparing MRR ` +
-		`(how highly each ranks the queried item) against ${metric === "query" ? "query milliseconds with indexes prebuilt" : "total milliseconds for one cold search (index build plus one query)"}, ` +
+		`(how highly each ranks the queried item) against ${metric === "query" ? "query milliseconds with indexes prebuilt" : "total milliseconds for one cold search (index build plus the first, cold query)"}, ` +
 		`on a log scale, on the mixed 10k corpus over ${probes} probes. ` +
 		`The Pareto frontier runs ${front.map((p) => `${p.n} (${p.mrr.toFixed(2)} MRR at ${p.ms.toFixed(2)} ms)`).join(" to ")}. ` +
 		M.tail;

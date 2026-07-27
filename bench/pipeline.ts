@@ -30,6 +30,11 @@ const RUNS = Number(options.get("--runs") ?? 5);
 const SCOPE = options.get("--scope") ?? process.env.BENCH ?? "";
 const CHECK = flags.has("--check");
 const DOCS_ONLY = flags.has("--docs");
+// `--only=krino` re-measures one library's cells and merges them over the
+// committed artifact, leaving every other row at the value it was published
+// with. Unlike --scope this DOES write, because the cells it produces are whole
+// — the matrix is complete, one library of it is fresher than the rest.
+const ONLY = options.get("--only") ?? "";
 
 // A scoped run measures a partial matrix, so it prints and stops: letting it
 // reach the artifact would overwrite published cells with a subset.
@@ -50,20 +55,47 @@ const vitest = (args: string, env: Record<string, string> = {}): void => {
 	execSync(`pnpm exec vitest ${args}`, {
 		cwd: here,
 		stdio: ["ignore", DRY ? "inherit" : "ignore", "inherit"],
-		env: { ...process.env, ...env },
+		env: { ...process.env, ...(ONLY ? { BENCH_ONLY: ONLY } : {}), ...env },
 	});
+};
+
+// Overlay measured cells onto the committed ones, leaf by leaf, so a narrowed
+// run replaces exactly the rows it measured.
+const overlay = <T>(into: Record<string, T>, from: Record<string, T>): void => {
+	for (const [key, value] of Object.entries(from)) {
+		const existing = into[key];
+		if (existing && typeof value === "object" && value !== null && !Array.isArray(value)) {
+			overlay(existing as Record<string, unknown>, value as Record<string, unknown>);
+		} else {
+			into[key] = value;
+		}
+	}
 };
 
 const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 
+// One corpus×size per process. compare.bench.ts probes every cell at
+// registration, so a single process would hold all four corpora and their
+// fourteen searchers apiece live at once — the ~1.3 GB that kills a worker.
+// @see docs/measurement.md
+const SPEED_CELLS = ["ascii-10k", "ascii-100k", "mixed-10k", "mixed-100k"];
+
 const runSpeed = (artifact: Artifact): void => {
-	console.error(SCOPE ? `speed stage (scoped to ${SCOPE})…` : "speed stage…");
 	ensureRawDir();
-	vitest("bench --run", { NODE_OPTIONS: "--expose-gc", ...(SCOPE ? { BENCH: SCOPE } : {}) });
-	if (DRY) return;
-	const { speed, build } = reduceBenchRun(readRaw("bench.json"));
-	artifact.speed = speed;
-	artifact.build = build;
+	if (SCOPE) {
+		console.error(`speed stage (scoped to ${SCOPE})…`);
+		vitest("bench --run", { NODE_OPTIONS: "--expose-gc", BENCH: SCOPE });
+		return;
+	}
+	for (const cell of SPEED_CELLS) {
+		console.error(`speed stage: ${cell}…`);
+		vitest("bench --run", { NODE_OPTIONS: "--expose-gc", BENCH_CELL: cell });
+		const { speed, build } = reduceBenchRun(readRaw("bench.json"));
+		// Always overlay, never replace: each process only ever measures its own
+		// cell, so a replace would leave the artifact holding one quarter.
+		overlay(artifact.speed, speed);
+		overlay(artifact.build, build);
+	}
 };
 
 type HitsRun = Record<string, { scorecard: ScorecardRow[]; tables: ProbeTable[] }>;
@@ -76,13 +108,17 @@ const runQuality = (artifact: Artifact): void => {
 		vitest("run hits.test.ts", { BENCH_RUN: String(i) });
 		runs.push(readRaw<HitsRun>(`hits-${i}.json`));
 	}
-	console.error("quality stage: session + long text…");
-	vitest("run session.test.ts longtext.test.ts");
+	// Both build a table per library, so a narrowed run would write one holding
+	// only the measured rows. Left at their published values instead.
+	if (!ONLY) {
+		console.error("quality stage: session + long text…");
+		vitest("run session.test.ts longtext.test.ts");
+	}
 
 	if (DRY) return;
 
 	for (const corpus of Object.keys(runs[0])) {
-		artifact.scorecard.corpora[corpus] = runs[0][corpus].scorecard
+		const measured = runs[0][corpus].scorecard
 			.map(({ library }) => {
 				const cells = runs.map((run) => {
 					const row = run[corpus].scorecard.find((r) => r.library === library);
@@ -97,28 +133,48 @@ const runQuality = (artifact: Artifact): void => {
 					);
 				}
 				const indexMs = median(cells.map((c) => c.indexMs));
+				const coldMs = median(cells.map((c) => c.coldMs));
 				const queryMs = median(cells.map((c) => c.queryMs));
-				return { library, mrr: cells[0].mrr, indexMs, queryMs, totalMs: indexMs + queryMs };
-			})
-			.sort((a, b) => b.mrr - a.mrr || a.totalMs - b.totalMs);
+				return { library, mrr: cells[0].mrr, indexMs, coldMs, queryMs, totalMs: indexMs + coldMs };
+			});
+		// A narrowed run measures a few rows; the rest keep their published
+		// values and the whole board is re-sorted, since a moved row moves rank.
+		const kept = ONLY
+			? (artifact.scorecard.corpora[corpus] ?? []).filter(
+					(row) => !measured.some((m) => m.library === row.library),
+				)
+			: [];
+		artifact.scorecard.corpora[corpus] = [...kept, ...measured].sort(
+			(a, b) => b.mrr - a.mrr || a.totalMs - b.totalMs,
+		);
 
-		artifact.probes[corpus] = runs[0][corpus].tables.map((probe, i) => ({
+		const probes = runs[0][corpus].tables.map((probe, i) => ({
 			...probe,
 			cells: Object.fromEntries(
 				Object.entries(probe.cells).map(([lib, cell]) => [
 					lib,
 					{
 						...cell,
+						coldMs: median(runs.map((r) => r[corpus].tables[i].cells[lib].coldMs)),
 						queryMs: median(runs.map((r) => r[corpus].tables[i].cells[lib].queryMs)),
 						totalMs: median(runs.map((r) => r[corpus].tables[i].cells[lib].totalMs)),
 					},
 				]),
 			),
 		}));
+		if (ONLY && artifact.probes[corpus]) {
+			for (const [i, probe] of probes.entries()) {
+				overlay(artifact.probes[corpus][i].cells, probe.cells);
+			}
+		} else {
+			artifact.probes[corpus] = probes;
+		}
 	}
-	artifact.scorecard.runs = RUNS;
-	artifact.session = readRaw("session.json");
-	artifact.longtext = readRaw("longtext.json");
+	if (!ONLY) {
+		artifact.scorecard.runs = RUNS;
+		artifact.session = readRaw("session.json");
+		artifact.longtext = readRaw("longtext.json");
+	}
 };
 
 const MARKER = /<!-- bench:([a-z0-9-]+) -->\n[\s\S]*?\n<!-- bench:end -->/g;
@@ -140,6 +196,15 @@ const inject = (doc: string, tables: Record<string, string>): { doc: string; sta
 };
 
 const artifact = load();
+
+if (ONLY) {
+	console.error(
+		`--only=${ONLY}: re-measuring matching rows and merging over bench/results.json.\n` +
+			"Every other row keeps the value it was published with, so the comparison now\n" +
+			"spans two measurement sessions. Fine for iterating on one library; rerun the\n" +
+			"full matrix before treating the cross-library ordering as evidence.",
+	);
+}
 
 if (stages.speed) runSpeed(artifact);
 if (stages.quality) runQuality(artifact);

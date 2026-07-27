@@ -179,15 +179,16 @@ const scorecardTable = (a: Artifact, corpus: string): string => {
 	const rows = a.scorecard.corpora[corpus];
 	if (!rows) throw new Error(`no scorecard for corpus '${corpus}' — run the quality stage first`);
 	return mdTable(
-		["Library", "MRR", "index ms", "query ms", "total ms"],
+		["Library", "MRR", "index ms", "cold ms", "warm ms", "total ms"],
 		rows.map((r) => [
 			displayName(r.library),
 			r.mrr.toFixed(2),
 			r.indexMs ? ms(r.indexMs) : "—",
+			ms(r.coldMs),
 			ms(r.queryMs),
 			ms(r.totalMs),
 		]),
-		["left", "right", "right", "right", "right"],
+		["left", "right", "right", "right", "right", "right"],
 	);
 };
 
@@ -227,18 +228,19 @@ const rankCell = (cell: ProbeTable["cells"][string]): string =>
 
 const probeTable = (probe: ProbeTable): string =>
 	mdTable(
-		["Library", "rank", "matches", "query ms", "total ms"],
+		["Library", "rank", "matches", "cold ms", "warm ms", "total ms"],
 		probeRows(probe).map((lib) => {
 			const cell = probe.cells[lib];
 			return [
 				displayName(lib),
 				rankCell(cell),
 				String(cell.count),
+				ms(cell.coldMs),
 				ms(cell.queryMs),
 				ms(cell.totalMs),
 			];
 		}),
-		["left", "right", "right", "right", "right"],
+		["left", "right", "right", "right", "right", "right"],
 	);
 
 /**
@@ -251,7 +253,7 @@ const missTable = (probes: ProbeTable[]): string => {
 	const reference = probes.find((p) => p.kind === "long-word");
 	if (!miss || !reference) throw new Error("probe set is missing the miss or long-word query");
 	return mdTable(
-		["Library", "matches", "query ms", `vs \`${reference.query}\``],
+		["Library", "matches", "warm ms", `vs \`${reference.query}\``],
 		probeRows(miss).map((lib) => [
 			displayName(lib),
 			String(miss.cells[lib].count),

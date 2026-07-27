@@ -22,14 +22,24 @@ export type Cell = {
 	rme: number;
 	samples: number;
 };
+// `queryMs` is the WARM steady-state call; `coldMs` is the first call on a
+// fresh searcher, every lazy slice unpaid; `totalMs` = indexMs + coldMs, the
+// honest worst-case cold start.
 export type ScorecardRow = {
 	library: string;
 	mrr: number;
 	indexMs: number;
+	coldMs: number;
 	queryMs: number;
 	totalMs: number;
 };
-export type ProbeCell = { count: number; rank: number | null; queryMs: number; totalMs: number };
+export type ProbeCell = {
+	count: number;
+	rank: number | null;
+	coldMs: number;
+	queryMs: number;
+	totalMs: number;
+};
 export type ProbeTable = {
 	kind: string;
 	query: string;
