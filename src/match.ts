@@ -36,6 +36,9 @@ export type PreparedQuery = {
 	rescueGate?: RegExp | null;
 	variantGate?: RegExp | null;
 	lastRescue?: PreparedQuery;
+	// Multi-word rescue state, built lazily like the single-word variants.
+	wordOffsets?: number[];
+	wordVariants?: (RescueVariant[] | null)[];
 };
 
 // One candidate correction of a mistyped query. `prepared` is filled in only if
@@ -155,15 +158,22 @@ const MIN_TYPO_QUERY_LENGTH = 5;
 const minTypoQueryLength = (fieldLength: number): number =>
 	fieldLength <= 64 ? 5 : fieldLength <= 1024 ? 6 : 7;
 
+// Multi-word queries are rescuable per word: only the one failing word is ever
+// corrected (see multiWordRescue), so a word long enough to correct is what the
+// query needs, not overall length.
 export const isRescuableQuery = (normalizedQuery: string, queryWords: string[]): boolean =>
-	queryWords.length === 1 && normalizedQuery.length >= MIN_RESCUE_QUERY_LENGTH;
+	queryWords.length === 1
+		? normalizedQuery.length >= MIN_RESCUE_QUERY_LENGTH
+		: queryWords.some((w) => w.length >= MIN_RESCUE_QUERY_LENGTH);
 
 // Only a substitution or a drop can explain an absent character class, and both
 // are floored at MIN_TYPO_QUERY_LENGTH — so a shorter query keeps the strict
 // mask gate. matchField and the searcher's survivor scan must ask this same
 // question or the searcher silently drops hits the matcher would accept.
 export const admitsMissingClass = (normalizedQuery: string, queryWords: string[]): boolean =>
-	isRescuableQuery(normalizedQuery, queryWords) && normalizedQuery.length >= MIN_TYPO_QUERY_LENGTH;
+	queryWords.length === 1
+		? normalizedQuery.length >= MIN_TYPO_QUERY_LENGTH
+		: queryWords.some((w) => w.length >= MIN_TYPO_QUERY_LENGTH);
 
 const SCORE_EPSILON = 1e-9;
 
@@ -409,6 +419,122 @@ const substitutionRescue = (
 	return best;
 };
 
+// Where each query word starts in the normalized query. Words come out of
+// splitWords in order with only separator characters between them, so a
+// sequential indexOf lands on each word's own occurrence.
+const wordOffsetsOf = (q: PreparedQuery): number[] => {
+	let offsets = q.wordOffsets;
+	if (offsets === undefined) {
+		offsets = [];
+		let cursor = 0;
+		for (const w of q.queryWords) {
+			const at = q.normalizedQuery.indexOf(w, cursor);
+			offsets.push(at);
+			cursor = at + w.length;
+		}
+		q.wordOffsets = offsets;
+	}
+	return offsets;
+};
+
+const wordVariantsOf = (q: PreparedQuery, wordIndex: number): RescueVariant[] => {
+	const cache = (q.wordVariants ??= q.queryWords.map(() => null));
+	let variants = cache[wordIndex];
+	if (variants === null) {
+		const word = q.queryWords[wordIndex];
+		const start = wordOffsetsOf(q)[wordIndex];
+		const rawWord = offsetsAligned(q.query, q.normalizedQuery)
+			? q.query.slice(start, start + word.length)
+			: word;
+		variants = cache[wordIndex] = buildRescueVariants(rawWord, word);
+	}
+	return variants;
+};
+
+// rawSubstitution for one word of a phrase: the corrected word in the caller's
+// own casing, everything but the substituted character kept raw.
+const rawWordSubstitution = (q: PreparedQuery, wordIndex: number, corrected: string): string => {
+	if (!offsetsAligned(q.query, q.normalizedQuery)) return corrected;
+	const word = q.queryWords[wordIndex];
+	const start = wordOffsetsOf(q)[wordIndex];
+	const rawWord = q.query.slice(start, start + word.length);
+	for (let k = 0; k < corrected.length; k++) {
+		if (corrected[k] !== word[k]) return rawWord.slice(0, k) + corrected[k] + rawWord.slice(k + 1);
+	}
+	return corrected;
+};
+
+// Splice a corrected word into the phrase and rescore the whole corrected query.
+const spliceCorrectedWord = (
+	q: PreparedQuery,
+	wordIndex: number,
+	rawWord: string,
+	corrected: string,
+): PreparedQuery => {
+	const start = wordOffsetsOf(q)[wordIndex];
+	const end = start + q.queryWords[wordIndex].length;
+	const normalizedCorrected =
+		q.normalizedQuery.slice(0, start) + corrected + q.normalizedQuery.slice(end);
+	const rawCorrected = offsetsAligned(q.query, q.normalizedQuery)
+		? q.query.slice(0, start) + rawWord + q.query.slice(end)
+		: normalizedCorrected;
+	return prepareRescue(q, rawCorrected, normalizedCorrected);
+};
+
+// A typo inside a phrase: when every query word but one occurs literally in the
+// field, the one failing word is corrected alone and the whole corrected phrase
+// rerun. Restricting the edit to the failing word is what keeps the guess space
+// sane where rescuing a whole phrase is not: the literal words have already
+// pinned the field, so a fifteen-character query no longer offers fifteen
+// positions to guess from — only the failing word's.
+const multiWordRescue = (
+	field: string,
+	normalizedField: string,
+	fieldMask: number,
+	q: PreparedQuery,
+	acronym: boolean,
+	missingClasses: number,
+): MatchResult | null => {
+	const words = q.queryWords;
+	let failing = -1;
+	for (let k = 0; k < words.length; k++) {
+		if (normalizedField.includes(words[k])) continue;
+		// Two absent words would need two edits, which no one-edit rescue performs.
+		if (failing !== -1) return null;
+		failing = k;
+	}
+	// Every word occurs somewhere: the ladder's verdict was about order or word
+	// wholeness, not a typo.
+	if (failing === -1) return null;
+	const word = words[failing];
+	if (word.length < MIN_RESCUE_QUERY_LENGTH) return null;
+
+	const floor = minTypoQueryLength(normalizedField.length);
+	let best: MatchResult | null = null;
+	for (const variant of wordVariantsOf(q, failing)) {
+		if (variant.shortens && word.length < floor) continue;
+		// A variant still needing a class the field lacks cannot be contained.
+		if ((variant.mask & missingClasses) !== 0) continue;
+		if (!normalizedField.includes(variant.text)) continue;
+		const prepared = spliceCorrectedWord(q, failing, variant.rawText, variant.text);
+		best = cheaper(best, rescueWith(field, normalizedField, fieldMask, prepared, acronym));
+		if (best !== null && best.score <= TYPO_PENALTY) return best;
+	}
+	if (word.length >= floor) {
+		for (const corrected of substitutedWindows(normalizedField, word)) {
+			const prepared = spliceCorrectedWord(
+				q,
+				failing,
+				rawWordSubstitution(q, failing, corrected),
+				corrected,
+			);
+			best = cheaper(best, rescueWith(field, normalizedField, fieldMask, prepared, acronym));
+			if (best !== null && best.score <= TYPO_PENALTY) return best;
+		}
+	}
+	return best;
+};
+
 // A fuzzy assembly of exactly two chunks separated by exactly one field
 // character is not a scattered chain — it is a dropped keystroke ("ergonmic"
 // for "ergonomic"), and the character the query is missing is sitting in the
@@ -453,6 +579,7 @@ export const matchField = (
 	q: PreparedQuery,
 	acronym: boolean,
 	rescued = false,
+	gated = false,
 ): MatchResult | null => {
 	const { query, normalizedQuery, queryWords } = q;
 
@@ -472,7 +599,9 @@ export const matchField = (
 	// field never had was typed as well, "genexric"). A swap cannot, so its
 	// variants simply fail the gate.
 	if (missingClasses !== 0) {
-		return typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses);
+		return queryWords.length > 1
+			? multiWordRescue(field, normalizedField, fieldMask, q, acronym, missingClasses)
+			: typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses);
 	}
 
 	// Bulk-reject remaining non-candidates before the tier ladder. Single-word
@@ -481,13 +610,16 @@ export const matchField = (
 	// use the order-independent presence gate, since the multi-word tier matches
 	// words out of order and a subsequence gate would wrongly reject them — but
 	// when the mask already proved exact char presence, the regex is skipped.
-	const frontGate = queryWords.length > 1 ? q.presenceGate : q.fuzzyGate;
+	// `gated` means the caller already ran this exact gate on this exact string
+	// — the searcher does, because the verdict is what shrinks its survivor set.
+	const frontGate = gated ? null : queryWords.length > 1 ? q.presenceGate : q.fuzzyGate;
 	if (frontGate && !frontGate.test(normalizedField)) {
-		// Rescue viability was already decided above, so ineligible queries
-		// (multi-word, short) pay nothing, not even a call, on this bulk-reject path.
-		return rescuable
-			? typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses)
-			: null;
+		// Rescue viability was already decided above, so ineligible (short)
+		// queries pay nothing, not even a call, on this bulk-reject path.
+		if (!rescuable) return null;
+		return queryWords.length > 1
+			? multiWordRescue(field, normalizedField, fieldMask, q, acronym, missingClasses)
+			: typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses);
 	}
 
 	if (field === query)
@@ -560,7 +692,13 @@ export const matchField = (
 	// Fuzzy fallback — gate on the native subsequence test before the loop.
 	// Single-word queries already passed fuzzyGate as the ladder's front gate;
 	// only multi-word queries (presence-gated up front) still owe this test.
-	if (queryWords.length > 1 && !q.fuzzyGate.test(normalizedField)) return null;
+	// A phrase with a swapped or doubled keystroke fails it while every class
+	// is present, so this reject is a rescue site like the others.
+	if (queryWords.length > 1 && !q.fuzzyGate.test(normalizedField)) {
+		return rescuable
+			? multiWordRescue(field, normalizedField, fieldMask, q, acronym, missingClasses)
+			: null;
+	}
 	const fuzzy = fuzzyChainMatch(normalizedField, normalizedQuery);
 	if (fuzzy) {
 		const chain: MatchResult = { score: fuzzy[0], tier: "fuzzy", ranges: fuzzy[1] };
@@ -569,14 +707,17 @@ export const matchField = (
 		// let junk assemble out of scraps while the field literally contains the
 		// corrected word. Returning here would hide both rescues below.
 		const dropped = missingCharRescue(field, normalizedField, fieldMask, q, acronym, fuzzy[1]);
-		const corrected = rescuable
-			? typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses)
-			: null;
+		const corrected = !rescuable
+			? null
+			: queryWords.length > 1
+				? multiWordRescue(field, normalizedField, fieldMask, q, acronym, missingClasses)
+				: typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses);
 		return cheaper(cheaper(dropped, corrected), chain);
 	}
 	// Every tier failed (the chain can refuse via the density floor even past
 	// the gate) — last chance for the one-edit rescue.
-	return rescuable
-		? typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses)
-		: null;
+	if (!rescuable) return null;
+	return queryWords.length > 1
+		? multiWordRescue(field, normalizedField, fieldMask, q, acronym, missingClasses)
+		: typoRescue(field, normalizedField, fieldMask, q, acronym, missingClasses);
 };

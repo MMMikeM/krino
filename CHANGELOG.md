@@ -2,6 +2,16 @@
 
 ## 2.0.0 (unreleased)
 
+- **Added: one-edit corrections inside phrases.**
+  A multi-word query with exactly one word the field is missing now rescues that word alone — swap, doubled character, dropped character or wrong character — and rescores the whole corrected phrase (`multiWordRescue`).
+  The old restriction to single-word queries existed because a fifteen-character phrase offers fifteen positions to guess from; the rescue inverts that: the literally-occurring words pin the candidate fields first, so the enumeration runs over a handful of fields rather than the corpus, and only the failing word is corrected.
+  Two mistyped words stay unmatched by design — refusal beats guessing — and `bench/longtext.test.ts` asserts a mistyped word beside a real one never invents a phrase match at any document length.
+  Four new bench probes stress it (typo in the first word, in the second, in a reversed phrase, and in both); the relaxed mask scan and the rescue bigram gate below extend to multi-word queries unchanged, and the strict gate is kept while every query word sits under the rescue floors.
+- **Faster: a bigram gate on the one-edit rescue's relaxed scan.**
+  A field missing exactly one of the query's character classes is only reachable by an edit at that class's sole query position, and every rescue-eligible tier is a contiguous occurrence — so every query bigram away from that position must be present in the field.
+  A 64-bit per-item bigram presence set (adjacent same-word class pairs, plus consecutive word-initial pairs so acronym rescues stay reachable) is filled in the same pass as the union masks and tested with two AND-NOTs per candidate; fields with two characters of the missing class are rejected outright.
+  Relaxed-scan admissions drop from 19.3% of a 100k corpus to **5.2%** (ascii) and 16.7% to **3.2%** (mixed); the published 100k query mean drops ~3.6× on ascii and ~5.7× on mixed, making Krino the fastest engine in the comparison on both corpora — result sets, ranks and MRR are byte-identical (`bench/searcher-parity.test.ts`), and the gate is asserted false-pass-only in `bench/funnel.test.ts`.
+  The once-per-searcher mask build grows ~6.9 → ~18.5 ms at 100k to fill the bigram sets; sessions whose queries all match literally never build them.
 - **Added: one-edit typo tolerance.**
   A single `corrected` tier covers every one-character correction the *query* needed: an adjacent swap ("geenric"), one character too many ("generric"), one missing ("genric"), one wrong ("genaric").
   Measured as MRR of the intended item over the ascii corpus, before → after: insertion **0.004 → 0.998**, substitution **0.000 → 0.996**; deletion already matched via the fuzzy tier and now ranks as a typo (0.968 → 0.962 at the new penalty).

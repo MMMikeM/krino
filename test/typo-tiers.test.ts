@@ -225,9 +225,16 @@ describe("the relaxed mask gate matches what a rescue can explain", () => {
 		expect(createFuzzySearch(["genes"])("genxs")[0]?.fields[0]?.tier).toBe("corrected");
 	});
 
-	it("a multi-word query keeps the strict gate in both", () => {
-		expect(fuzzyMatch("wooden table", "wooden tablx")).toBeNull();
-		expect(createFuzzySearch(["wooden table"])("wooden tablx")).toHaveLength(0);
+	it("a multi-word query relaxes once its mistyped word is long enough", () => {
+		expect(fuzzyMatch("wooden table", "wooden tablx")?.tier).toBe("corrected");
+		expect(createFuzzySearch(["wooden table"])("wooden tablx")[0]?.fields[0]?.tier).toBe(
+			"corrected",
+		);
+	});
+
+	it("a multi-word query keeps the strict gate while every word is under the floor", () => {
+		expect(fuzzyMatch("big oak", "big oakx")).toBeNull();
+		expect(createFuzzySearch(["big oak"])("big oakx")).toHaveLength(0);
 	});
 });
 

@@ -101,4 +101,71 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 		ensureRawDir();
 		writeFileSync(rawFile("longtext.json"), JSON.stringify({ rows }, null, "\t"));
 	});
+
+	// Damerau-Levenshtein ≤ 1, specialised: equal, one substitution, one
+	// adjacent swap, or one insertion/deletion.
+	const withinOneEdit = (a: string, b: string): boolean => {
+		if (a === b) return true;
+		const la = a.length;
+		const lb = b.length;
+		if (Math.abs(la - lb) > 1) return false;
+		if (la === lb) {
+			const diffs: number[] = [];
+			for (let k = 0; k < la && diffs.length <= 2; k++) if (a[k] !== b[k]) diffs.push(k);
+			if (diffs.length === 1) return true;
+			return (
+				diffs.length === 2 &&
+				diffs[1] === diffs[0] + 1 &&
+				a[diffs[0]] === b[diffs[1]] &&
+				a[diffs[1]] === b[diffs[0]]
+			);
+		}
+		const [short, long] = la < lb ? [a, b] : [b, a];
+		let k = 0;
+		while (k < short.length && short[k] === long[k]) k++;
+		return short.slice(k) === long.slice(k + 1);
+	};
+
+	it("a mistyped word beside a real one never invents a phrase match", { timeout: 60_000 }, () => {
+		const mixed = CORPORA.find((c) => c.name === "mixed");
+		if (!mixed) throw new Error("mixed corpus missing");
+		const items = mixed.build(10_000);
+		const fullDoc = items.join(" ");
+		const maxSlice = normalizeText(fullDoc.slice(0, Math.max(...DOC_LENGTHS)));
+		const docWords = [...new Set(splitWords(maxSlice))];
+
+		// Mangle words that are absent from every slice; a probe whose mangled
+		// form sits within one edit of a real document word is discarded — a
+		// rescue THERE would be a legitimate correction, not junk.
+		const mangled: string[] = [];
+		const seen = new Set<string>();
+		for (const item of items.slice(5000)) {
+			for (const w of splitWords(normalizeText(item))) {
+				if (mangled.length >= 10) break;
+				if (seen.has(w) || !isPlainWord(w) || maxSlice.includes(w)) continue;
+				seen.add(w);
+				const mid = w.length >> 1;
+				const m = w.slice(0, mid) + (w[mid] === "q" ? "x" : "q") + w.slice(mid + 1);
+				if (maxSlice.includes(m) || docWords.some((d) => withinOneEdit(m, d))) continue;
+				mangled.push(m);
+			}
+			if (mangled.length >= 10) break;
+		}
+		expect(mangled.length).toBe(10);
+
+		for (const len of DOC_LENGTHS) {
+			const doc = fullDoc.slice(0, len);
+			const present = [...new Set(splitWords(normalizeText(doc)).filter(isPlainWord))].slice(
+				0,
+				mangled.length,
+			);
+			for (const [j, m] of mangled.entries()) {
+				const anchor = present[j % present.length];
+				expect(
+					fuzzyMatch(doc, `${anchor} ${m}`),
+					`"${anchor} ${m}" matched a ${len}-char document`,
+				).toBeNull();
+			}
+		}
+	});
 });
