@@ -23,9 +23,6 @@ const OUT = new URL("./.variants/", import.meta.url);
 export const VARIANTS: Record<string, string[]> = {
 	baseline: [],
 	dispatch: ["MISSING_CLASS_DISPATCH"],
-	lazy: ["LAZY_FIELDS"],
-	"lazy+dispatch": ["LAZY_FIELDS", "MISSING_CLASS_DISPATCH"],
-	all: ["MISSING_CLASS_DISPATCH", "LAZY_FIELDS"],
 };
 
 export const variantEntry = (name: string): string =>
@@ -56,12 +53,15 @@ const buildVariant = (name: string, enabled: string[]): void => {
 	rmSync(work, { recursive: true, force: true });
 };
 
-const wanted = process.argv.slice(2);
-const names = wanted.length ? wanted : Object.keys(VARIANTS);
-mkdirSync(fileURLToPath(OUT), { recursive: true });
-for (const name of names) {
-	const enabled = VARIANTS[name];
-	if (!enabled) throw new Error(`unknown variant '${name}' — have ${Object.keys(VARIANTS).join(", ")}`);
-	buildVariant(name, enabled);
-	console.error(`built ${name.padEnd(16)} ${enabled.length ? enabled.join(" + ") : "(all flags off)"}`);
+// Importers want variantEntry, not a rebuild of every variant.
+if (import.meta.main) {
+	const wanted = process.argv.slice(2);
+	const names = wanted.length ? wanted : Object.keys(VARIANTS);
+	mkdirSync(fileURLToPath(OUT), { recursive: true });
+	for (const name of names) {
+		const enabled = VARIANTS[name];
+		if (!enabled) throw new Error(`unknown variant '${name}' — have ${Object.keys(VARIANTS).join(", ")}`);
+		buildVariant(name, enabled);
+		console.error(`built ${name.padEnd(16)} ${enabled.length ? enabled.join(" + ") : "(all flags off)"}`);
+	}
 }

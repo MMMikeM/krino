@@ -3,7 +3,7 @@
  * (Per-field specs + atBest live in fields.test.ts.)
  */
 import { describe, expect, it } from "vitest";
-import { createFuzzySearch } from "../src/index";
+import { createFuzzySearch, fuzzyMatch } from "../src/index";
 
 describe("string collections", () => {
 	const search = createFuzzySearch(["apple", "banana", "cherry", "grape"]);
@@ -27,6 +27,23 @@ describe("empty and whitespace queries", () => {
 	const search = createFuzzySearch(["apple"]);
 	it.each([[""], ["   "], ["\t"]])("query %j → []", (query) => {
 		expect(search(query)).toEqual([]);
+	});
+});
+
+describe("one-character queries", () => {
+	const search = createFuzzySearch(["apple", "apricot", "banana"]);
+
+	it("a single character matches nothing, however exactly it fits", () => {
+		expect(search("a")).toEqual([]);
+		expect(createFuzzySearch(["a"])("a")).toEqual([]);
+	});
+
+	it("two characters is the shortest query that searches", () => {
+		expect(search("ap").map((r) => r.item)).toEqual(["apple", "apricot"]);
+	});
+
+	it("the primitive has nothing to narrow, so it keeps matching one character", () => {
+		expect(fuzzyMatch("apple", "a")?.tier).toBe("prefix");
 	});
 });
 

@@ -73,7 +73,16 @@ let sink = 0;
 // corpus (`mixed`), a size (`100k`), or a table (`mixed-100k`). Unset = full
 // matrix (the publish ritual); scoped runs are the dev loop.
 //   BENCH=mixed-10k pnpm bench
-const BENCH_TOKENS = (process.env.BENCH ?? "").toLowerCase().split(",").filter(Boolean);
+// BENCH_CELL is the same filter, set by the pipeline rather than by hand: it
+// runs one corpus×size per process because `calibrated` probes each cell at
+// registration, so every group this file collects has to hold its corpus and
+// all fourteen searchers live at once. Collecting the whole matrix in one
+// process is ~1.3 GB of simultaneous retention and the reason a worker dies.
+// Unlike BENCH it leaves `outputJson` on, so the cell still reaches the artifact.
+const BENCH_TOKENS = (process.env.BENCH_CELL ?? process.env.BENCH ?? "")
+	.toLowerCase()
+	.split(",")
+	.filter(Boolean);
 const sizeLabel = (n: number): string => `${n / 1000}k`;
 const wants = (corpus: string, size: number): boolean =>
 	BENCH_TOKENS.length === 0 ||

@@ -16,10 +16,3 @@
 
 /** Dispatch rescue variant families on which char classes the field is missing. */
 export const MISSING_CLASS_DISPATCH: boolean = false;
-
-/**
- * Materialise a field's trimmed and normalised text on first mask survival
- * rather than for every item at build. The mask rejects ~94% of a corpus, so
- * most of what the eager index builds is never read.
- */
-export const LAZY_FIELDS: boolean = false;
