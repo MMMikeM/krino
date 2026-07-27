@@ -2,9 +2,9 @@
 
 > Tiny, typed fuzzy matching
 
-- **~3.1 kB** gzip, zero dependencies, TS-first, ESM/CJS
-- **0.3 ms** per query over 10k items, ~2.2 ms over 100k, optimised for search-as-you-type
-- **Tops match-quality scorecard** across 15 probes
+- **~6.6 kB** gzip, zero dependencies, TS-first, ESM/CJS
+- **0.07 ms** per query over 10k items, ~0.8–1.4 ms over 100k, optimised for search-as-you-type
+- **Tops match-quality scorecard** across 20 probes
 - **Returns** `tier`, `ranges` and `score` on every match: easily rank, highlight and explain
 - **Diacritics, multi-word, acronyms, one-edit typos** built in
 
@@ -74,7 +74,7 @@ Options: `fuzzyMatch(text, query, { acronym? })`.
 ## Where it fits
 
 - **Command palettes and pickers**: `tier` + `ranges` rank and highlight results without reverse-engineering a score.
-- **Search-as-you-type**: each keystroke rescans only the previous one's survivors, so the first keystroke is the expensive one and the rest cost ~40% less, even over 100k items.
+- **Search-as-you-type**: each keystroke rescans only the previous one's survivors, so the first keystroke is the expensive one and the last costs 5× less, even over 100k items.
 - **Filter UIs that show every match**: the narrowest result sets of the subsequence engines; a structured query returns a median of 7 rows where Fuse.js ships ~90.
 - **Backend one-shot lookups**: build + query costs ~1.5 ms cold over 10k items, so indexing per request is fine.
 - **Finding a phrase inside a document**: `fuzzyMatch` scans 16,000 characters in 0.28 ms, and the density floor keeps absent words at exactly 0 false matches.
@@ -130,13 +130,13 @@ Anything it refuses either matched a higher tier already or wasn't worth showing
 
 ## Comparison
 
-Speed is not the constraint at any realistic size; a prebuilt Krino index answers a 100,000-item query in ~2.2 ms (0.3 ms at 10k), and `fuzzyMatch` over a 16,000-character document costs 0.28 ms.
+Speed is not the constraint at any realistic size; a prebuilt Krino index answers a 100,000-item query in ~0.8–1.4 ms (0.07 ms at 10k), and `fuzzyMatch` over a 16,000-character document costs 0.29 ms.
 What separates these libraries is **match quality** and **what you get back**.
 Accuracy against the total cost of one cold search (index + one query) — the least flattering ledger for Krino, since a no-index library pays nothing up front (the mixed 10k scorecard from [docs/benchmarks.md](./docs/benchmarks.md); the frontend chart there, query cost only, is a Krino-only frontier):
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/pareto-total-dark.svg">
-  <img alt="Mixed-corpus accuracy (MRR) vs. total cost of one cold search (index + one query, log scale) as a Pareto frontier. The frontier runs uFuzzy, uFuzzy (all opts), Krino, Krino (acronym); fuzzysort's hidden prepare cache moves it off the frontier, and Fuse.js is dominated: Krino (acronym) scores 0.84 at a 1.5 ms total against Fuse's 0.75 at ~16 ms." src="./docs/pareto-total-light.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. total cost of one cold search (index + one query, log scale) as a Pareto frontier. The frontier runs uFuzzy, uFuzzy (all opts), Krino (acronym); fuzzysort's prepare-all pass lands in its cold query and moves it off the frontier, and Fuse.js is dominated: Krino (acronym) scores 0.87 at a 1.6 ms cold total against Fuse's 0.81 at ~20 ms." src="./docs/pareto-total-light.svg">
 </picture>
 
 Krino is the only library that by default:
@@ -153,22 +153,23 @@ Originally written for matching in-memory lists on the client, Krino has proven 
 
 Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 
-- **Match quality**: Krino returns the smallest result set of the subsequence libraries and ranks the queried item **first on every structured query**; a one-char slip still matches, and at two dropped chars it returns nothing where its parent returns 135 junk chains.
-  A transposition, an insertion and a substitution each break the subsequence property; Krino's four one-edit tiers take all three at rank 1 with a single row, where the subsequence engines return nothing at all. Two or more edits in one query remain the edit-distance engines' edge.
-- **Speed** (per-query mean): ~0.3 ms over 10k items and ~2.2–3.6 ms over 100k, ~5–6× faster than its parent microfuzz; uFuzzy edges Krino on pure-ascii 100k corpora, while Krino leads accented data outright.
+- **Match quality**: Krino returns the smallest result set of the subsequence libraries and ranks the queried item **first on every structured query**; a one-char slip still matches, and at two dropped chars it returns nothing where its parent returns 67 junk chains.
+  A transposition, an insertion and a substitution each break the subsequence property; Krino's four one-edit tiers take all three at rank 1 with a single row, where the subsequence engines return nothing at all.
+  A typo inside a phrase is corrected too: the words that do occur pin the field, and only the failing word is rescued. Two or more edits in one query remain the edit-distance engines' edge.
+- **Speed** (warm per-query mean): 0.07 ms over 10k items and 0.8–1.3 ms over 100k — the fastest engine in the comparison on both corpora at 100k, and ~14–28× faster than its parent microfuzz.
+  The lazy preparation defers onto a fresh searcher's first typo-shaped query instead (~1.6 ms at 10k), the cold column in [docs/benchmarks.md](./docs/benchmarks.md).
   A prefix-narrowing cache makes the keystrokes after the first cheaper as the phrase grows.
 
 ### What to pick when
 
-**Pick Krino.** It tops the quality scorecard on both benchmark corpora by a wide margin, answers a query faster than anything else that ranks near it, and at ~3.1 kB only substring-only `fuzzy` and its parent `microfuzz` undercut it on size.
-It is not the fastest engine in the set: `uFuzzy` is ~1.6× quicker per query at 100k on ascii and keeps no index, trading most of the match quality to get there.
-Two workloads genuinely point elsewhere:
+**Pick Krino.** It tops the quality scorecard on both benchmark corpora outright and holds the fastest warm-query column at every published size.
+At ~6.6 kB gzip it sits mid-pack on size: the one-edit rescue machinery and the fold tables bought the quality lead, and Fuse.js and fast-fuzzy are still 1.4–1.7× larger.
+One workload genuinely points elsewhere:
 
-- **Typos beyond a single edit must still match** (user-typed queries over messy data): the four typo tiers cover every one-character mistake, but two or more edits in one query need real edit distance. Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 3–4× the bundle, ~6–18 ms queries, and ~90–450-row result sets.
-- **Raw query throughput at 100k+, bare index output is enough**: `uFuzzy` is ~1.6× faster per query on ascii, and keeps no index at all. On accented data the order reverses and Krino leads. It costs roughly half Krino's match quality (0.38 MRR to 0.77 on ascii), so this is a genuine trade rather than a free win.
+- **Typos beyond a single edit must still match** (user-typed queries over messy data): the four typo tiers cover every one-character mistake, but two or more edits in one query need real edit distance. Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 3–4× the bundle, ~7–19 ms queries, and ~90–450-row result sets.
 
 The rest of the field is dominated on these benchmarks; the full argument, per-library, is in [the recommendation](./docs/benchmarks.md#the-recommendation).
-(Already on `@nozbe/microfuzz`? Krino is its rebuild: same subsequence approach plus tier, ESM, and 5–6× faster. See [MIGRATION.md](./MIGRATION.md).)
+(Already on `@nozbe/microfuzz`? Krino is its rebuild: same subsequence approach plus tier, ESM, and ~14–28× faster at 100k. See [MIGRATION.md](./MIGRATION.md).)
 
 ## Building blocks
 

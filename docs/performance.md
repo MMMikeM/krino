@@ -54,9 +54,10 @@ pay off doesn't transfer.
 
 ## What would actually help (if we ever target scale)
 
-Krino's README already punts on huge corpora ("for 100k+ prefer uFuzzy /
-fuzzysort"). If we ever wanted to compete there, the right structures are **not** a
-prefix trie:
+Krino's README used to punt on huge corpora ("for 100k+ prefer uFuzzy /
+fuzzysort"); the scan-level wins below — ending with the rescue bigram gate —
+eventually took the 100k tables outright, so the punt is gone. If an index-based
+structure were ever wanted anyway, the right ones are **not** a prefix trie:
 
 - **Inverted token index** (`word → items`). Turns the multi-word and
   boundary tiers into posting-list intersections instead of an N-item scan. The
@@ -154,15 +155,16 @@ Measured, same corpus + queries, regex gates only → with bitmask in front:
 --disable-console-intercept`) show the mask alone cutting 55–100% of items per
 query and the two stages together cutting 90–100% before any ladder work.
 
-Post-mask standings (two-corpus bench, see below): Krino leads its parent
-`@nozbe/microfuzz` everywhere on the accented corpus (~2–4×); on ascii at 100k
-they converge, with microfuzz's `aggressive` config slightly ahead. Residual gap
-to uFuzzy (~2.5–4.5× at scale) is fundamental: Krino's survivors run the full JS
-tier ladder and build a `tier` + per-char `ranges` + score, and its multi-word
-gate is the weaker order-independent kind. The (all opts) bench rows pin this:
-uFuzzy with latinize + outOfOrder parity keeps essentially its whole lead —
-architecture, not skipped features. Krino trades that speed for richer, safer
-semantics.
+Post-mask standings at the time (two-corpus bench, see below): Krino led its
+parent `@nozbe/microfuzz` everywhere on the accented corpus (~2–4×); on ascii at
+100k they converged, with microfuzz's `aggressive` config slightly ahead, and a
+residual ~2.5–4.5× gap to uFuzzy looked fundamental — full JS tier ladder,
+per-char `ranges`, the weaker order-independent multi-word gate.
+It wasn't. The residual cost was never the ladder: it was the one-edit rescue's
+relaxed whole-corpus scan (measured below under "One-edit typo rescues"), and
+once the bigram gate cut that scan's admissions ("Rescue bigram gate"), Krino
+took the 100k query column on both corpora — see docs/benchmarks.md for the
+current tables.
 
 ### fieldWords Set removal — DONE (with a stated trade)
 
@@ -289,9 +291,41 @@ The rest came from the pre-gate. A substituted window is only ever found at an
 occurrence of one of the query's two halves, so those halves are a complete
 pre-gate for it — folding them into the rescue's existing alternation means a
 rejected field costs one native regex test instead of two full-field scans. The first three tiers together cost ~19% on scatter and ~3% on plain
-words; the fourth roughly doubles query time on top of that. If Krino ever needs
-its old numbers back, `substituted` is the tier to put behind a flag — the other
-three are close to free.
+words; the fourth roughly doubled query time on top of that, until the bigram
+gate below repriced it.
+
+### Rescue bigram gate — DONE (the relaxed scan, repriced)
+
+The relaxed mask gate above was the last big line item: tolerating one missing
+character class admitted ~19% of a 100k corpus, and every admitted field paid
+the rescue's alternation regex. The fix is a second stage on exactly those
+fields, from two facts that pin the edit down:
+
+- A field missing exactly class β is only reachable by an edit **at the query's
+  sole class-β character** — two β characters would need two edits, which no
+  one-edit rescue performs, so those fields are rejected outright.
+- Every rescue-eligible tier is a contiguous occurrence (literal tiers by
+  definition, acronym via consecutive initials; a fuzzy chain scores above
+  `CONTAINS` and cannot be rescued) — so every query bigram *not touching* the
+  β position must appear in the field.
+
+Per item that is a 64-bit presence set of adjacent same-word character-class
+pairs (plus consecutive word-initial pairs, keeping acronym rescues reachable),
+filled in the same pass that builds the union masks; per query, one required-set
+per missing class; per field, two AND-NOTs. Hash collisions merge bits and can
+only weaken the filter — false-pass-only, like every gate before it.
+
+Measured (bench/cost.test.ts at 100k): relaxed admissions 19.3% → **5.2%** on
+ascii and 16.7% → **3.2%** on mixed; the relaxed scan 2.34 → 1.39 ms. On the
+published tables that flipped the headline: Krino now holds the fastest 100k
+query column on **both** corpora (1.40 ms ascii to uFuzzy's 2.17; 0.76 ms mixed
+to folding uFuzzy's 2.60), and the frontend Pareto frontier collapsed to Krino
+alone. The bill: the once-per-searcher mask build grew 6.9 → 18.5 ms, because
+the bigram sets walk each string a second time — folding that into the
+`rawCharMask` pass is the obvious next shaving. Soundness is pinned twice:
+funnel.test.ts asserts the gate never rejects a field the rescue corrects, and
+searcher-parity.test.ts asserts the searcher returns exactly what per-item
+`fuzzyMatch` accepts on every bench query.
 
 ### Still on the table
 
