@@ -211,14 +211,16 @@ const render = (C: Palette, metric: Metric, data: Point[], probes: number): stri
 export const renderPareto = (artifact: Artifact): void => {
 	const scorecard = artifact.scorecard.corpora.mixed;
 	if (!scorecard?.length) throw new Error("no mixed scorecard — run the quality stage first");
+	const kinds = Object.keys(artifact.coldMatrix.mixed ?? {}).filter((k) => k !== "batch");
 	const data: Point[] = scorecard.map((r) => {
 		const batch = artifact.coldMatrix.mixed?.batch?.["10000"]?.[r.library];
 		if (!batch) throw new Error(`no batch cell for '${r.library}' — run the cold stage first`);
+		const oneShots = kinds.map((k) => artifact.coldMatrix.mixed[k]["10000"][r.library].oneShotMs);
 		return {
 			name: r.library,
 			mrr: r.mrr,
 			query: batch.restMs ?? batch.queryMs,
-			total: batch.oneShotMs,
+			total: oneShots.reduce((a, b) => a + b, 0) / oneShots.length,
 		};
 	});
 	const probes = artifact.probes.mixed?.length ?? 0;

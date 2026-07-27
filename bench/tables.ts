@@ -57,6 +57,14 @@ const meanColdOf = (a: Artifact, corpus: string, size: string, lib: string): num
 	return cells.length ? mean(cells) : null;
 };
 
+/** Mean one-shot (constructor + first answer, summed per child) across every probe kind. */
+const meanOneShotOf = (a: Artifact, corpus: string, size: string, lib: string): number | null => {
+	const cells = probeKinds(a, corpus)
+		.map((k) => cellOf(a, corpus, k, size, lib)?.oneShotMs)
+		.filter((v): v is number => v != null);
+	return cells.length ? mean(cells) : null;
+};
+
 const variantsOf = (a: Artifact, corpus: string): string[] =>
 	Object.keys(a.coldMatrix[corpus]?.batch?.[PROBE_SIZE] ?? {});
 
@@ -103,8 +111,9 @@ const librariesTable = (): string =>
 		["left", "left", "left", "left"],
 	);
 
-// The 100k table: every cell process-cold. cold = mean first answer across the
-// twenty probes; batch = all twenty in one process, the realistic session.
+// The 100k tables: every cell process-cold. The scale table is the one-shot
+// ledger (constructor, mean first answer, and their measured sum); the batch
+// table is the session ledger (warmup match + twenty probes, one process).
 const scaleTable = (a: Artifact, corpus: string): string => {
 	const size = String(PUBLISHED_SIZE);
 	const shown = variantsOf(a, corpus)
@@ -113,51 +122,82 @@ const scaleTable = (a: Artifact, corpus: string): string => {
 	const krinoBatch = cellOf(a, corpus, "batch", size, "krino");
 	if (!krinoBatch) throw new Error(`no krino batch cell for '${corpus}' — run the cold stage first`);
 
-	const row = (lib: string): Array<string> => {
-		const batch = cellOf(a, corpus, "batch", size, lib);
-		const cold = meanColdOf(a, corpus, size, lib);
-		if (!batch || cold == null) return ["—", "—", "—", "—", "—", "—"];
+	const krinoOneShot = meanOneShotOf(a, corpus, size, "krino") as number;
+	const rows = shown.map((lib) => {
+		const batch = cellOf(a, corpus, "batch", size, lib) as ColdCell;
+		const cold = meanColdOf(a, corpus, size, lib) as number;
+		const oneShot = meanOneShotOf(a, corpus, size, lib) as number;
 		const emphasize = (v: string): string => (lib === "krino" ? `**${v}**` : v);
 		return [
+			lib === "krino" ? "**Krino**" : displayName(lib),
 			`${ms(batch.indexMs)} ms`,
 			`${ms(cold)} ms`,
-			`${ms(batch.queryMs)} ms`,
-			`${ms(batch.restMs ?? batch.queryMs)} ms`,
-			emphasize(pct(batch.queryMs, krinoBatch.queryMs)),
-			emphasize(pct(batch.oneShotMs, krinoBatch.oneShotMs)),
+			`${ms(oneShot)} ms`,
+			emphasize(pct(oneShot, krinoOneShot)),
 		];
-	};
-
-	const rows = shown.map((lib) => [lib === "krino" ? "**Krino**" : displayName(lib), ...row(lib)]);
+	});
 
 	const agg = {
 		index: geomean(shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).indexMs || 0.01)),
 		cold: geomean(shown.map((l) => meanColdOf(a, corpus, size, l) as number)),
-		batch: geomean(shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).queryMs)),
+		oneShot: geomean(shown.map((l) => meanOneShotOf(a, corpus, size, l) as number)),
+	};
+	// geomean-of-ratios is the ratio-of-geomeans, so the rel cell is equally
+	// the geomean of the rel column and field-geomean ÷ krino.
+	rows.push([
+		"_all libraries (geomean)_",
+		`${ms(agg.index)} ms`,
+		`${ms(agg.cold)} ms`,
+		`${ms(agg.oneShot)} ms`,
+		pct(agg.oneShot, krinoOneShot),
+	]);
+
+	return mdTable(
+		["Library", "index", "cold query", "total", "total rel"],
+		rows,
+		["left", "right", "right", "right", "right"],
+	);
+};
+
+const batchTable = (a: Artifact, corpus: string): string => {
+	const size = String(PUBLISHED_SIZE);
+	const shown = variantsOf(a, corpus)
+		.filter((name) => foldsFor(corpus, name))
+		.sort(speedOrder);
+	const krinoBatch = cellOf(a, corpus, "batch", size, "krino");
+	if (!krinoBatch) throw new Error(`no krino batch cell for '${corpus}' — run the cold stage first`);
+
+	const rows = shown.map((lib) => {
+		const batch = cellOf(a, corpus, "batch", size, lib) as ColdCell;
+		const emphasize = (v: string): string => (lib === "krino" ? `**${v}**` : v);
+		return [
+			lib === "krino" ? "**Krino**" : displayName(lib),
+			`${ms(batch.restMs ?? batch.queryMs)} ms`,
+			`${ms(batch.queryMs)} ms`,
+			emphasize(pct(batch.queryMs, krinoBatch.queryMs)),
+		];
+	});
+
+	const agg = {
 		rest: geomean(
 			shown.map((l) => {
 				const c = cellOf(a, corpus, "batch", size, l) as ColdCell;
 				return c.restMs ?? c.queryMs;
 			}),
 		),
-		oneShot: geomean(shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).oneShotMs)),
+		batch: geomean(shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).queryMs)),
 	};
-	// geomean-of-ratios is the ratio-of-geomeans, so the rel cells are equally
-	// the geomean of each rel column and field-geomean ÷ krino.
 	rows.push([
 		"_all libraries (geomean)_",
-		`${ms(agg.index)} ms`,
-		`${ms(agg.cold)} ms`,
-		`${ms(agg.batch)} ms`,
 		`${ms(agg.rest)} ms`,
+		`${ms(agg.batch)} ms`,
 		pct(agg.batch, krinoBatch.queryMs),
-		pct(agg.oneShot, krinoBatch.oneShotMs),
 	]);
 
 	return mdTable(
-		["Library", "index", "cold query", "batch", "batch/query", "batch rel", "one-shot rel"],
+		["Library", "batch/query", "batch total", "batch rel"],
 		rows,
-		["left", "right", "right", "right", "right", "right", "right"],
+		["left", "right", "right", "right"],
 	);
 };
 
@@ -298,7 +338,10 @@ export const regions = (a: Artifact): Record<string, string> => {
 	const out: Record<string, string> = {};
 	if (Object.keys(a.coldMatrix).length) out.build = buildTable(a);
 	out.libraries = librariesTable();
-	for (const corpus of Object.keys(a.coldMatrix)) out[`speed-${corpus}`] = scaleTable(a, corpus);
+	for (const corpus of Object.keys(a.coldMatrix)) {
+		out[`speed-${corpus}`] = scaleTable(a, corpus);
+		out[`batch-${corpus}`] = batchTable(a, corpus);
+	}
 	for (const corpus of Object.keys(a.scorecard.corpora)) {
 		out[`scorecard-${corpus}`] = scorecardTable(a, corpus);
 	}

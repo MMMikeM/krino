@@ -644,7 +644,9 @@ _Both charts read the scorecard above out of [`bench/results.json`](../bench/res
 
 These tables position each library rather than rank them; the method is uniform throughout.
 **Gzip** = esbuild `--bundle --minify` + gzip, tree-shaken to each lib's primary API (the size table is in [Libraries](#libraries)).
-Every cell is process-cold ("One measurement model"): **index** = the constructor, **cold query** = mean first answer across the twenty probes (each in its own fresh process), **batch** = one fresh process answering a short-word warmup match then all twenty probes once, **batch/query** = the mean of the twenty post-warmup probes; the two **rel** columns restate batch and one-shot (index + first answer) relative to Krino (100% = same, lower = faster).
+Every cell is process-cold ("One measurement model"), and each corpus gets two tables.
+The scale table is the one-shot ledger: **index** = the constructor, **cold query** = mean first answer across the twenty probes (each in its own fresh process), **total** = the mean of constructor + first answer, summed inside each probe's own child, **total rel** = that total relative to Krino (100% = same, lower = faster).
+The batch table is the session ledger: **batch total** = one fresh process answering a short-word warmup match then all twenty probes once, **batch/query** = the mean of the twenty post-warmup probes, **batch rel** = batch total relative to Krino.
 The aggregate row is a **geometric mean**: per-library times span orders of magnitude, so an arithmetic mean would only describe the slowest library; the geomean is the standard aggregate for multiplicative spreads, and the rel cells are equally the geomean of each rel column (a geomean of ratios is the ratio of geomeans).
 These tables publish the 100k size; the full 10k matrix — scorecard and per-probe tables — carries the fine-grained view, and every cell of both sits in [`bench/results.json`](../bench/results.json).
 The two corpora are described in "The corpus and the twenty probes"; they're benched separately.
@@ -660,39 +662,77 @@ Krino leads its own table; the rest are alphabetical, so each library's base and
 ### ascii corpus
 
 <!-- bench:speed-ascii -->
-| Library                     |     index | cold query |      batch | batch/query | batch rel | one-shot rel |
-|-----------------------------|----------:|-----------:|-----------:|------------:|----------:|-------------:|
-| **Krino**                   |   0.86 ms |   23.25 ms |   97.36 ms |     4.60 ms |  **100%** |     **100%** |
-| Krino (acronym)             |   0.87 ms |   23.75 ms |  108.11 ms |     5.10 ms |      111% |         109% |
-| @nozbe/microfuzz            | 104.17 ms |   24.14 ms |  454.49 ms |    21.60 ms |      467% |        2053% |
-| @nozbe/microfuzz (all opts) | 102.15 ms |   24.16 ms |  460.25 ms |    21.93 ms |      473% |        2014% |
-| fast-fuzzy                  | 572.06 ms |  110.83 ms | 1917.01 ms |    89.56 ms |     1969% |       11042% |
-| fast-fuzzy (all opts)       | 580.02 ms |  112.28 ms | 1924.99 ms |    91.18 ms |     1977% |       11071% |
-| Fuse.js                     |   7.46 ms |  223.13 ms | 4140.09 ms |   200.14 ms |     4252% |        2382% |
-| Fuse.js (all opts)          |   7.54 ms |  225.72 ms | 4141.36 ms |   197.21 ms |     4254% |        3314% |
-| fuzzy                       |   0.05 ms |   24.58 ms |  378.76 ms |    17.66 ms |      389% |         414% |
-| fuzzy (all opts)            |   0.05 ms |   25.80 ms |  397.71 ms |    18.59 ms |      408% |         417% |
-| fuzzysort                   |   0.05 ms |  123.92 ms |  232.81 ms |     5.71 ms |      239% |        1957% |
-| match-sorter                |   0.05 ms |   41.53 ms |  592.21 ms |    27.31 ms |      608% |         743% |
-| uFuzzy                      |   4.88 ms |    3.37 ms |   45.49 ms |     2.08 ms |       47% |         141% |
-| uFuzzy (all opts)           |  11.24 ms |    4.87 ms |   66.14 ms |     3.09 ms |       68% |         250% |
-| _all libraries (geomean)_   |   3.59 ms |   37.49 ms |  435.06 ms |    19.53 ms |      447% |         934% |
+| Library                     |     index | cold query |     total | total rel |
+|-----------------------------|----------:|-----------:|----------:|----------:|
+| **Krino**                   |   0.86 ms |   23.25 ms |  24.11 ms |  **100%** |
+| Krino (acronym)             |   0.87 ms |   23.75 ms |  24.58 ms |      102% |
+| @nozbe/microfuzz            | 104.17 ms |   24.14 ms | 125.49 ms |      521% |
+| @nozbe/microfuzz (all opts) | 102.15 ms |   24.16 ms | 125.57 ms |      521% |
+| fast-fuzzy                  | 572.06 ms |  110.83 ms | 692.88 ms |     2874% |
+| fast-fuzzy (all opts)       | 580.02 ms |  112.28 ms | 693.79 ms |     2878% |
+| Fuse.js                     |   7.46 ms |  223.13 ms | 230.70 ms |      957% |
+| Fuse.js (all opts)          |   7.54 ms |  225.72 ms | 233.26 ms |      968% |
+| fuzzy                       |   0.05 ms |   24.58 ms |  24.64 ms |      102% |
+| fuzzy (all opts)            |   0.05 ms |   25.80 ms |  25.85 ms |      107% |
+| fuzzysort                   |   0.05 ms |  123.92 ms | 123.98 ms |      514% |
+| match-sorter                |   0.05 ms |   41.53 ms |  41.58 ms |      172% |
+| uFuzzy                      |   4.88 ms |    3.37 ms |   8.28 ms |       34% |
+| uFuzzy (all opts)           |  11.24 ms |    4.87 ms |  16.31 ms |       68% |
+| _all libraries (geomean)_   |   3.59 ms |   37.49 ms |  72.32 ms |      300% |
+<!-- bench:end -->
+
+**The session batch** (one process: a warmup match, then the twenty probes once each):
+
+<!-- bench:batch-ascii -->
+| Library                     | batch/query | batch total | batch rel |
+|-----------------------------|------------:|------------:|----------:|
+| **Krino**                   |     4.60 ms |    97.36 ms |  **100%** |
+| Krino (acronym)             |     5.10 ms |   108.11 ms |      111% |
+| @nozbe/microfuzz            |    21.60 ms |   454.49 ms |      467% |
+| @nozbe/microfuzz (all opts) |    21.93 ms |   460.25 ms |      473% |
+| fast-fuzzy                  |    89.56 ms |  1917.01 ms |     1969% |
+| fast-fuzzy (all opts)       |    91.18 ms |  1924.99 ms |     1977% |
+| Fuse.js                     |   200.14 ms |  4140.09 ms |     4252% |
+| Fuse.js (all opts)          |   197.21 ms |  4141.36 ms |     4254% |
+| fuzzy                       |    17.66 ms |   378.76 ms |      389% |
+| fuzzy (all opts)            |    18.59 ms |   397.71 ms |      408% |
+| fuzzysort                   |     5.71 ms |   232.81 ms |      239% |
+| match-sorter                |    27.31 ms |   592.21 ms |      608% |
+| uFuzzy                      |     2.08 ms |    45.49 ms |       47% |
+| uFuzzy (all opts)           |     3.09 ms |    66.14 ms |       68% |
+| _all libraries (geomean)_   |    19.53 ms |   435.06 ms |      447% |
 <!-- bench:end -->
 
 ### mixed corpus
 
 <!-- bench:speed-mixed -->
-| Library                     |     index | cold query |      batch | batch/query | batch rel | one-shot rel |
-|-----------------------------|----------:|-----------:|-----------:|------------:|----------:|-------------:|
-| **Krino**                   |   0.82 ms |   23.55 ms |   85.36 ms |     3.92 ms |  **100%** |     **100%** |
-| Krino (acronym)             |   0.83 ms |   23.79 ms |   87.61 ms |     4.01 ms |      103% |         106% |
-| @nozbe/microfuzz            | 103.54 ms |   25.73 ms |  318.77 ms |    14.63 ms |      373% |        1646% |
-| @nozbe/microfuzz (all opts) | 102.06 ms |   25.73 ms |  326.36 ms |    14.99 ms |      382% |        1650% |
-| Fuse.js (all opts)          |   7.59 ms |  226.02 ms | 4194.28 ms |   199.28 ms |     4914% |        2759% |
-| fuzzysort                   |   0.05 ms |  128.57 ms |  221.33 ms |     4.46 ms |      259% |        1691% |
-| match-sorter                |   0.05 ms |   49.40 ms |  706.02 ms |    32.56 ms |      827% |         683% |
-| uFuzzy (all opts)           |  12.01 ms |    5.22 ms |   71.93 ms |     3.35 ms |       84% |         216% |
-| _all libraries (geomean)_   |   2.53 ms |   35.94 ms |  278.96 ms |    11.63 ms |      327% |         612% |
+| Library                     |     index | cold query |     total | total rel |
+|-----------------------------|----------:|-----------:|----------:|----------:|
+| **Krino**                   |   0.82 ms |   23.55 ms |  24.39 ms |  **100%** |
+| Krino (acronym)             |   0.83 ms |   23.79 ms |  24.62 ms |      101% |
+| @nozbe/microfuzz            | 103.54 ms |   25.73 ms | 129.14 ms |      530% |
+| @nozbe/microfuzz (all opts) | 102.06 ms |   25.73 ms | 129.02 ms |      529% |
+| Fuse.js (all opts)          |   7.59 ms |  226.02 ms | 233.50 ms |      957% |
+| fuzzysort                   |   0.05 ms |  128.57 ms | 128.63 ms |      527% |
+| match-sorter                |   0.05 ms |   49.40 ms |  49.45 ms |      203% |
+| uFuzzy (all opts)           |  12.01 ms |    5.22 ms |  17.32 ms |       71% |
+| _all libraries (geomean)_   |   2.53 ms |   35.94 ms |  63.29 ms |      260% |
+<!-- bench:end -->
+
+**The session batch** (one process: a warmup match, then the twenty probes once each):
+
+<!-- bench:batch-mixed -->
+| Library                     | batch/query | batch total | batch rel |
+|-----------------------------|------------:|------------:|----------:|
+| **Krino**                   |     3.92 ms |    85.36 ms |  **100%** |
+| Krino (acronym)             |     4.01 ms |    87.61 ms |      103% |
+| @nozbe/microfuzz            |    14.63 ms |   318.77 ms |      373% |
+| @nozbe/microfuzz (all opts) |    14.99 ms |   326.36 ms |      382% |
+| Fuse.js (all opts)          |   199.28 ms |  4194.28 ms |     4914% |
+| fuzzysort                   |     4.46 ms |   221.33 ms |      259% |
+| match-sorter                |    32.56 ms |   706.02 ms |      827% |
+| uFuzzy (all opts)           |     3.35 ms |    71.93 ms |       84% |
+| _all libraries (geomean)_   |    11.63 ms |   278.96 ms |      327% |
 <!-- bench:end -->
 
 The acronym configuration runs strictly _more_ code per query (an extra tier, plus the one-edit rescues on candidates that reach it); its 104% cell is that price plus load swing.
