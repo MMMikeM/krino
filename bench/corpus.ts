@@ -15,8 +15,15 @@
  * ranks. Used by the speed benches (compare.bench.ts), the gate-funnel
  * diagnostics (funnel.test.ts), and the match-count checks (hits.test.ts).
  */
-import asciiJson from "./corpus-ascii.json";
-import mixedJson from "./corpus-mixed.json";
+import { readFileSync } from "node:fs";
+
+// readFileSync rather than JSON module imports so this file loads under plain
+// node too (bench/run.ts children) — import attributes for JSON differ between
+// vitest's bundler and node's ESM loader.
+const loadCorpus = (file: string): string[] =>
+	JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8")) as string[];
+const asciiJson: string[] = loadCorpus("./corpus-ascii.json");
+const mixedJson: string[] = loadCorpus("./corpus-mixed.json");
 
 // The snapshots hold the full 100k sequence; generation was a single reseed
 // followed by sequential appends, so a prefix slice equals a smaller build
@@ -271,6 +278,6 @@ const makeCorpus = (name: Corpus["name"], build: (n: number) => string[]): Corpu
 };
 
 export const CORPORA: Corpus[] = [
-	makeCorpus("ascii", slicer(asciiJson as string[])),
-	makeCorpus("mixed", slicer(mixedJson as string[])),
+	makeCorpus("ascii", slicer(asciiJson)),
+	makeCorpus("mixed", slicer(mixedJson)),
 ];
