@@ -38,7 +38,7 @@ const TABLE_MAX = 0x4ff;
 // oxlint-disable-next-line unicorn/no-new-array
 const foldTable: (string | undefined)[] = new Array(TABLE_MAX + 1).fill(undefined);
 const foldRare = new Map<string, string>();
-const foldChar = (ch: string): string => {
+export const foldChar = (ch: string): string => {
 	const cp = ch.codePointAt(0) as number;
 	if (cp <= TABLE_MAX) {
 		let folded = foldTable[cp];
