@@ -1,5 +1,5 @@
-import type { Artifact, ProbeTable } from "./artifact.ts";
-import { PUBLISHED_SIZE, indexMsFor } from "./artifact.ts";
+import type { Artifact, ColdCell, ProbeTable } from "./artifact.ts";
+import { PUBLISHED_SIZE } from "./artifact.ts";
 import { META, bySize, displayName, foldsFor } from "./libraries.ts";
 
 type Align = "left" | "right";
@@ -19,10 +19,6 @@ const mdTable = (header: string[], rows: string[][], align: Align[]): string => 
 
 const ms = (v: number): string => v.toFixed(2);
 const pct = (num: number, den: number): string => `${Math.round((num / den) * 100)}%`;
-const sizeLabel = (s: string): string => (Number(s) >= 1000 ? `${Number(s) / 1000}k` : s);
-
-const sizesOf = (byLib: Record<string, Record<string, unknown>>): string[] =>
-	[...new Set(Object.values(byLib).flatMap(Object.keys))].sort((a, b) => Number(a) - Number(b));
 
 // Krino leads its own table; the rest are alphabetical, which keeps each
 // library's base and (all opts) rows adjacent and orders nothing by result.
@@ -41,23 +37,50 @@ const speedOrder = (a: string, b: string): number => {
 const geomean = (xs: number[]): number =>
 	Math.exp(xs.reduce((a, v) => a + Math.log(v), 0) / xs.length);
 
+const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length;
+
+/** Corpus the per-probe tables are drawn from; the docs say so in prose. */
+const PROBE_CORPUS = "mixed";
+const PROBE_SIZE = "10000";
+
+const cellOf = (a: Artifact, corpus: string, kind: string, size: string, lib: string): ColdCell | undefined =>
+	a.coldMatrix[corpus]?.[kind]?.[size]?.[lib];
+
+const probeKinds = (a: Artifact, corpus: string): string[] =>
+	Object.keys(a.coldMatrix[corpus] ?? {}).filter((k) => k !== "batch");
+
+/** Mean first-answer cost across every probe kind — the average cold query. */
+const meanColdOf = (a: Artifact, corpus: string, size: string, lib: string): number | null => {
+	const cells = probeKinds(a, corpus)
+		.map((k) => cellOf(a, corpus, k, size, lib)?.queryMs)
+		.filter((v): v is number => v != null);
+	return cells.length ? mean(cells) : null;
+};
+
+const variantsOf = (a: Artifact, corpus: string): string[] =>
+	Object.keys(a.coldMatrix[corpus]?.batch?.[PROBE_SIZE] ?? {});
+
 const BUILD_COLUMNS: Array<[library: string, label: string]> = [
 	["krino", "Krino"],
 	["@nozbe/microfuzz", "@nozbe/microfuzz"],
 	["fast-fuzzy", "fast-fuzzy"],
 	["fuse.js", "Fuse.js"],
-	["fuzzysort", "fuzzysort (lazy)"],
 	["uFuzzy (all opts)", "uFuzzy (all opts)"],
 ];
 
+// Constructor cost alone, from the batch cells (the constructor is timed in
+// every child; the batch cell's median is as good as any). fuzzysort has no
+// constructor at all — its prepare-all pass lands in its cold query.
 const buildTable = (a: Artifact): string => {
-	const columns = BUILD_COLUMNS.filter(([lib]) => a.build[lib]);
-	const sizes = sizesOf(a.build);
+	const sizes = Object.keys(a.coldMatrix[PROBE_CORPUS]?.batch ?? {});
+	const columns = BUILD_COLUMNS.filter(([lib]) =>
+		sizes.some((s) => cellOf(a, PROBE_CORPUS, "batch", s, lib)),
+	);
 	const rows = sizes.map((size) => [
-		sizeLabel(size),
+		Number(size) >= 1000 ? `${Number(size) / 1000}k` : size,
 		...columns.map(([lib]) => {
-			const cell = a.build[lib]?.[size];
-			return cell == null ? "—" : `${ms(cell)} ms`;
+			const cell = cellOf(a, PROBE_CORPUS, "batch", size, lib);
+			return cell == null ? "—" : `${ms(cell.indexMs)} ms`;
 		}),
 	]);
 	return mdTable(
@@ -80,114 +103,84 @@ const librariesTable = (): string =>
 		["left", "left", "left", "left"],
 	);
 
-const speedTable = (a: Artifact, corpus: string): string => {
-	const byLib = a.speed[corpus];
-	if (!byLib) throw new Error(`no speed data for corpus '${corpus}' — run the speed stage first`);
-	const sizes = sizesOf(byLib).filter((s) => Number(s) >= PUBLISHED_SIZE);
-	const shown = Object.keys(byLib)
+// The 100k table: every cell process-cold. cold = mean first answer across the
+// twenty probes; batch = all twenty in one process, the realistic session.
+const scaleTable = (a: Artifact, corpus: string): string => {
+	const size = String(PUBLISHED_SIZE);
+	const shown = variantsOf(a, corpus)
 		.filter((name) => foldsFor(corpus, name))
 		.sort(speedOrder);
-	const krino = byLib.krino;
-	if (!krino) throw new Error(`no 'krino' row for corpus '${corpus}'`);
+	const krinoBatch = cellOf(a, corpus, "batch", size, "krino");
+	if (!krinoBatch) throw new Error(`no krino batch cell for '${corpus}' — run the cold stage first`);
 
-	// total = index + one query: the cold one-shot cost. A library that keeps no
-	// index has already run its preparation inside the query.
-	const totalOf = (lib: string, size: string): number | null => {
-		const query = byLib[lib]?.[size]?.ms;
-		return query == null ? null : (indexMsFor(a, lib, size) ?? 0) + query;
+	const row = (lib: string): Array<string> => {
+		const batch = cellOf(a, corpus, "batch", size, lib);
+		const cold = meanColdOf(a, corpus, size, lib);
+		if (!batch || cold == null) return ["—", "—", "—", "—", "—", "—"];
+		const emphasize = (v: string): string => (lib === "krino" ? `**${v}**` : v);
+		return [
+			`${ms(batch.indexMs)} ms`,
+			`${ms(cold)} ms`,
+			`${ms(batch.queryMs)} ms`,
+			`${ms(batch.restMs ?? batch.queryMs)} ms`,
+			emphasize(pct(batch.queryMs, krinoBatch.queryMs)),
+			emphasize(pct(batch.oneShotMs, krinoBatch.oneShotMs)),
+		];
 	};
 
-	const header = [
-		"Library",
-		...sizes.flatMap((s) => [
-			`${sizeLabel(s)} index`,
-			`${sizeLabel(s)} query`,
-			`${sizeLabel(s)} total`,
-			"query rel",
-			"total rel",
-		]),
-	];
+	const rows = shown.map((lib) => [lib === "krino" ? "**Krino**" : displayName(lib), ...row(lib)]);
 
-	const rows = shown.map((lib) => [
-		lib === "krino" ? "**Krino**" : displayName(lib),
-		...sizes.flatMap((size) => {
-			const query = byLib[lib]?.[size]?.ms;
-			const base = krino[size]?.ms;
-			if (query == null || base == null) return ["—", "—", "—", "—", "—"];
-			const index = indexMsFor(a, lib, size);
-			const total = totalOf(lib, size) as number;
-			const krinoTotal = totalOf("krino", size) as number;
-			const emphasize = (v: string): string => (lib === "krino" ? `**${v}**` : v);
-			return [
-				index == null ? "—" : `${ms(index)} ms`,
-				`${ms(query)} ms`,
-				`${ms(total)} ms`,
-				emphasize(pct(query, base)),
-				emphasize(pct(total, krinoTotal)),
-			];
-		}),
-	]);
-
-	const aggregate = (size: string) => {
-		const defined = <T>(xs: Array<T | null | undefined>): T[] => xs.filter((x) => x != null) as T[];
-		return {
-			index: geomean(defined(shown.map((lib) => indexMsFor(a, lib, size)))),
-			query: geomean(defined(shown.map((lib) => byLib[lib]?.[size]?.ms))),
-			total: geomean(defined(shown.map((lib) => totalOf(lib, size)))),
-		};
+	const agg = {
+		index: geomean(shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).indexMs || 0.01)),
+		cold: geomean(shown.map((l) => meanColdOf(a, corpus, size, l) as number)),
+		batch: geomean(shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).queryMs)),
+		rest: geomean(
+			shown.map((l) => {
+				const c = cellOf(a, corpus, "batch", size, l) as ColdCell;
+				return c.restMs ?? c.queryMs;
+			}),
+		),
+		oneShot: geomean(shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).oneShotMs)),
 	};
-
 	// geomean-of-ratios is the ratio-of-geomeans, so the rel cells are equally
 	// the geomean of each rel column and field-geomean ÷ krino.
 	rows.push([
 		"_all libraries (geomean)_",
-		...sizes.flatMap((size) => {
-			const agg = aggregate(size);
-			return [
-				`${ms(agg.index)} ms`,
-				`${ms(agg.query)} ms`,
-				`${ms(agg.total)} ms`,
-				pct(agg.query, krino[size].ms),
-				pct(agg.total, totalOf("krino", size) as number),
-			];
-		}),
-	]);
-	rows.push([
-		"_geomean vs Krino_",
-		...sizes.flatMap((size) => {
-			const agg = aggregate(size);
-			const index = indexMsFor(a, "krino", size);
-			const query = krino[size].ms;
-			const total = totalOf("krino", size) as number;
-			return [
-				index == null ? "—" : pct(agg.index, index),
-				pct(agg.query, query),
-				pct(agg.total, total),
-				pct(agg.query, query),
-				pct(agg.total, total),
-			];
-		}),
+		`${ms(agg.index)} ms`,
+		`${ms(agg.cold)} ms`,
+		`${ms(agg.batch)} ms`,
+		`${ms(agg.rest)} ms`,
+		pct(agg.batch, krinoBatch.queryMs),
+		pct(agg.oneShot, krinoBatch.oneShotMs),
 	]);
 
-	return mdTable(header, rows, ["left", ...header.slice(1).map((): Align => "right")]);
+	return mdTable(
+		["Library", "index", "cold query", "batch", "batch/query", "batch rel", "one-shot rel"],
+		rows,
+		["left", "right", "right", "right", "right", "right", "right"],
+	);
 };
 
 export const omittedFrom = (a: Artifact, corpus: string): string[] =>
-	Object.keys(a.speed[corpus] ?? {}).filter((name) => !foldsFor(corpus, name));
+	variantsOf(a, corpus).filter((name) => !foldsFor(corpus, name));
 
 const scorecardTable = (a: Artifact, corpus: string): string => {
 	const rows = a.scorecard.corpora[corpus];
 	if (!rows) throw new Error(`no scorecard for corpus '${corpus}' — run the quality stage first`);
 	return mdTable(
-		["Library", "MRR", "index ms", "cold ms", "warm ms", "total ms"],
-		rows.map((r) => [
-			displayName(r.library),
-			r.mrr.toFixed(2),
-			r.indexMs ? ms(r.indexMs) : "—",
-			ms(r.coldMs),
-			ms(r.queryMs),
-			ms(r.totalMs),
-		]),
+		["Library", "MRR", "index ms", "cold ms", "batch ms", "batch/query"],
+		rows.map((r) => {
+			const batch = cellOf(a, corpus, "batch", PROBE_SIZE, r.library);
+			const cold = meanColdOf(a, corpus, PROBE_SIZE, r.library);
+			return [
+				displayName(r.library),
+				r.mrr.toFixed(2),
+				batch ? ms(batch.indexMs) : "—",
+				cold == null ? "—" : ms(cold),
+				batch ? ms(batch.queryMs) : "—",
+				batch ? ms(batch.restMs ?? batch.queryMs) : "—",
+			];
+		}),
 		["left", "right", "right", "right", "right", "right"],
 	);
 };
@@ -226,40 +219,47 @@ const probeRows = (probe: ProbeTable): string[] =>
 const rankCell = (cell: ProbeTable["cells"][string]): string =>
 	cell.count === 0 ? "—" : String(cell.rank ?? "✗");
 
-const probeTable = (probe: ProbeTable): string =>
+const probeTable = (a: Artifact, probe: ProbeTable, kindIndex: number): string =>
 	mdTable(
-		["Library", "rank", "matches", "cold ms", "warm ms", "total ms"],
+		["Library", "rank", "matches", "index ms", "cold ms", "total ms", "batch ms"],
 		probeRows(probe).map((lib) => {
 			const cell = probe.cells[lib];
+			const cold = cellOf(a, PROBE_CORPUS, probe.kind, PROBE_SIZE, lib);
+			const batch = cellOf(a, PROBE_CORPUS, "batch", PROBE_SIZE, lib)?.perQueryMs?.[kindIndex];
 			return [
 				displayName(lib),
 				rankCell(cell),
 				String(cell.count),
-				ms(cell.coldMs),
-				ms(cell.queryMs),
-				ms(cell.totalMs),
+				cold ? ms(cold.indexMs) : "—",
+				cold ? ms(cold.queryMs) : "—",
+				cold ? ms(cold.oneShotMs) : "—",
+				batch == null ? "—" : ms(batch),
 			];
 		}),
-		["left", "right", "right", "right", "right", "right"],
+		["left", "right", "right", "right", "right", "right", "right"],
 	);
 
 /**
  * The guaranteed-miss probe has no rank to report, so its table prices the
- * refusal instead: each library's cost for a hopeless query against its own
- * cost for one that matches.
+ * refusal instead: each library's cold cost for a hopeless query against its
+ * own cold cost for one that matches.
  */
-const missTable = (probes: ProbeTable[]): string => {
+const missTable = (a: Artifact, probes: ProbeTable[]): string => {
 	const miss = probes.find((p) => p.kind === "miss");
 	const reference = probes.find((p) => p.kind === "long-word");
 	if (!miss || !reference) throw new Error("probe set is missing the miss or long-word query");
 	return mdTable(
-		["Library", "matches", "warm ms", `vs \`${reference.query}\``],
-		probeRows(miss).map((lib) => [
-			displayName(lib),
-			String(miss.cells[lib].count),
-			miss.cells[lib].queryMs.toFixed(3),
-			pct(miss.cells[lib].queryMs, reference.cells[lib].queryMs),
-		]),
+		["Library", "matches", "cold ms", `vs \`${reference.query}\``],
+		probeRows(miss).map((lib) => {
+			const missCold = cellOf(a, PROBE_CORPUS, "miss", PROBE_SIZE, lib);
+			const refCold = cellOf(a, PROBE_CORPUS, "long-word", PROBE_SIZE, lib);
+			return [
+				displayName(lib),
+				String(miss.cells[lib].count),
+				missCold ? missCold.queryMs.toFixed(3) : "—",
+				missCold && refCold ? pct(missCold.queryMs, refCold.queryMs) : "—",
+			];
+		}),
 		["left", "right", "right", "right"],
 	);
 };
@@ -293,15 +293,12 @@ const longtextTable = (a: Artifact): string => {
 	);
 };
 
-/** Corpus the per-probe tables are drawn from; the docs say so in prose. */
-const PROBE_CORPUS = "mixed";
-
 /** Every injectable region, keyed by the id its marker carries. */
 export const regions = (a: Artifact): Record<string, string> => {
 	const out: Record<string, string> = {};
-	if (Object.keys(a.build).length) out.build = buildTable(a);
+	if (Object.keys(a.coldMatrix).length) out.build = buildTable(a);
 	out.libraries = librariesTable();
-	for (const corpus of Object.keys(a.speed)) out[`speed-${corpus}`] = speedTable(a, corpus);
+	for (const corpus of Object.keys(a.coldMatrix)) out[`speed-${corpus}`] = scaleTable(a, corpus);
 	for (const corpus of Object.keys(a.scorecard.corpora)) {
 		out[`scorecard-${corpus}`] = scorecardTable(a, corpus);
 	}
@@ -311,7 +308,8 @@ export const regions = (a: Artifact): Record<string, string> => {
 	for (const probe of probes) {
 		if (kinds.has(probe.kind)) throw new Error(`duplicate probe kind '${probe.kind}'`);
 		kinds.add(probe.kind);
-		out[`probe-${probe.kind}`] = probe.kind === "miss" ? missTable(probes) : probeTable(probe);
+		out[`probe-${probe.kind}`] =
+			probe.kind === "miss" ? missTable(a, probes) : probeTable(a, probe, probes.indexOf(probe));
 	}
 
 	if (a.session) out.session = sessionTable(a);

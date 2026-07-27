@@ -1,6 +1,6 @@
 /**
- * Every measured library configuration, defined once: compare.bench.ts times
- * them, hits.test.ts ranks them, session.test.ts replays a subset. A
+ * Every measured library configuration, defined once: bench/run.ts times them
+ * process-cold, hits.test.ts ranks them, session.test.ts replays a subset. A
  * configuration defined in only one of those files gets measured on only one
  * axis, which is how a row comes to be timed but never scored.
  *
@@ -33,18 +33,11 @@ export type Probe = {
 
 export type Config = {
 	name: string;
-	/** Result count only — the shape compare.bench.ts times. */
+	/** Result count only — the shape the runner times. */
 	count: (query: string) => number;
 	probe: (query: string) => Probe;
 	/** Constructor cost alone (plus unavoidable per-searcher preparation like uFuzzy's latinize), or null when the library has no constructor at all. */
 	index: (() => number) | null;
-	/**
-	 * A brand-new searcher with every cache empty and every lazy slice unpaid,
-	 * for cold-query timing: the first call on it is the worst case. Omitted for
-	 * libraries that keep no per-searcher or process-wide state — their cold and
-	 * warm calls are the same call.
-	 */
-	fresh?: () => (query: string) => number;
 	/** Carries cross-query state, so timing loops must bust it between samples. */
 	stateful?: boolean;
 };
@@ -163,10 +156,6 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => krino(q).length,
 				probe: (q) => rankedOnly(krino(q).map((r) => r.item)),
 				index: () => consume(createFuzzySearch(list)),
-				fresh: () => {
-					const s = createFuzzySearch(list);
-					return (q) => s(q).length;
-				},
 				stateful: true,
 			};
 		},
@@ -180,10 +169,6 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => acronym(q).length,
 				probe: (q) => rankedOnly(acronym(q).map((r) => r.item)),
 				index: () => consume(createFuzzySearch(list, spec)),
-				fresh: () => {
-					const s = createFuzzySearch(list, spec);
-					return (q) => s(q).length;
-				},
 				stateful: true,
 			};
 		},
@@ -196,10 +181,6 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => microfuzz(q).length,
 				probe: (q) => rankedOnly(byScore(microfuzz(q)).map((r) => r.item)),
 				index: () => consume(createMicrofuzz(list)),
-				fresh: () => {
-					const s = createMicrofuzz(list);
-					return (q) => s(q).length;
-				},
 			};
 		},
 	},
@@ -211,10 +192,6 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => aggressive(q).length,
 				probe: (q) => rankedOnly(byScore(aggressive(q)).map((r) => r.item)),
 				index: () => consume(createMicrofuzz(list, { strategy: "aggressive" })),
-				fresh: () => {
-					const s = createMicrofuzz(list, { strategy: "aggressive" });
-					return (q) => s(q).length;
-				},
 			};
 		},
 	},
@@ -241,13 +218,9 @@ const definitions = (list: string[]): Definition[] => [
 			count: (q) => fuzzysort.go(q, list).length,
 			probe: (q) => rankedOnly(fuzzysort.go(q, list).map((r) => r.target)),
 			// No constructor at all: the prepare-all pass its first go() runs
-			// lazily is process-wide state, so it is priced where it is paid —
-			// the cold query, via cleanup() emptying the cache.
+			// lazily is process-wide state, priced where it is paid — the first
+			// query of a fresh process (bench/run.ts).
 			index: null,
-			fresh: () => {
-				fuzzysort.cleanup();
-				return (q) => fuzzysort.go(q, list).length;
-			},
 		}),
 	},
 	{
@@ -266,10 +239,6 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => fastFuzzy.search(q).length,
 				probe: (q) => rankedOnly(fastFuzzy.search(q)),
 				index: () => consume(new Searcher(list)),
-				fresh: () => {
-					const s = new Searcher(list);
-					return (q) => s.search(q).length;
-				},
 			};
 		},
 	},
@@ -281,10 +250,6 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => withMatchData.search(q).length,
 				probe: (q) => rankedOnly(withMatchData.search(q).map((m) => m.item)),
 				index: () => consume(new Searcher(list, { returnMatchData: true })),
-				fresh: () => {
-					const s = new Searcher(list, { returnMatchData: true });
-					return (q) => s.search(q).length;
-				},
 			};
 		},
 	},
@@ -311,11 +276,6 @@ const definitions = (list: string[]): Definition[] => [
 				// Latinizing the haystack is real preparation that normally hides as
 				// "no index", and this row competes on the total column.
 				index: () => uFuzzy.latinize(list).length,
-				fresh: () => {
-					const uf = new uFuzzy(UFUZZY_ALL);
-					const hay = uFuzzy.latinize(list);
-					return (q) => uFuzzyRanked(uf, hay, uFuzzy.latinize([q])[0], OUT_OF_ORDER)[0]?.length ?? 0;
-				},
 			};
 		},
 	},
@@ -327,10 +287,6 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => fuse.search(q).length,
 				probe: (q) => rankedOnly(fuse.search(q).map((r) => r.item)),
 				index: () => consume(new Fuse(list, FUSE_BASE)),
-				fresh: () => {
-					const s = new Fuse(list, FUSE_BASE);
-					return (q) => s.search(q).length;
-				},
 			};
 		},
 	},
@@ -342,10 +298,6 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => fuseAll.search(q).length,
 				probe: (q) => rankedOnly(fuseAll.search(q).map((r) => r.item)),
 				index: () => consume(new Fuse(list, FUSE_ALL)),
-				fresh: () => {
-					const s = new Fuse(list, FUSE_ALL);
-					return (q) => s.search(q).length;
-				},
 			};
 		},
 	},

@@ -1,7 +1,7 @@
 /**
  * Builds one bundle per combination of src/flags.ts switches, so index
  * experiments can be measured against each other by the ordinary harness:
- * speed.ts gives each variant a build/cold/warm cell, memory.ts a footprint,
+ * run.ts gives each variant process-cold cells, memory.ts a footprint,
  * hits.test.ts a rank and MRR.
  *
  * Copy-and-rewrite rather than a runtime option, because the point is to

@@ -46,25 +46,25 @@ const METRICS: Record<Metric, {
 }> = {
 	query: {
 		file: "pareto-query",
-		X0: 0.05,
-		X1: 25,
-		ticks: [0.1, 0.2, 0.5, 1, 2, 5, 10, 20],
-		heading: "Ranking quality vs. warm query cost",
-		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · index built once at load`,
-		axis: "Warm duration: index pre-built. Log scale, lower is better",
-		title: "Fuzzy search libraries: MRR vs query latency, index prebuilt",
+		X0: 0.15,
+		X1: 40,
+		ticks: [0.2, 0.5, 1, 2, 5, 10, 20],
+		heading: "Ranking quality vs. per-query session cost",
+		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · one searcher, all probes once (batch)`,
+		axis: "Batch per-query: searcher built once, twenty distinct queries. Log scale, lower is better",
+		title: "Fuzzy search libraries: MRR vs per-query cost across a 20-query session",
 		tail:
 			"Krino owns the accurate end of the frontier; the cheaper points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
 	},
 	total: {
 		file: "pareto-total",
-		X0: 0.15,
-		X1: 60,
-		ticks: [0.2, 0.5, 1, 2, 5, 10, 20, 50],
+		X0: 1,
+		X1: 120,
+		ticks: [1, 2, 5, 10, 20, 50, 100],
 		heading: "Ranking quality vs. cold search cost",
-		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · index built per search`,
-		axis: "Cold start: index + first query on a fresh searcher. Log scale, lower is better",
-		title: "Fuzzy search libraries: MRR vs total cost (index + cold query)",
+		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · fresh process per search`,
+		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
+		title: "Fuzzy search libraries: MRR vs cold one-shot cost",
 		tail:
 			"The no-index engines own the cheapest cold one-shots; the two Krino configurations share one pooled build cost and differ only in query time, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
 	},
@@ -207,16 +207,20 @@ const render = (C: Palette, metric: Metric, data: Point[], probes: number): stri
 `;
 };
 
-/** Both charts draw the mixed 10k scorecard, the same numbers the doc's table shows. */
+/** Both charts draw mixed 10k: MRR from the scorecard, costs from the cold matrix. */
 export const renderPareto = (artifact: Artifact): void => {
 	const scorecard = artifact.scorecard.corpora.mixed;
 	if (!scorecard?.length) throw new Error("no mixed scorecard — run the quality stage first");
-	const data: Point[] = scorecard.map((r) => ({
-		name: r.library,
-		mrr: r.mrr,
-		query: r.queryMs,
-		total: r.totalMs,
-	}));
+	const data: Point[] = scorecard.map((r) => {
+		const batch = artifact.coldMatrix.mixed?.batch?.["10000"]?.[r.library];
+		if (!batch) throw new Error(`no batch cell for '${r.library}' — run the cold stage first`);
+		return {
+			name: r.library,
+			mrr: r.mrr,
+			query: batch.restMs ?? batch.queryMs,
+			total: batch.oneShotMs,
+		};
+	});
 	const probes = artifact.probes.mixed?.length ?? 0;
 	for (const metric of Object.keys(METRICS) as Metric[]) {
 		const { file } = METRICS[metric];

@@ -1,16 +1,16 @@
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { renderPareto } from "../docs/pareto.ts";
 import {
 	type Artifact,
+	type ColdMatrix,
 	type ProbeTable,
 	type ScorecardRow,
-	contamination,
 	ensureRawDir,
 	load,
+	rawFile,
 	readRaw,
-	reduceBenchRun,
 	save,
 } from "./artifact.ts";
 import { omittedFrom, regions } from "./tables.ts";
@@ -26,6 +26,7 @@ const options = new Map(
 		.map((a) => a.split("=", 2) as [string, string]),
 );
 
+// Fresh processes per cold cell. 5 is the dev default; publish runs use 10.
 const RUNS = Number(options.get("--runs") ?? 5);
 const SCOPE = options.get("--scope") ?? process.env.BENCH ?? "";
 const CHECK = flags.has("--check");
@@ -40,23 +41,32 @@ const ONLY = options.get("--only") ?? "";
 // reach the artifact would overwrite published cells with a subset.
 const DRY = SCOPE !== "";
 
-// The scope token only selects bench matrix cells, so a scoped run defaults to
-// the speed stage alone rather than paying for N hits processes it can't scope.
 const measures = !DOCS_ONLY && !CHECK;
 const named = flags.has("--speed") || flags.has("--quality");
 const stages = {
-	speed: measures && (flags.has("--speed") || !named),
+	cold: measures && (flags.has("--speed") || !named),
 	quality: measures && (flags.has("--quality") || (!named && !DRY)),
 };
 
-// A scoped run has no artifact to render afterwards, so vitest's own output is
-// the result and has to reach the terminal.
+// A scoped run has no artifact to render afterwards, so the runner's own
+// output is the result and has to reach the terminal.
 const vitest = (args: string, env: Record<string, string> = {}): void => {
 	execSync(`pnpm exec vitest ${args}`, {
 		cwd: here,
 		stdio: ["ignore", DRY ? "inherit" : "ignore", "inherit"],
 		env: { ...process.env, ...(ONLY ? { BENCH_ONLY: ONLY } : {}), ...env },
 	});
+};
+
+// The process-cold runner (bench/run.ts): fresh node process per sample, one
+// invocation for the whole matrix — it interleaves cells internally and exits
+// nonzero on a contaminated run.
+const runner = (variant: string, test: string, extra: string[]): void => {
+	execFileSync(
+		process.execPath,
+		[`${here}run.ts`, variant, test, ...extra, `--count=${RUNS}`],
+		{ cwd: here, stdio: ["ignore", "inherit", "inherit"] },
+	);
 };
 
 // Overlay measured cells onto the committed ones, leaf by leaf, so a narrowed
@@ -72,29 +82,24 @@ const overlay = <T>(into: Record<string, T>, from: Record<string, T>): void => {
 	}
 };
 
-const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
-
-// One corpus×size per process. compare.bench.ts probes every cell at
-// registration, so a single process would hold all four corpora and their
-// fourteen searchers apiece live at once — the ~1.3 GB that kills a worker.
-// @see docs/measurement.md
-const SPEED_CELLS = ["ascii-10k", "ascii-100k", "mixed-10k", "mixed-100k"];
-
-const runSpeed = (artifact: Artifact): void => {
+const runCold = (artifact: Artifact): void => {
 	ensureRawDir();
 	if (SCOPE) {
-		console.error(`speed stage (scoped to ${SCOPE})…`);
-		vitest("bench --run", { NODE_OPTIONS: "--expose-gc", BENCH: SCOPE });
+		// Tokens: a corpus, a size, or corpus-size — mapped onto the runner's
+		// own filters; prints and stops.
+		const token = SCOPE.split(",")[0];
+		const [corpus, size] = token.includes("-") ? token.split("-") : [token, ""];
+		console.error(`cold stage (scoped to ${token})…`);
+		runner("all", corpus || "all", size ? [`--size=${size}`] : []);
 		return;
 	}
-	for (const cell of SPEED_CELLS) {
-		console.error(`speed stage: ${cell}…`);
-		vitest("bench --run", { NODE_OPTIONS: "--expose-gc", BENCH_CELL: cell });
-		const { speed, build } = reduceBenchRun(readRaw("bench.json"));
-		// Always overlay, never replace: each process only ever measures its own
-		// cell, so a replace would leave the artifact holding one quarter.
-		overlay(artifact.speed, speed);
-		overlay(artifact.build, build);
+	console.error(`cold stage: full matrix, ${RUNS} processes per cell…`);
+	const out = fileURLToPath(rawFile("cold-matrix.json"));
+	runner(ONLY || "all", "all", [`--out=${out}`]);
+	if (ONLY) {
+		overlay(artifact.coldMatrix, readRaw<ColdMatrix>("cold-matrix.json"));
+	} else {
+		artifact.coldMatrix = readRaw<ColdMatrix>("cold-matrix.json");
 	}
 };
 
@@ -102,76 +107,31 @@ type HitsRun = Record<string, { scorecard: ScorecardRow[]; tables: ProbeTable[] 
 
 const runQuality = (artifact: Artifact): void => {
 	ensureRawDir();
-	const runs: HitsRun[] = [];
-	for (let i = 1; i <= RUNS; i++) {
-		console.error(`quality stage: hits run ${i}/${RUNS}…`);
-		vitest("run hits.test.ts", { BENCH_RUN: String(i) });
-		runs.push(readRaw<HitsRun>(`hits-${i}.json`));
-	}
+	console.error("quality stage: ranks + session + long text…");
+	vitest("run hits.test.ts");
 	// Both build a table per library, so a narrowed run would write one holding
 	// only the measured rows. Left at their published values instead.
-	if (!ONLY) {
-		console.error("quality stage: session + long text…");
-		vitest("run session.test.ts longtext.test.ts");
-	}
+	if (!ONLY) vitest("run session.test.ts longtext.test.ts");
 
 	if (DRY) return;
 
-	for (const corpus of Object.keys(runs[0])) {
-		const measured = runs[0][corpus].scorecard
-			.map(({ library }) => {
-				const cells = runs.map((run) => {
-					const row = run[corpus].scorecard.find((r) => r.library === library);
-					if (!row) throw new Error(`${corpus}/${library}: missing in a run`);
-					return row;
-				});
-				// Ranks are deterministic, so a differing MRR is a bug, not drift.
-				const mrrs = new Set(cells.map((c) => c.mrr));
-				if (mrrs.size > 1) {
-					throw new Error(
-						`${corpus}/${library}: MRR differs across runs (${[...mrrs].join(", ")})`,
-					);
-				}
-				const indexMs = median(cells.map((c) => c.indexMs));
-				const coldMs = median(cells.map((c) => c.coldMs));
-				const queryMs = median(cells.map((c) => c.queryMs));
-				return { library, mrr: cells[0].mrr, indexMs, coldMs, queryMs, totalMs: indexMs + coldMs };
-			});
-		// A narrowed run measures a few rows; the rest keep their published
-		// values and the whole board is re-sorted, since a moved row moves rank.
-		const kept = ONLY
-			? (artifact.scorecard.corpora[corpus] ?? []).filter(
-					(row) => !measured.some((m) => m.library === row.library),
-				)
-			: [];
-		artifact.scorecard.corpora[corpus] = [...kept, ...measured].sort(
-			(a, b) => b.mrr - a.mrr || a.totalMs - b.totalMs,
-		);
-
-		const probes = runs[0][corpus].tables.map((probe, i) => ({
-			...probe,
-			cells: Object.fromEntries(
-				Object.entries(probe.cells).map(([lib, cell]) => [
-					lib,
-					{
-						...cell,
-						coldMs: median(runs.map((r) => r[corpus].tables[i].cells[lib].coldMs)),
-						queryMs: median(runs.map((r) => r[corpus].tables[i].cells[lib].queryMs)),
-						totalMs: median(runs.map((r) => r[corpus].tables[i].cells[lib].totalMs)),
-					},
-				]),
-			),
-		}));
-		if (ONLY && artifact.probes[corpus]) {
-			for (const [i, probe] of probes.entries()) {
+	const hits = readRaw<HitsRun>("hits.json");
+	for (const corpus of Object.keys(hits)) {
+		const { scorecard, tables } = hits[corpus];
+		if (ONLY) {
+			const kept = (artifact.scorecard.corpora[corpus] ?? []).filter(
+				(row) => !scorecard.some((m) => m.library === row.library),
+			);
+			artifact.scorecard.corpora[corpus] = [...kept, ...scorecard].sort((a, b) => b.mrr - a.mrr);
+			for (const [i, probe] of tables.entries()) {
 				overlay(artifact.probes[corpus][i].cells, probe.cells);
 			}
 		} else {
-			artifact.probes[corpus] = probes;
+			artifact.scorecard.corpora[corpus] = scorecard;
+			artifact.probes[corpus] = tables;
 		}
 	}
 	if (!ONLY) {
-		artifact.scorecard.runs = RUNS;
 		artifact.session = readRaw("session.json");
 		artifact.longtext = readRaw("longtext.json");
 	}
@@ -206,7 +166,7 @@ if (ONLY) {
 	);
 }
 
-if (stages.speed) runSpeed(artifact);
+if (stages.cold) runCold(artifact);
 if (stages.quality) runQuality(artifact);
 
 if (DRY) {
@@ -214,15 +174,9 @@ if (DRY) {
 	process.exit(0);
 }
 
-// The physical-invariant guard runs before anything is written: a contaminated
-// run must not reach the artifact or the docs.
-const complaints = contamination(artifact.speed);
-for (const c of complaints) console.error(`WARNING: contaminated run — ${c.message}`);
-if (complaints.some((c) => c.fatal)) process.exit(1);
-
 const tables = regions(artifact);
 
-if (stages.speed || stages.quality) save(artifact);
+if (stages.cold || stages.quality) save(artifact);
 
 const { doc, stale } = inject(readFileSync(DOC, "utf8"), tables);
 
@@ -239,7 +193,7 @@ if (CHECK) {
 	console.error(
 		stale.length ? `rewrote ${stale.length} region(s): ${stale.join(", ")}` : "docs already current.",
 	);
-	for (const corpus of Object.keys(artifact.speed)) {
+	for (const corpus of Object.keys(artifact.coldMatrix)) {
 		const omitted = omittedFrom(artifact, corpus);
 		if (omitted.length) console.error(`[${corpus}] omitted (no diacritic folding): ${omitted.join(", ")}`);
 	}
