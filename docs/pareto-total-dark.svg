@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 524" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" role="img" aria-labelledby="pareto-total-title pareto-total-desc">
-  <title id="pareto-total-title">Fuzzy search libraries: MRR vs total cost (index + cold query)</title>
-  <desc id="pareto-total-desc">Scatter plot of 14 configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against total milliseconds for one cold search (index build plus the first, cold query), on a log scale, on the mixed 10k corpus over 20 probes. The Pareto frontier runs uFuzzy (0.11 MRR at 0.17 ms) to uFuzzy (all opts) (0.52 MRR at 0.91 ms) to Krino (acronym) (0.87 MRR at 1.58 ms). The no-index engines own the cheapest cold one-shots; the two Krino configurations share one pooled build cost and differ only in query time, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.</desc>
+  <title id="pareto-total-title">Fuzzy search libraries: MRR vs cold one-shot cost</title>
+  <desc id="pareto-total-desc">Scatter plot of 14 configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against total milliseconds for one cold search (index build plus the first, cold query), on a log scale, on the mixed 10k corpus over 20 probes. The Pareto frontier runs fuzzy (0.35 MRR at 2.66 ms) to Krino (0.84 MRR at 3.07 ms) to Krino (acronym) (0.87 MRR at 3.33 ms). The no-index engines own the cheapest cold one-shots; the two Krino configurations share one pooled build cost and differ only in query time, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#898781"/>
@@ -8,16 +8,15 @@
   </defs>
   <rect x="0" y="0" width="820" height="524" fill="#1a1a19"/>
   <text x="66" y="28" fill="#ffffff" font-size="18" font-weight="600">Ranking quality vs. cold search cost</text>
-  <text x="66" y="47" fill="#c3c2b7" font-size="13">MRR over 20 probes · mixed 10k corpus · index built per search</text>
+  <text x="66" y="47" fill="#c3c2b7" font-size="13">MRR over 20 probes · mixed 10k corpus · fresh process per search</text>
   <g>
-    <line x1="100.8" y1="62" x2="100.8" y2="434" stroke="#2c2c2a"/>
-    <line x1="211.5" y1="62" x2="211.5" y2="434" stroke="#2c2c2a"/>
-    <line x1="295.2" y1="62" x2="295.2" y2="434" stroke="#2c2c2a"/>
-    <line x1="379" y1="62" x2="379" y2="434" stroke="#2c2c2a"/>
-    <line x1="489.7" y1="62" x2="489.7" y2="434" stroke="#2c2c2a"/>
-    <line x1="573.5" y1="62" x2="573.5" y2="434" stroke="#2c2c2a"/>
-    <line x1="657.2" y1="62" x2="657.2" y2="434" stroke="#2c2c2a"/>
-    <line x1="768" y1="62" x2="768" y2="434" stroke="#2c2c2a"/>
+    <line x1="66" y1="62" x2="66" y2="434" stroke="#2c2c2a"/>
+    <line x1="170.8" y1="62" x2="170.8" y2="434" stroke="#2c2c2a"/>
+    <line x1="309.4" y1="62" x2="309.4" y2="434" stroke="#2c2c2a"/>
+    <line x1="414.2" y1="62" x2="414.2" y2="434" stroke="#2c2c2a"/>
+    <line x1="519" y1="62" x2="519" y2="434" stroke="#2c2c2a"/>
+    <line x1="657.6" y1="62" x2="657.6" y2="434" stroke="#2c2c2a"/>
+    <line x1="762.4" y1="62" x2="762.4" y2="434" stroke="#2c2c2a"/>
     <line x1="66" y1="434" x2="790" y2="434" stroke="#2c2c2a"/>
     <line x1="66" y1="388.6" x2="790" y2="388.6" stroke="#2c2c2a"/>
     <line x1="66" y1="343.3" x2="790" y2="343.3" stroke="#2c2c2a"/>
@@ -31,14 +30,13 @@
   <line x1="66" y1="434" x2="790" y2="434" stroke="#383835"/>
   <line x1="66" y1="62" x2="66" y2="434" stroke="#383835"/>
   <g>
-    <text x="100.8" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.2</text>
-    <text x="211.5" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.5</text>
-    <text x="295.2" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">1</text>
-    <text x="379" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">2</text>
-    <text x="489.7" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">5</text>
-    <text x="573.5" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">10</text>
-    <text x="657.2" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">20</text>
-    <text x="768" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">50</text>
+    <text x="66" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">1</text>
+    <text x="170.8" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">2</text>
+    <text x="309.4" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">5</text>
+    <text x="414.2" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">10</text>
+    <text x="519" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">20</text>
+    <text x="657.6" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">50</text>
+    <text x="762.4" y="452" text-anchor="middle" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">100</text>
   </g>
   <g>
     <text x="54" y="438" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.1</text>
@@ -51,44 +49,44 @@
     <text x="54" y="120.4" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.8</text>
     <text x="54" y="75.1" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.9</text>
   </g>
-  <text x="428" y="479" text-anchor="middle" fill="#c3c2b7" font-size="13">Cold start: index + first query on a fresh searcher. Log scale, lower is better</text>
+  <text x="428" y="479" text-anchor="middle" fill="#c3c2b7" font-size="13">Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better</text>
   <text transform="translate(18,248) rotate(-90)" text-anchor="middle" fill="#c3c2b7" font-size="13">Rank of queried item: 1st = 1.0, 10th = 0.1</text>
-  <path d="M80.4 429.5 L283.4 243.5 L350.9 84.7" fill="none" stroke="#199e70" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
+  <path d="M214 320.6 L235.4 98.3 L247.8 84.7" fill="none" stroke="#199e70" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
   <g transform="translate(78,70)">
     <line x1="34" y1="24" x2="4" y2="4" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
     <text x="40" y="20" fill="#898781" font-size="12" font-style="italic">faster &amp; more accurate</text>
   </g>
   <g>
-    <circle cx="350.9" cy="84.7" r="6.5" fill="#3987e5" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="351.7" cy="98.3" r="6.5" fill="#3987e5" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="656.7" cy="111.9" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="668.6" cy="139.1" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="741.2" cy="211.7" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="742.3" cy="211.7" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="283.4" cy="243.5" r="6.5" fill="#199e70" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="536.7" cy="270.7" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="548.8" cy="270.7" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="536.5" cy="288.8" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="404.7" cy="320.6" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="406.5" cy="320.6" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="416.6" cy="334.2" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
-    <circle cx="80.4" cy="429.5" r="6.5" fill="#199e70" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="247.8" cy="84.7" r="6.5" fill="#3987e5" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="235.4" cy="98.3" r="6.5" fill="#3987e5" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="576.4" cy="111.9" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="520" cy="139.1" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="738.2" cy="211.7" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="736.7" cy="211.7" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="379.1" cy="243.5" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="430.1" cy="270.7" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="431.9" cy="270.7" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="442.3" cy="288.8" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="214" cy="320.6" r="6.5" fill="#199e70" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="221.1" cy="320.6" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="413.4" cy="334.2" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
+    <circle cx="345.9" cy="429.5" r="6.5" fill="#8f8d86" fill-opacity="0.9" stroke="#1a1a19" stroke-width="1.5"/>
   </g>
   <g>
-    <text x="364.4" y="76.7" text-anchor="start" fill="#ffffff" font-size="12.5" font-weight="600">Krino (acronym)</text>
-    <text x="338.2" y="114.3" text-anchor="end" fill="#ffffff" font-size="12.5" font-weight="600">Krino</text>
-    <text x="668.6" y="124.1" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js</text>
-    <text x="656.7" y="131.9" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js (all opts)</text>
-    <text x="727.7" y="215.7" text-anchor="end" fill="#898781" font-size="12.5">fast-fuzzy</text>
-    <text x="755.8" y="215.7" text-anchor="start" fill="#898781" font-size="12.5">fast-fuzzy (all opts)</text>
-    <text x="269.9" y="247.5" text-anchor="end" fill="#ffffff" font-size="12.5" font-weight="600">uFuzzy (all opts)</text>
-    <text x="550.2" y="274.7" text-anchor="start" fill="#898781" font-size="12.5">@nozbe/microfuzz (all opts)</text>
-    <text x="535.3" y="274.7" text-anchor="end" fill="#898781" font-size="12.5">@nozbe/microfuzz</text>
-    <text x="550" y="292.8" text-anchor="start" fill="#898781" font-size="12.5">fuzzysort</text>
-    <text x="418.2" y="310.6" text-anchor="start" fill="#898781" font-size="12.5">fuzzy</text>
-    <text x="420" y="324.6" text-anchor="start" fill="#898781" font-size="12.5">fuzzy (all opts)</text>
-    <text x="430.1" y="350.2" text-anchor="start" fill="#898781" font-size="12.5">match-sorter</text>
-    <text x="93.9" y="433.5" text-anchor="start" fill="#ffffff" font-size="12.5" font-weight="600">uFuzzy</text>
+    <text x="261.3" y="76.7" text-anchor="start" fill="#ffffff" font-size="12.5" font-weight="600">Krino (acronym)</text>
+    <text x="221.9" y="114.3" text-anchor="end" fill="#ffffff" font-size="12.5" font-weight="600">Krino</text>
+    <text x="520" y="124.1" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js</text>
+    <text x="576.4" y="131.9" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js (all opts)</text>
+    <text x="724.7" y="215.7" text-anchor="end" fill="#898781" font-size="12.5">fast-fuzzy</text>
+    <text x="750.2" y="215.7" text-anchor="start" fill="#898781" font-size="12.5">fast-fuzzy (all opts)</text>
+    <text x="365.6" y="247.5" text-anchor="end" fill="#898781" font-size="12.5">uFuzzy (all opts)</text>
+    <text x="416.6" y="274.7" text-anchor="end" fill="#898781" font-size="12.5">@nozbe/microfuzz</text>
+    <text x="445.4" y="274.7" text-anchor="start" fill="#898781" font-size="12.5">@nozbe/microfuzz (all opts)</text>
+    <text x="455.8" y="292.8" text-anchor="start" fill="#898781" font-size="12.5">fuzzysort</text>
+    <text x="227.5" y="310.6" text-anchor="start" fill="#ffffff" font-size="12.5" font-weight="600">fuzzy</text>
+    <text x="234.6" y="324.6" text-anchor="start" fill="#898781" font-size="12.5">fuzzy (all opts)</text>
+    <text x="426.9" y="350.2" text-anchor="start" fill="#898781" font-size="12.5">match-sorter</text>
+    <text x="359.4" y="433.5" text-anchor="start" fill="#898781" font-size="12.5">uFuzzy</text>
   </g>
   <g>
     <line x1="66" y1="508" x2="92" y2="508" stroke="#199e70" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>

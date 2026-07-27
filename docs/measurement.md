@@ -111,3 +111,13 @@ A reader choosing on the steady-state table alone would be misled about the expe
 
 Every speed cell measured by a full-matrix run predates this understanding and carries unknown error bars.
 The quality results are unaffected: `hits.test.ts` builds one corpus at 10k per test and its ranks and MRR are deterministic, which is why they reproduced exactly across runs while the timings did not.
+
+## The calibration blind spot, and the move to processes
+
+The vitest-bench era ended on a simple observation: its calibration probe ran every query once, untimed, to size the sample loop — and that untimed pass silently paid every lazy first-call cost in the suite.
+Krino's 18.5 ms mask build at 100k, fuzzysort's prepare-all, microfuzz's first-search slice: none of them could ever reach a timed sample, so the "total" column published index + one warm query as if it were a cold start.
+Worse, the warm loops themselves sampled hundreds of repeats of a single query, tiering the JIT far past anything a real session reaches; nobody repeats one query three hundred times.
+
+The replacement (bench/run.ts) measures nothing but first calls: a fresh node process per sample, constructor and first answer timed in consecutive windows, and one batch test per corpus — twenty distinct probes through one process — as the only warm-ish number, its warmth earned the way real sessions earn it.
+Five to ten processes per cell suffice because every number under this model is milliseconds-scale; the hundreds-of-samples machinery existed only to resolve steady-state microseconds that no user ever observes.
+Honesty guards moved with it: result counts asserted identical across a cell's processes, variant order rotated per repetition, the krino-vs-acronym physical invariant now fatal to the run, and a drift canary bracketing the whole matrix.
