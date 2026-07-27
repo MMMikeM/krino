@@ -40,6 +40,11 @@ export type QuerySpec = {
 		| "short-word"
 		| "two-words"
 		| "two-words-reversed"
+		| "two-words-typo"
+		| "two-words-typo-second"
+		| "two-words-typo-reversed"
+		| "two-words-double-typo"
+		| "plural-to-singular"
 		| "prefix"
 		| "infix"
 		| "scatter-light"
@@ -106,8 +111,47 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 			kind: "two-words-reversed",
 			source: sample[8],
 		},
+		// A typo inside a phrase. Every other typo probe is single-word, and a
+		// multi-word query takes a different route entirely: the presence gate
+		// rather than the subsequence gate, with the rescue correcting only the
+		// word the field is missing (multiWordRescue). Four variations stress
+		// the rescue from each side: typo in the first word, typo in the
+		// second, typo with the words reversed (the correction must survive
+		// order-independence), and both words mistyped — two edits, which the
+		// one-edit rescue must refuse rather than guess at.
+		{
+			query: [substitute(wordsOf(sample[8])[0] ?? "steel"), wordsOf(sample[8])[1] ?? "chair"]
+				.join(" ")
+				.toLowerCase(),
+			kind: "two-words-typo",
+			source: sample[8],
+		},
+		{
+			query: [wordsOf(sample[8])[0] ?? "steel", substitute(wordsOf(sample[8])[1] ?? "chair")]
+				.join(" ")
+				.toLowerCase(),
+			kind: "two-words-typo-second",
+			source: sample[8],
+		},
+		{
+			query: [wordsOf(sample[8])[1] ?? "chair", substitute(wordsOf(sample[8])[0] ?? "steel")]
+				.join(" ")
+				.toLowerCase(),
+			kind: "two-words-typo-reversed",
+			source: sample[8],
+		},
+		// No source: like the garbage probe, the right answer is nothing, and
+		// what an engine returns instead is the diagnostic.
+		{
+			query: [substitute(wordsOf(sample[8])[0] ?? "steel"), substitute(wordsOf(sample[8])[1] ?? "chair")]
+				.join(" ")
+				.toLowerCase(),
+			kind: "two-words-double-typo",
+			source: null,
+		},
 		{ query: sample[42].slice(0, 5).toLowerCase(), kind: "prefix", source: sample[42] },
 	];
+
 	// Infix probe: an interior slice of a long word — never a prefix, so it
 	// separates contains-anywhere matching from start-anchored ranking.
 	for (let i = 900; i < sample.length; i++) {
@@ -137,6 +181,23 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 		}
 		return true;
 	};
+	// A plural typed against a corpus that holds only the singular: one deletion,
+	// which is the whole of what the one-edit rescue can reach. Derived, not
+	// hardcoded, and the word must be absent in plural form (or the query matches
+	// outright and measures nothing) and near-unique by the same argument the
+	// scatter probes make — otherwise the source's rank is tie-block order.
+	{
+		const present = new Set(sample.flatMap((s) => wordsOf(s).map((w) => w.toLowerCase())));
+		outer: for (let i = 0; i < sample.length; i++) {
+			for (const raw of wordsOf(sample[i])) {
+				const word = raw.toLowerCase();
+				if (word.length < 5 || word.endsWith("s") || present.has(`${word}s`)) continue;
+				if (!isNearUnique(word)) continue;
+				specs.push({ query: `${word}s`, kind: "plural-to-singular", source: sample[i] });
+				break outer;
+			}
+		}
+	}
 	for (let i = 1300; i < sample.length; i++) {
 		const scatterWord = wordsOf(sample[i])[0] ?? "";
 		if (scatterWord.length >= 7 && isNearUnique(scatterWord)) {
