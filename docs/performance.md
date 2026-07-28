@@ -11,7 +11,7 @@ benchmarked ~4× faster than Krino *while doing typo-tolerant edit-distance matc
 That looked paradoxical — edit distance is expensive per pair. The trick is
 structural, not algorithmic:
 
-1. **Trie index.** `new Searcher(list)` inserts every candidate's normalized key
+1. **Trie index.** `new Searcher(list)` inserts every candidate's normalised key
    into a trie. Shared prefixes are stored — and scored — once.
 2. **Threshold-pruned DFS.** It walks the trie running a bounded Sellers /
    Damerau-Levenshtein DP. At each node it computes the *best score any string in
@@ -31,7 +31,7 @@ slowest here. "Typo-tolerant" says nothing about speed; the data structure and t
 corpus do.)
 
 Krino, by comparison, does **zero corpus indexing**. `createFuzzySearch` caches
-per-field normalization and word splits, but each query then linearly scans *every*
+per-field normalisation and word splits, but each query then linearly scans *every*
 item through the whole tier ladder (exact → prefix → boundary → multi-word →
 contains → acronym → fuzzy). O(N) full passes with a fat per-item constant and no
 pruning.
@@ -186,7 +186,7 @@ Side effect worth keeping: run-to-run variance dropped sharply — the typed-arr
 
 ### Prefix-narrowing survivor cache — DONE
 
-The searcher closure remembers the last normalized query and its mask-gate survivor indices; when the new query extends the previous one (the typing case), only those survivors are rescanned.
+The searcher closure remembers the last normalised query and its mask-gate survivor indices; when the new query extends the previous one (the typing case), only those survivors are rescanned.
 Correctness rests on a monotonicity argument, documented in the code and pinned by a test: the cache stores the **mask-pass set**, never the match set.
 The match set is not monotone under query extension ("the quick brown fox" matches `fox brown` via the multi-word tier while failing `fox brow`); the mask gate is, because extending a query only adds mask bits, so every match of the extended query lies inside the previous mask-pass set.
 Backspace and replacement queries fall back to a full scan via the `startsWith` check; a repeated query is idempotent (also pinned by tests).
@@ -321,8 +321,8 @@ published tables that flipped the headline: Krino now holds the fastest 100k
 query column on **both** corpora (1.40 ms ascii to uFuzzy's 2.17; 0.76 ms mixed
 to folding uFuzzy's 2.60), and the frontend Pareto frontier collapsed to Krino
 alone. The bill: the once-per-searcher mask build grew 6.9 → 18.5 ms, because
-the bigram sets walk each string a second time — folding that into the
-`rawCharMask` pass is the obvious next shaving. Soundness is pinned twice:
+the bigram sets walked each string a second time; fusing both into one scan
+per field (`rawFieldScan`) has since brought it back to ~12 ms. Soundness is pinned twice:
 funnel.test.ts asserts the gate never rejects a field the rescue corrects, and
 searcher-parity.test.ts asserts the searcher returns exactly what per-item
 `fuzzyMatch` accepts on every bench query.

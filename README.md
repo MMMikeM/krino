@@ -2,7 +2,7 @@
 
 > Tiny, typed fuzzy matching
 
-- **~6.6 kB** gzip, zero dependencies, TS-first, ESM/CJS
+- **~5.4 kB** gzip, zero dependencies, TS-first, ESM/CJS
 - **~1 ms per query** across a real 10k session (3.9 ms at 100k), measured process-cold, optimised for search-as-you-type
 - **Tops match-quality scorecard** across 20 probes
 - **Returns** `tier`, `ranges` and `score` on every match: easily rank, highlight and explain
@@ -86,7 +86,7 @@ Lower is better. Each match reports a numeric `score` (for sorting) and a catego
 | score | tier               | meaning                                    |
 |-------|--------------------|--------------------------------------------|
 | 0     | `exact`            | exact match                                |
-| 0.1   | `normalized-exact` | case / diacritics-insensitive exact        |
+| 0.1   | `normalised-exact` | case / diacritics-insensitive exact        |
 | 0.5   | `prefix`           | starts with query                          |
 | 0.9   | `boundary-exact`   | at a word boundary, exact case             |
 | 1     | `boundary`         | at a word boundary                         |
@@ -163,17 +163,17 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 ### What to pick when
 
 **Pick Krino.** It tops the quality scorecard on both benchmark corpora outright and runs the cheapest realistic session of anything above 0.5 MRR at every published size.
-At ~6.6 kB gzip it sits mid-pack on size: the one-edit rescue machinery and the fold tables bought the quality lead, and Fuse.js and fast-fuzzy are still 1.4–1.7× larger.
+At ~5.4 kB gzip it sits mid-pack on size: the one-edit rescue machinery bought the quality lead (the unfold table is generated from the fold logic at first use, not shipped), and Fuse.js and fast-fuzzy are 1.7–2× larger.
 One workload genuinely points elsewhere:
 
-- **Typos beyond a single edit must still match** (user-typed queries over messy data): the four typo tiers cover every one-character mistake, but two or more edits in one query need real edit distance. Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 3–4× the bundle, ~7–19 ms queries, and ~90–450-row result sets.
+- **Typos beyond a single edit must still match** (user-typed queries over messy data): the four typo tiers cover every one-character mistake, but two or more edits in one query need real edit distance. Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 1.7–2× the bundle, ~7–19 ms queries, and ~90–450-row result sets.
 
 The rest of the field is dominated on these benchmarks; the full argument, per-library, is in [the recommendation](./docs/benchmarks.md#the-recommendation).
 (Already on `@nozbe/microfuzz`? Krino is its rebuild: same subsequence approach plus tier, ESM, and ~14–28× faster at 100k. See [MIGRATION.md](./MIGRATION.md).)
 
 ## Building blocks
 
-- `normalizeText(str)`: lowercase, strip diacritics.
+- `normaliseText(str)`: lowercase, strip diacritics.
 - `splitWords(str)`: tokenize on any non-alphanumeric run (keeps `_`).
 - `SCORES`: the tier constants.
 
@@ -182,7 +182,7 @@ The rest of the field is dominated on these benchmarks; the full argument, per-l
 ```typescript
 type Range = [number, number]; // [start, end] inclusive
 type Tier =
-  | "exact" | "normalized-exact" | "prefix" | "boundary-exact"
+  | "exact" | "normalised-exact" | "prefix" | "boundary-exact"
   | "boundary" | "multi-word" | "acronym" | "contains"
   | "fuzzy" | "corrected";
 

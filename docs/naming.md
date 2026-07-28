@@ -23,7 +23,7 @@ bottom is the current state.
 | `field` | conceptual: one searchable string per element | types doc ("each text field") — no literal identifier |
 | `query` | the raw search string | everywhere |
 | `queryWords` | query split on `" "` | `fuzzyMatch`, `createFuzzySearch`, `matchesFuzzily` |
-| `itemWords` / word `Set` | set of normalized item words | `matchesFuzzily`, preprocessing |
+| `itemWords` / word `Set` | set of normalised item words | `matchesFuzzily`, preprocessing |
 | `match` / `matches` | (1) a single `[score, ranges]` result; (2) `FuzzyResult.matches` per-field list; (3) local `matches` | `matchesFuzzily`, `FuzzyResult`, `createFuzzySearch` |
 | `Range` | `[number, number]` inclusive — **reused** for highlight spans and chunk index-pairs | `types.ts`, `sortRangeTuple`, `indices` elements |
 | `HighlightRanges` | `Range[]` | types, return shapes |
@@ -42,20 +42,20 @@ bottom is the current state.
 | `key` | property name to read | `options.key` |
 | `getText` | field extractor fn | `options.getText` |
 | `preprocessed` / `processed` | precomputed per-element / per-field tuples | `createFuzzySearch` |
-| `normalizedItem` / `normalizedText` / `normalized` | the normalized field string (three names) | `matchesFuzzily` / `fuzzyMatch` / `createFuzzySearch` |
+| `normalisedItem` / `normalisedText` / `normalised` | the normalised field string (three names) | `matchesFuzzily` / `fuzzyMatch` / `createFuzzySearch` |
 | `queryChar` | current query character | `fuzzy.ts` strategies |
 | `minQueryChunk` | query slice for the smart lookahead | `smartFuzzyMatch` |
 | Idx family | `idx, itemIdx, queryIdx, chunkFirstIdx, chunkLastIdx, containsIdx, exactContainsIdx` | positions/counters |
-| Len family | `queryLen, normalizedItemLen, normalizedQueryLen, chunkLength, minChunkLen, queryCharsLeft, itemCharsLeft` | lengths |
+| Len family | `queryLen, normalisedItemLen, normalisedQueryLen, chunkLength, minChunkLen, queryCharsLeft, itemCharsLeft` | lengths |
 | `SCORE_*` / `CHUNK_*` / `FUZZY_BASE` | named score constants | `shared.ts` |
 | `MAX_SAFE_INTEGER` | "no field matched yet" sentinel | `createFuzzySearch` |
-| `diacriticsRegex` / `regexŁ` / `regexÑ` | normalization regexes | `normalize.ts` |
+| `diacriticsRegex` / `regexŁ` / `regexÑ` | normalisation regexes | `normalise.ts` |
 
 ## Verbs
 
 | Verb | Meaning | Where |
 |---|---|---|
-| normalize | fold to canonical form | `normalizeText` |
+| normalise | fold to canonical form | `normaliseText` |
 | match | test/score a string vs a query | `fuzzyMatch`, `matchesFuzzily`, `aggressive`/`smartFuzzyMatch` |
 | score | assign numeric quality | `scoreConsecutiveLetters` |
 | create | build a searcher | `createFuzzySearch` |
@@ -64,7 +64,7 @@ bottom is the current state.
 | startsWith / contains (`indexOf`) | substring tests | `matchesFuzzily`, strategies |
 | isValidWordBoundary / isStartOfWord / isEndOfWord | boundary predicates | `shared.ts`, `scoreConsecutiveLetters` |
 | preprocess / extract (`getText`·`key`) | precompute per-element data | `createFuzzySearch` |
-| split / slice | tokenize / substring | `normalize.ts`, strategies |
+| split / slice | tokenize / substring | `normalise.ts`, strategies |
 | push / every / has / min | accumulate / all-words / membership / minimum | throughout |
 
 ## Inconsistencies
@@ -100,8 +100,8 @@ Applied items are marked ✅; doc-only items are marked ✍️.
   intent **`getFields`**/`getTexts` (public — would need a compat shim to change).
 - **(l) `preprocessed` vs `processed`** differ only by prefix, easy to confuse. → Rename inner
   **`processed → fields`**.
-- **(m) `normalizedItem` / `normalizedText` / `normalized`** — three names for one thing. →
-  Canonical **`normalizedField`**.
+- **(m) `normalisedItem` / `normalisedText` / `normalised`** — three names for one thing. →
+  Canonical **`normalisedField`**.
 - **(n) `queryChar: string` can be `undefined`** once `queryIdx` runs past the query end (the
   code relies on the coercion in `indexOf`). → Type-honesty note; behavior is fine, leave the code.
 - **(o) `sortByScore` (by-what) vs `sortRangeTuple` (of-what)** — mismatched naming scheme. →
@@ -111,7 +111,7 @@ Applied items are marked ✅; doc-only items are marked ✍️.
 
 - **`item`** — a collection entry (public, via `FuzzyResult.item`).
 - **`field`** — one raw searchable string extracted from an item.
-- **`normalizedField`** — a field after `normalizeText`.
+- **`normalisedField`** — a field after `normaliseText`.
 - **`chunk`** (`type Chunk = Range`) — a consecutive run of matched characters.
 - **`Range`** — a highlight span `[start, end]`, inclusive.
 - **`matches`** — per-field highlight lists.
@@ -142,13 +142,13 @@ Primitive-first redesign — `fuzzyMatch` scores one string, `createFuzzySearch`
 - **`SCORES`** (`src/scores.ts`) — exported tier constants; single source of truth.
 - **`CHUNK_SCORES`** (`src/fuzzy.ts`) — internal fuzzy-chunk bonuses; `BASE` equals
   `SCORES.CONTAINS` by design, not by a shared binding.
-- **`MatchQuery`** (`src/match.ts`) — query-derived state (`query`, `normalizedQuery`,
+- **`MatchQuery`** (`src/match.ts`) — query-derived state (`query`, `normalisedQuery`,
   `queryWords`, `fuzzyGate`) built once per query.
 - **`buildFuzzyGate`** (`src/fuzzy.ts`) — the native subsequence regex gate for the fuzzy tier.
 - **`PreparedField`** (`src/search.ts`) — internal per-item cached field: `{field,
-  normalizedField, fieldWords, strategy, acronym, atBest}`.
+  normalisedField, fieldWords, strategy, acronym, atBest}`.
 - **`matchDensity`** (`src/density.ts`) — matched-chars ÷ inclusive span helper.
-- **`splitWords`** (`src/normalize.ts`, exported) — tokenizer on `/[^\p{L}\p{N}_]+/u`.
+- **`splitWords`** (`src/normalise.ts`, exported) — tokenizer on `/[^\p{L}\p{N}_]+/u`.
 
 **Tokenization asymmetry (documented):** `splitWords` splits on any non-alphanumeric run,
 while `isValidWordBoundary` recognizes an explicit set (spaces, brackets, dashes, quotes,

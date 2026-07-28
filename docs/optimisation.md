@@ -112,7 +112,7 @@ That is why Krino was the library the old shared-process harness distorted most.
 
 ## Open
 
-- `rawCharMask` has no soundness test. It must never produce fewer bits than `charMask(normalizeText(raw))`, or the gate false-rejects and results silently vanish. The argument is that skipping NFC only ever *adds* bits, but an argument is not a test, and the bench suite exercises `src` with flags off so it has never run this path.
-- `fieldMasks` duplicates `unionMasks` whenever there is one field, which is every plain string list: 400 kB and 100k redundant writes.
-- The acronym configuration's 3× allocation.
-- `LAZY_FIELDS` and `MISSING_CLASS_DISPATCH` are still build-time flags in `src/flags.ts`, defaulting off. That file and every `if` reading it should be deleted once the experiments have picked a winner.
+- ~~`rawCharMask` has no soundness test~~ — done: `test/raw-mask.test.ts` and `bench/raw-mask.test.ts` pin that the (now fused) `rawFieldScan` mask never drops a bit over either corpus.
+- ~~`fieldMasks` duplicates `unionMasks` for one-field lists~~ — done: `buildUnionMasks` shares the array when `specCount === 1`.
+- The acronym configuration's 3× allocation: `acronymMatch` builds an offsets array and initials string per surviving field, hit or miss. Speed parity with base holds in every published cell, so this is GC pressure only; fix by streaming over module scratch if a heap number ever moves on it.
+- ~~Build-time flags in `src/flags.ts`~~ — done: the missing-class dispatch is unconditional (a variant needing a class the field lacks always fails the containment test it skips, so the short-circuit is result-neutral), and `src/flags.ts` plus the `bench/variants.ts` machinery are deleted.

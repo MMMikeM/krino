@@ -11,7 +11,7 @@ Stage costs are measured by difference, so they overlap slightly.
 ```mermaid
 flowchart LR
     L["createFuzzySearch(list)"] --> S["resolve spec defaults"]
-    S --> B["allocate fieldText, normalizedText, fieldMasks"]
+    S --> B["allocate fieldText, normalisedText, fieldMasks"]
     B --> D(["done — ~0.8 ms at 100k"])
 ```
 
@@ -25,7 +25,7 @@ Everything an index would hold is built on demand, by the two mechanisms below.
 flowchart TD
     Q["search(query)"] --> F{"< 2 characters?"}
     F -->|yes| Z(["[]"])
-    F -->|no| P["normalizeText -> prepareQuery"]
+    F -->|no| P["normaliseText -> prepareQuery"]
     P --> N{"extends the previous query,<br/>same gate kind?"}
 
     N -->|yes| NAR["scan cached survivors<br/>gate on normalised text"]
@@ -57,10 +57,10 @@ ascii 100k, mean over fourteen single-word probes:
 | materialise survivors | 517 | 517 | 0.08 ms |
 | tier ladder | 517 | **413 results** | 0.18 ms |
 | — rescue path only — | | | |
-| union mask + bigram build | 100,000 | — | **18.5 ms**, once per searcher |
+| union mask + bigram build | 100,000 | — | **11.8 ms**, once per searcher |
 | relaxed scan + rescue | 100,000 | **5,222 — 5.2%** | 1.39 ms |
 
-Mixed 100k is the same shape and tighter: the raw gate leaves **197 records, 0.20%**, at 3.29 ms; the ladder produces 147 results in 0.03 ms; the rescue's mask build is 18.7 ms and its relaxed scan admits 3,223 records (3.2%) at 0.90 ms.
+Mixed 100k is the same shape and tighter: the raw gate leaves **197 records, 0.20%**, at 3.29 ms; the ladder produces 147 results in 0.03 ms; the rescue's mask build is 12.0 ms and its relaxed scan admits 3,223 records (3.2%) at 0.90 ms.
 
 Two things stand out.
 
@@ -71,8 +71,8 @@ It used to admit 19.3% on a character-class test alone; the bigram stage — a f
 
 ## Two costs that only some sessions pay
 
-**The union masks and bigram sets, ~18.5 ms.** Built the first time a query is rescuable *and* turns up fewer than ten literal hits — because below that a correction can still reach the visible page, and only a mask can admit the near-misses the literal gate rejected. A session whose queries all match literally never builds them. Multi-word and non-Latin queries have no raw-gate form, so they take the mask path and force the build immediately.
-Two thirds of the cost is the bigram sets, added for the relaxed scan's second stage; they walk each string a second time, and folding the two passes into one is the obvious next shaving.
+**The union masks and bigram sets, ~12 ms.** Built the first time a query is rescuable *and* turns up fewer than ten literal hits — because below that a correction can still reach the visible page, and only a mask can admit the near-misses the literal gate rejected. A session whose queries all match literally never builds them. Multi-word and non-Latin queries have no raw-gate form, so they take the mask path and force the build immediately.
+The class mask and the bigram sets come from one fused scan per field (`rawFieldScan`), folding each code unit exactly once; the two-pass build it replaced cost ~18.5 ms.
 
 **The raw gate, ~3.3 ms.** Paid by any query that cannot narrow: the first one, and any later one that isn't an extension of its predecessor. A typed sequence pays it once; a searcher handed unrelated queries pays it every time.
 

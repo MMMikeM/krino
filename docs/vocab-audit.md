@@ -16,8 +16,8 @@ Words that carry meaning across files; a maintainer should be able to trust thes
 |---|---|---|
 | `item` | one collection element `T` | `FuzzyResult.item` |
 | `field` | one searchable string extracted from an item by a `FieldSpec` | `matchField`, `PreparedField` |
-| `query` | the search string (trimmed raw; `normalizedQuery` for the folded form) | `MatchQuery` |
-| `normalized` | passed through `normalizeText` (lowercased, diacritics folded, trimmed) | every `normalized*` binding |
+| `query` | the search string (trimmed raw; `normalisedQuery` for the folded form) | `MatchQuery` |
+| `normalised` | passed through `normaliseText` (lowercased, diacritics folded, trimmed) | every `normalised*` binding |
 | `tier` | which rung of the ladder matched (categorical) | `Tier`, `SCORES` |
 | `score` | the numeric sort key, lower = better | `MatchResult.score` |
 | `range` | inclusive `[start, end]` span for highlighting | `Range`, `HighlightRanges` |
@@ -25,7 +25,7 @@ Words that carry meaning across files; a maintainer should be able to trust thes
 | `gate` | a cheap per-query pre-filter that can only false-pass, never false-reject | `gates.ts` |
 | `mask` | the 32-bit char-class summary used by the O(1) gate | `charMask` |
 | `survivor` | an item index that passed the mask gate for the previous query | search.ts cache |
-| `fold` | the per-code-point, length-preserving case/diacritic mapping | normalize.ts |
+| `fold` | the per-code-point, length-preserving case/diacritic mapping | normalise.ts |
 | `lead` | count of leading-whitespace units stripped from a raw field | `PreparedField.lead` |
 
 Conventions observed (worth keeping deliberate):
@@ -62,11 +62,11 @@ Conventions observed (worth keeping deliberate):
 |---|---|---|---|
 | `SCORES` | const (public) | the tier ladder as named constants | ✓ |
 
-### normalize.ts
+### normalise.ts
 
 | Name | Kind | Role | Verdict |
 |---|---|---|---|
-| `normalizeText` | fn (public) | the fold pipeline | ✓ locked API |
+| `normaliseText` | fn (public) | the fold pipeline | ✓ locked API |
 | `splitWords` | fn (public) | tokenize on separator runs | ✓ |
 | `diacriticsRegex` | const | strips U+0300–036F, global | **~** only regex with a `Regex` suffix; siblings (`combiningMark`, `nonAscii`, `wordSeparators`) go without — pick one style |
 | `combiningMark` | const | presence test for decomposed input | ~ same consistency note; also singular tests "any mark", `combiningMarks` would read truer |
@@ -126,7 +126,7 @@ Conventions observed (worth keeping deliberate):
 | `shiftRanges` | fn | trimmed-space → raw-space offset shift | ✓ |
 | `prepareQuery` | fn | build `MatchQuery` | ✓ (pairs better if the type becomes `PreparedQuery`) |
 | `PreparedField` | type | cached per-field strings + `lead` | ✓ |
-| `normalizedSpecs` | local | field specs with defaults resolved | **✗ collision** — "normalized" means `normalizeText` everywhere else in this codebase; these specs are *defaulted*, not folded — `resolvedSpecs` |
+| `normalisedSpecs` | local | field specs with defaults resolved | **✗ collision** — "normalised" means `normaliseText` everywhere else in this codebase; these specs are *defaulted*, not folded — `resolvedSpecs` |
 | `unionMasks`, `fieldMasks`, `maskBase` | locals | flat mask storage | ✓ |
 | `cachedQuery`, `cachedSurvivors`, `cachedCount`, `spare` | locals | prefix-narrowing double buffer | ✓ documented in place |
 | `narrowed`, `source`, `bound` | locals | scan-source selection | ~ `bound` reads as a verb at first glance; `scanCount` would be unambiguous — marginal |
@@ -145,8 +145,8 @@ Conventions observed (worth keeping deliberate):
 1. **`smartFuzzyMatch` + the `DENSITY_FLOOR` comment** — the word `smart` survives only as a fossil of the deleted strategy enum.
    A maintainer who never saw 0.x will look for the "dumb" variant.
    Rename to `fuzzyChainMatch`, fix the comment.
-2. **`normalizedSpecs`** — the one genuine collision with a load-bearing word.
-   In a codebase where `normalized*` always means "through `normalizeText`", this binding is a lie of vocabulary.
+2. **`normalisedSpecs`** — the one genuine collision with a load-bearing word.
+   In a codebase where `normalised*` always means "through `normaliseText`", this binding is a lie of vocabulary.
    `resolvedSpecs`.
 3. **`wordChar` / `WORD_CHAR` duplication** — identical regex defined in `match.ts` and `gates.ts` under two casings.
    Consolidate to one export; `shared.ts`→`boundaries.ts` is its natural home next to the boundary predicate, which would also surface the known semantic divergence between the two boundary definitions in one file.
@@ -165,7 +165,7 @@ Same method, different question: is each thing defined in the file a maintainer 
 | Thing | Was | Problem | Now |
 |---|---|---|---|
 | `matchDensity` + `density.ts` | public export, own file | the v1.0 plan's own open call ("say the word and I cut it"): a building block with zero internal consumers, duplicating the maths `scoreChunks` inlines, that the maintainer didn't recognise | **cut** — file, test, export, README/CHANGELOG/MIGRATION mentions (unpublished, so not breaking) |
-| `splitWords` + `wordSeparators` | normalize.ts | tokenization, not folding — normalize.ts's one concern is the 1:1 fold | **moved to boundaries.ts**, which now owns all word semantics |
+| `splitWords` + `wordSeparators` | normalise.ts | tokenization, not folding — normalise.ts's one concern is the 1:1 fold | **moved to boundaries.ts**, which now owns all word semantics |
 | word-class duplication | `wordChar` and `wordSeparators` each hard-coded `\p{L}\p{N}_` | two regexes, one class, drift risk | both built from a single `WORD_CLASS` source string |
 
 ### Checked and judged fine
@@ -188,7 +188,7 @@ Current file map, one concern each:
 | types.ts | the public types |
 | scores.ts | the tier ladder's constants |
 | boundaries.ts | word semantics: the char class, tokenization, boundary predicate |
-| normalize.ts | the 1:1 fold |
+| normalise.ts | the 1:1 fold |
 | gates.ts | per-query bulk-reject pre-filters |
 | match.ts | the tier ladder |
 | fuzzy.ts | the fuzzy chain tier |

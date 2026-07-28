@@ -94,7 +94,7 @@ Statistical claims live in `bench/`, where the corpora and the measurement do: t
 
 ## Prose
 
-README.md, CHANGELOG.md, MIGRATION.md, docs/ and BLOG-DRAFT.md: one sentence per line, no hard wrapping mid-sentence. EU spelling in prose (behaviour, optimise, normalisation); identifiers keep their own spelling (`normalizeText`, `normalizedField`).
+README.md, CHANGELOG.md, MIGRATION.md, docs/ and BLOG-DRAFT.md: one sentence per line, no hard wrapping mid-sentence. EU spelling everywhere — prose (behaviour, optimise, normalisation) and identifiers alike (`normaliseText`, `normalisedField`); only platform builtins keep theirs (`String.prototype.normalize`).
 
 Claims about behaviour cite the table or command that produced them, and a claim that no longer matches a regenerated table gets rewritten rather than softened.
 

@@ -42,7 +42,7 @@ Size and type, by bundle size ascending.
 <!-- bench:libraries -->
 | Library          | Gzip    | Deps | Type                 |
 |------------------|---------|------|----------------------|
-| **Krino**        | ~6.6 kB | 0    | subsequence (tiered) |
+| **Krino**        | ~5.4 kB | 0    | subsequence (tiered) |
 | fuzzy            | ~0.8 kB | 0    | substring            |
 | @nozbe/microfuzz | ~1.7 kB | 0    | subsequence          |
 | match-sorter     | ~3.4 kB | 2    | subsequence (tiered) |
@@ -59,7 +59,7 @@ The specific opt-ins the "(all opts)" rows switch on, and where output shapes di
 - `Krino`: Typos 🟢 is the always-on one-edit rescue, reported as the `corrected` tier — a swap, an extra character, a missing one or a wrong one, i.e. Damerau-Levenshtein distance 1, not general edit distance
 - `uFuzzy`: folds diacritics via `latinize()`, matches multi-word via `outOfOrder`, and runs its one-typo `SingleError` mode with all four edits, the closest config to Krino's one-edit rescue
 - `Fuse.js`: returns `ranges` via `includeMatches`, folds diacritics via `ignoreDiacritics`, and matches multi-word via `useExtendedSearch`, which turns space-separated terms into an AND of fuzzy patterns in any order — the same result set Krino's multi-word tier returns. Fuse's other multi-word switch, `useTokenSearch`, defaults to OR (`tokenMatch: "any"`) and only reaches these semantics at `tokenMatch: "all"`
-- `fast-fuzzy`: its `ranges` are one span (`index` + `length`), not per-character, and its default normalization doesn't strip accents
+- `fast-fuzzy`: its `ranges` are one span (`index` + `length`), not per-character, and its default normalisation doesn't strip accents
 - `fuzzy`: its "ranges" are a pre-wrapped string, not numeric indices
 
 Every configuration is defined once, in [`bench/configs.ts`](../bench/configs.ts), so a row timed in the speed tables is the same row ranked in the scorecard.
@@ -173,7 +173,7 @@ fast-fuzzy's trie is the opposite trade: the heaviest build in the set buys its 
 fuzzysort has no constructor at all, so it has no column here — its lazy prepare-all pass lands in its first query's cold cell, where stock usage actually pays it.
 uFuzzy's ~5 ms index cell is a process-cold discovery of its own: `new uFuzzy()` compiles the engine's regex machinery on first construction (a second construction costs 0.03 ms), so "keeps no index" is true per item but not per process — the cell is identical at 10k and 100k, which is the proof it never touches the list.
 microfuzz's column is its eager constructor; its lazy first-search slice shows up in the cold cells instead.
-Krino's constructor only allocates — field text is trimmed, normalized and masked the first time an item survives a gate — so a 100k list swap costs about a millisecond, and the first query then carries what construction deferred (its cold cells).
+Krino's constructor only allocates — field text is trimmed, normalised and masked the first time an item survives a gate — so a 100k list swap costs about a millisecond, and the first query then carries what construction deferred (its cold cells).
 
 ## Match quality, probe by probe
 
@@ -813,7 +813,7 @@ Everything above condenses to one recommendation: _pick Krino for list matching_
 Three things carry the claim, each measured in its own section:
 
 - **Quality**: Krino (acronym) tops the scorecard on both corpora outright (0.87 mixed / 0.82 ascii), with the smallest result sets of the subsequence engines (median 7 rows on structured queries where Fuse.js ships ~90); the phrase-typo probes are what pushed the lead past the tie band.
-- **Cost, measured cold**: the cheapest twenty-query session of anything above 0.5 MRR at both sizes (batch 20.9 ms at mixed 10k, ~1 ms per query after the first; 2.5–42× under every typo-tolerant or tiered alternative), a near-zero constructor, ~6.6 kB gzip, zero deps. The honest asterisk is the first call: Krino's lazy preparation lands its whole bill on query one (~5.5 ms at 10k, ~23 ms at 100k), and a workload that only ever asks one question of one searcher should read the one-shot ledger, where bare `fuzzy` is cheaper.
+- **Cost, measured cold**: the cheapest twenty-query session of anything above 0.5 MRR at both sizes (batch 20.9 ms at mixed 10k, ~1 ms per query after the first; 2.5–42× under every typo-tolerant or tiered alternative), a near-zero constructor, ~5.4 kB gzip, zero deps. The honest asterisk is the first call: Krino's lazy preparation lands its whole bill on query one (~5.5 ms at 10k, ~23 ms at 100k), and a workload that only ever asks one question of one searcher should read the one-shot ledger, where bare `fuzzy` is cheaper.
 - **Long text**: the density floor holds `fuzzyMatch` junk at 0% at every measured document length — phrase probes included — so the same engine covers documents, not just labels.
 
 The carve-outs:
