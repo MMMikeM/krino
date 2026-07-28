@@ -2,10 +2,10 @@
 // every string the published corpora hold — where the real Unicode lives.
 import { expect, it } from "vitest";
 import { charMask } from "../src/gates";
-import { normalizeText, rawCharMask } from "../src/normalize";
+import { normaliseText, rawFieldScan } from "../src/normalise";
 import { CORPORA } from "./corpus";
 
-it("rawCharMask never drops a bit over either corpus", { timeout: 300_000 }, () => {
+it("rawFieldScan never drops a mask bit over either corpus", { timeout: 300_000 }, () => {
 	for (const { name, build } of CORPORA) {
 		const list = build(100_000);
 		// Collected rather than asserted per item: 100k assertions per corpus is
@@ -13,8 +13,8 @@ it("rawCharMask never drops a bit over either corpus", { timeout: 300_000 }, () 
 		const drops: string[] = [];
 		let extra = 0;
 		for (const raw of list) {
-			const eager = charMask(normalizeText(raw.trim()));
-			const lazy = rawCharMask(raw);
+			const eager = charMask(normaliseText(raw.trim()));
+			const lazy = rawFieldScan(raw, { lo: 0, hi: 0 });
 			if (eager & ~lazy) drops.push(raw);
 			else if (eager !== lazy) extra++;
 		}

@@ -22,7 +22,7 @@ export type LibraryMeta = {
 
 export const META: Record<string, LibraryMeta> = {
 	krino: {
-		gzipKB: 6.6, deps: 0, type: "subsequence (tiered)", module: "esm", updated: null,
+		gzipKB: 5.4, deps: 0, type: "subsequence (tiered)", module: "esm", updated: null,
 		features: { ranges: "yes", tier: "yes", diacritics: "yes", multiWord: "yes", perField: "yes", typos: "partial" },
 	},
 	"@nozbe/microfuzz": {

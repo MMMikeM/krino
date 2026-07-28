@@ -9,9 +9,10 @@
  */
 import { expect, it } from "vitest";
 import { splitWords } from "../src/boundaries";
-import { addRawBigramMask, buildRawGate, buildRescueBigramGate, charMask } from "../src/gates";
-import { admitsMissingClass, matchField, prepareQuery } from "../src/match";
-import { normalizeText, rawCharMask } from "../src/normalize";
+import { buildRawGate, buildRescueBigramGate, charMask } from "../src/gates";
+import { matchField, prepareQuery } from "../src/match";
+import { admitsMissingClass } from "../src/rescue";
+import { normaliseText, rawFieldScan } from "../src/normalise";
 import { SCORES } from "../src/scores";
 import { createFuzzySearch } from "../src/search";
 import { CORPORA } from "./corpus";
@@ -28,7 +29,7 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 	for (const { name, build, queries } of CORPORA) {
 		const list = build(100_000);
 		const raw = list.map((s) => s.trim());
-		const norm = raw.map(normalizeText);
+		const norm = raw.map(normaliseText);
 		const fieldMask = new Int32Array(list.length);
 		const bigramLo = new Int32Array(list.length);
 		const bigramHi = new Int32Array(list.length);
@@ -37,7 +38,7 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 			fieldMask[i] = charMask(norm[i]);
 			acc.lo = 0;
 			acc.hi = 0;
-			addRawBigramMask(list[i], acc);
+			rawFieldScan(list[i], acc);
 			bigramLo[i] = acc.lo;
 			bigramHi[i] = acc.hi;
 		}
@@ -51,7 +52,7 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 		let counted = 0;
 
 		for (const query of queries) {
-			const nq = normalizeText(query);
+			const nq = normaliseText(query);
 			if (nq.length < 2) continue;
 			const q = prepareQuery(query, nq);
 			const gate = splitWords(nq).length > 1 ? null : buildRawGate(nq);
@@ -66,7 +67,7 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 				for (let i = 0; i < raw.length; i++) if (gate.test(raw[i])) sink++;
 			});
 			ms.materialise += time(() => {
-				for (const i of survivors) sink += charMask(normalizeText(raw[i])).valueOf();
+				for (const i of survivors) sink += charMask(normaliseText(raw[i])).valueOf();
 			});
 			ms.ladder += time(() => {
 				for (const i of survivors) {
@@ -85,10 +86,9 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 				ms.maskBuild += time(() => {
 					const a = { lo: 0, hi: 0 };
 					for (let i = 0; i < list.length; i++) {
-						sink += rawCharMask(list[i]);
 						a.lo = 0;
 						a.hi = 0;
-						addRawBigramMask(list[i], a);
+						sink += rawFieldScan(list[i], a);
 						sink += a.lo;
 					}
 				});

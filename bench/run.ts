@@ -10,7 +10,7 @@
  *           twenty probes once each: warmth earned by distinct real queries,
  *           never repetition.
  *
- *   node bench/run.ts <variant|all> <test|all> [count] [--size=10k|100k] [--out=file]
+ *   node bench/run.ts <variant|all> <test|all> [count] [--size=10k|100k] [--out=file] [--json]
  *   node bench/run.ts krino mixed/garbage 10
  *   node bench/run.ts all batch 5 --size=10k
  *
@@ -162,8 +162,11 @@ for (const size of sizes) {
 			for (let i = 0; i < variants.length; i++) {
 				const v = variants[(i + rep) % variants.length];
 				(runs.get(v) as ChildOut[]).push(sample(t, size, v));
+				// One dot per finished child, so a long run is visibly alive.
+				process.stderr.write(".");
 			}
 		}
+		process.stderr.write("\n");
 		for (const v of variants) {
 			const cellRuns = runs.get(v) as ChildOut[];
 			const stats = aggregate(cellRuns);
@@ -221,11 +224,12 @@ for (const size of sizes) {
 	}
 }
 
-// --out: the aggregated matrix, shaped for the artifact:
+// The aggregated matrix, shaped for the artifact:
 // corpus → test kind → size → variant → CellStats (sans counts).
-if (outFile) {
-	const { writeFileSync, mkdirSync } = await import("node:fs");
-	const { dirname } = await import("node:path");
+const shaped = (): Record<
+	string,
+	Record<string, Record<string, Record<string, Omit<CellStats, "counts">>>>
+> => {
 	const out: Record<string, Record<string, Record<string, Record<string, Omit<CellStats, "counts">>>>> = {};
 	for (const size of sizes) {
 		for (const t of chosen) {
@@ -236,7 +240,19 @@ if (outFile) {
 			}
 		}
 	}
+	return out;
+};
+
+if (outFile) {
+	const { writeFileSync, mkdirSync } = await import("node:fs");
+	const { dirname } = await import("node:path");
 	mkdirSync(dirname(outFile), { recursive: true });
-	writeFileSync(outFile, `${JSON.stringify(out, null, "\t")}\n`);
+	writeFileSync(outFile, `${JSON.stringify(shaped(), null, "\t")}\n`);
 	console.error(`wrote ${outFile}`);
+}
+
+// --json: the same matrix on stdout for scripting — cell lines go to stderr,
+// so `bench ... --json | jq` sees only the JSON.
+if (flags.includes("--json")) {
+	process.stdout.write(`${JSON.stringify(shaped(), null, "\t")}\n`);
 }

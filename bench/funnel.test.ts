@@ -11,15 +11,14 @@
 import { describe, expect, it } from "vitest";
 import { fuzzyMatch } from "krino";
 import {
-	addRawBigramMask,
 	buildFuzzyGate,
 	buildPresenceGate,
 	buildRescueBigramGate,
 	charMask,
 } from "../src/gates";
-import { admitsMissingClass } from "../src/match";
+import { admitsMissingClass } from "../src/rescue";
 import { splitWords } from "../src/boundaries";
-import { normalizeText } from "../src/normalize";
+import { normaliseText, rawFieldScan } from "../src/normalise";
 import { CORPORA } from "./corpus";
 
 type FunnelRow = {
@@ -40,8 +39,8 @@ const pct = (part: number, whole: number): string =>
 // the corrected query rather than read off a label. The mask invariant below is
 // about which edit fired, and this is what keeps it assertable.
 const editKind = (query: string, corrected: string): string => {
-	const q = normalizeText(query);
-	const c = normalizeText(corrected);
+	const q = normaliseText(query);
+	const c = normaliseText(corrected);
 	if (c.length === q.length - 1) return "inserted";
 	if (c.length === q.length + 1) return "deleted";
 	if (c.length !== q.length) return "unknown";
@@ -61,27 +60,27 @@ describe("pre-filter funnel", () => {
 	for (const size of [10_000, 100_000]) {
 		it(`[${name}] stages are monotonic and mask-safe at ${size}`, { timeout: 120_000 }, () => {
 			const list = build(size);
-			const normalized = list.map(normalizeText);
-			const masks = normalized.map(charMask);
+			const normalised = list.map(normaliseText);
+			const masks = normalised.map(charMask);
 			const bigrams = list.map((item) => {
 				const acc = { lo: 0, hi: 0 };
-				addRawBigramMask(item, acc);
+				rawFieldScan(item, acc);
 				return acc;
 			});
 
 			const rows: FunnelRow[] = [];
 			for (const query of queries) {
-				const normalizedQuery = normalizeText(query);
-				const queryMask = charMask(normalizedQuery);
+				const normalisedQuery = normaliseText(query);
+				const queryMask = charMask(normalisedQuery);
 				const gate =
-					splitWords(normalizedQuery).length > 1
-						? buildPresenceGate(normalizedQuery)
-						: buildFuzzyGate(normalizedQuery);
+					splitWords(normalisedQuery).length > 1
+						? buildPresenceGate(normalisedQuery)
+						: buildFuzzyGate(normalisedQuery);
 
 				// Modelling the relaxed gate unconditionally would count items
 				// through a filter production never applies, overstating the cut.
-				const relaxed = admitsMissingClass(normalizedQuery, splitWords(normalizedQuery));
-				const bigramGate = relaxed ? buildRescueBigramGate(normalizedQuery) : null;
+				const relaxed = admitsMissingClass(normalisedQuery, splitWords(normalisedQuery));
+				const bigramGate = relaxed ? buildRescueBigramGate(normalisedQuery) : null;
 
 				let maskPass = 0;
 				let bigramPass = 0;
@@ -139,7 +138,7 @@ describe("pre-filter funnel", () => {
 						// exempt for the same reason as the mask above.)
 						if (result.tier !== "corrected") {
 							expect(
-								gate.test(normalized[i]),
+								gate.test(normalised[i]),
 								`gate rejected a ${result.tier} match for "${query}": ${list[i]}`,
 							).toBe(true);
 						}
@@ -148,7 +147,7 @@ describe("pre-filter funnel", () => {
 					maskPass++;
 					if (!bigramOk) continue;
 					bigramPass++;
-					if (!gate.test(normalized[i])) continue;
+					if (!gate.test(normalised[i])) continue;
 					gatePass++;
 				}
 

@@ -15,7 +15,7 @@
  */
 import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { fuzzyMatch, normalizeText, splitWords } from "krino";
+import { fuzzyMatch, normaliseText, splitWords } from "krino";
 import { type LongtextRow, ensureRawDir, rawFile } from "./artifact.ts";
 import { CORPORA } from "./corpus";
 
@@ -52,11 +52,11 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 		// Absent probes: plain words drawn from items far past any slice we use,
 		// each verified absent from the LARGEST slice — so it is absent from
 		// every smaller slice too, and one probe set serves every row.
-		const maxSlice = normalizeText(fullDoc.slice(0, Math.max(...DOC_LENGTHS)));
+		const maxSlice = normaliseText(fullDoc.slice(0, Math.max(...DOC_LENGTHS)));
 		const absent: string[] = [];
 		const seen = new Set<string>();
 		for (const item of items.slice(5000)) {
-			for (const w of splitWords(normalizeText(item))) {
+			for (const w of splitWords(normaliseText(item))) {
 				if (absent.length >= ABSENT_PROBES) break;
 				if (seen.has(w) || !isPlainWord(w) || maxSlice.includes(w)) continue;
 				seen.add(w);
@@ -70,10 +70,10 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 
 		for (const len of DOC_LENGTHS) {
 			const doc = fullDoc.slice(0, len);
-			const normalizedDoc = normalizeText(doc);
+			const normalisedDoc = normaliseText(doc);
 
 			// Present probes: words from inside this slice.
-			const present = [...new Set(splitWords(normalizedDoc).filter(isPlainWord))].slice(0, PRESENT_PROBES);
+			const present = [...new Set(splitWords(normalisedDoc).filter(isPlainWord))].slice(0, PRESENT_PROBES);
 
 			let junk = 0;
 			for (const w of absent) if (fuzzyMatch(doc, w)) junk++;
@@ -131,7 +131,7 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 		if (!mixed) throw new Error("mixed corpus missing");
 		const items = mixed.build(10_000);
 		const fullDoc = items.join(" ");
-		const maxSlice = normalizeText(fullDoc.slice(0, Math.max(...DOC_LENGTHS)));
+		const maxSlice = normaliseText(fullDoc.slice(0, Math.max(...DOC_LENGTHS)));
 		const docWords = [...new Set(splitWords(maxSlice))];
 
 		// Mangle words that are absent from every slice; a probe whose mangled
@@ -140,7 +140,7 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 		const mangled: string[] = [];
 		const seen = new Set<string>();
 		for (const item of items.slice(5000)) {
-			for (const w of splitWords(normalizeText(item))) {
+			for (const w of splitWords(normaliseText(item))) {
 				if (mangled.length >= 10) break;
 				if (seen.has(w) || !isPlainWord(w) || maxSlice.includes(w)) continue;
 				seen.add(w);
@@ -155,7 +155,7 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 
 		for (const len of DOC_LENGTHS) {
 			const doc = fullDoc.slice(0, len);
-			const present = [...new Set(splitWords(normalizeText(doc)).filter(isPlainWord))].slice(
+			const present = [...new Set(splitWords(normaliseText(doc)).filter(isPlainWord))].slice(
 				0,
 				mangled.length,
 			);
