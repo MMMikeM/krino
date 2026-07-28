@@ -1,14 +1,16 @@
-// Imports internals rather than the public surface: `rawCharMask` is the index
-// build's whole per-item cost and its correctness is not observable through
-// `createFuzzySearch` — a dropped bit makes results vanish silently.
+// Imports internals rather than the public surface: `rawFieldScan`'s mask half
+// is the index build's whole per-item cost and its correctness is not
+// observable through `createFuzzySearch` — a dropped bit makes results vanish
+// silently.
 import { describe, expect, it } from "vitest";
 import { charMask } from "../src/gates";
-import { normalizeText, rawCharMask } from "../src/normalize";
+import { normaliseText, rawFieldScan } from "../src/normalise";
 
-// Skipping NFC and the trim may only ADD bits. A bit the normalized form sets
+// Skipping NFC and the trim may only ADD bits. A bit the normalised form sets
 // and the raw form does not is a gate that false-rejects, which is the one
 // failure no tier can recover from.
-const dropped = (raw: string): number => charMask(normalizeText(raw.trim())) & ~rawCharMask(raw);
+const dropped = (raw: string): number =>
+	charMask(normaliseText(raw.trim())) & ~rawFieldScan(raw, { lo: 0, hi: 0 });
 
 const CASES: [string, string][] = [
 	["lowercase ascii", "generic soft cheese"],
@@ -29,7 +31,7 @@ const CASES: [string, string][] = [
 	["whitespace only", "   \t  "],
 ];
 
-describe("rawCharMask never drops a bit charMask would set", () => {
+describe("rawFieldScan never drops a mask bit charMask would set", () => {
 	for (const [name, raw] of CASES) {
 		it(name, () => {
 			expect(dropped(raw)).toBe(0);

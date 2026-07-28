@@ -8,6 +8,6 @@
 
 export { createFuzzySearch, fuzzyMatch } from "./search";
 export { splitWords } from "./boundaries";
-export { normalizeText } from "./normalize";
+export { normaliseText } from "./normalise";
 export { SCORES } from "./scores";
 export type * from "./types";

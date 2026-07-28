@@ -33,7 +33,7 @@ describe("field specs", () => {
 	it("atBest keeps body from outranking title", () => {
 		const posts: Post[] = [
 			{ title: "Redux Toolkit stuff", body: "unrelated text" }, // A: title prefix (0.5)
-			{ title: "unrelated title", body: "Redux" }, // B: body normalized-exact (0.1)
+			{ title: "unrelated title", body: "Redux" }, // B: body normalised-exact (0.1)
 		];
 		const fields = [
 			{ text: (p: Post) => p.title },

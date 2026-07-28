@@ -52,7 +52,7 @@ describe("bug 5: fuzzyMatch rejects an empty query", () => {
 	});
 });
 
-describe("bug 6: highlight width uses the normalized query length", () => {
+describe("bug 6: highlight width uses the normalised query length", () => {
 	it("padding in the query does not widen the highlight", () => {
 		expect(fuzzyMatch("Hello World", "wor")?.ranges).toEqual([[6, 8]]);
 		expect(fuzzyMatch("Hello World", " wor ")?.ranges).toEqual([[6, 8]]);

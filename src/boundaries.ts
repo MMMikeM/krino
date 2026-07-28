@@ -19,7 +19,7 @@ export const wordChar: RegExp = new RegExp(`[${WORD_CLASS}]`, "u");
 const wordSeparators = new RegExp(`[^${WORD_CLASS}]+`, "u");
 
 /**
- * Splits normalized text into words on any punctuation/whitespace run, so
+ * Splits normalised text into words on any punctuation/whitespace run, so
  * multi-word matching tokenizes "build," and "build" identically.
  */
 export const splitWords = (text: string): string[] => text.split(wordSeparators).filter(Boolean);

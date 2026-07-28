@@ -4,7 +4,7 @@
  * i.e. virtually all real data. Every tier reports the same space.
  */
 import { describe, expect, it } from "vitest";
-import { createFuzzySearch, fuzzyMatch, normalizeText } from "../src/index";
+import { createFuzzySearch, fuzzyMatch, normaliseText } from "../src/index";
 
 describe("ranges index the caller's string", () => {
 	describe("leading whitespace", () => {
@@ -34,11 +34,11 @@ describe("ranges index the caller's string", () => {
 		});
 	});
 
-	describe("length-changing normalization stays 1:1", () => {
+	describe("length-changing normalisation stays 1:1", () => {
 		it("İ folds to one unit, offsets aligned", () => {
 			// U+0130 is the only unconditional 1→2 lowercase expansion; the fold
 			// must absorb it so every later offset stays aligned.
-			expect(normalizeText("İstanbul")).toBe("istanbul");
+			expect(normaliseText("İstanbul")).toBe("istanbul");
 			const result = fuzzyMatch("İstanbul Airport", "airport");
 			expect(result?.tier).toBe("boundary");
 			expect(result?.ranges).toEqual([[9, 15]]);
@@ -47,7 +47,7 @@ describe("ranges index the caller's string", () => {
 		it("Hangul stays syllable-level, not jamo-level", () => {
 			// NFD would explode 한국 into 6 jamo units and every offset after it
 			// would drift; the 1:1 fold keeps syllables whole.
-			expect(normalizeText("한국").length).toBe(2);
+			expect(normaliseText("한국").length).toBe(2);
 			const result = fuzzyMatch("한국어 검색", "한국");
 			expect(result?.tier).toBe("prefix");
 			expect(result?.ranges).toEqual([[0, 1]]);
@@ -56,8 +56,8 @@ describe("ranges index the caller's string", () => {
 		it("Greek sigma folds case-insensitively in both forms", () => {
 			// Final sigma (ς) and medial sigma (σ) both fold to σ, so a typed
 			// query matches uppercase text regardless of which form it uses.
-			expect(fuzzyMatch("ΤΕΛΟΣ", "τελος")?.tier).toBe("normalized-exact");
-			expect(fuzzyMatch("ΤΕΛΟΣ", "τελοσ")?.tier).toBe("normalized-exact");
+			expect(fuzzyMatch("ΤΕΛΟΣ", "τελος")?.tier).toBe("normalised-exact");
+			expect(fuzzyMatch("ΤΕΛΟΣ", "τελοσ")?.tier).toBe("normalised-exact");
 		});
 	});
 
@@ -72,7 +72,7 @@ describe("ranges index the caller's string", () => {
 		});
 
 		it("still matches its precomposed twin", () => {
-			expect(fuzzyMatch("Café", "café")?.tier).toBe("normalized-exact");
+			expect(fuzzyMatch("Café", "café")?.tier).toBe("normalised-exact");
 		});
 	});
 });

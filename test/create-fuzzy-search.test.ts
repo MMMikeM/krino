@@ -78,7 +78,7 @@ describe("sort order — full tier ladder in one search", () => {
 		"greedy nectar team", // fuzzy (>2)
 		"iced Green Tea", // boundary (1)
 		"green tea ice cream", // prefix (0.5)
-		"Green Tea", // normalized-exact (0.1)
+		"Green Tea", // normalised-exact (0.1)
 		"matcha green tea", // boundary-exact (0.9)
 	];
 	const results = createFuzzySearch(collection)("green tea");
@@ -163,7 +163,7 @@ describe("unicode", () => {
 		expect(r.fields[0]?.ranges).toEqual([[6, 11]]);
 	});
 
-	it("normalized-exact for special characters", () => {
+	it("normalised-exact for special characters", () => {
 		expect(createFuzzySearch(["Łódź"])("lodz")[0]!.score).toBe(0.1);
 	});
 });

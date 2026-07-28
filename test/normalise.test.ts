@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeText, splitWords } from "../src/index";
+import { normaliseText, splitWords } from "../src/index";
 
 const cases: Array<[string, string]> = [
 	["HELLO", "hello"],
@@ -14,25 +14,25 @@ const cases: Array<[string, string]> = [
 	["", ""],
 ];
 
-describe("normalizeText", () => {
-	it.each(cases)("normalizes %j to %j", (input, expected) => {
-		expect(normalizeText(input)).toBe(expected);
+describe("normaliseText", () => {
+	it.each(cases)("normalises %j to %j", (input, expected) => {
+		expect(normaliseText(input)).toBe(expected);
 	});
 
 	it("does not touch punctuation", () => {
-		// If the punctuation-boundary bug is fixed by normalizing punctuation to
+		// If the punctuation-boundary bug is fixed by normalising punctuation to
 		// spaces rather than by widening boundaryChars, update this pin.
-		expect(normalizeText("a.b,c:d;e/f")).toBe("a.b,c:d;e/f");
+		expect(normaliseText("a.b,c:d;e/f")).toBe("a.b,c:d;e/f");
 	});
 
 	it("preserves internal whitespace", () => {
-		expect(normalizeText("a  b")).toBe("a  b");
+		expect(normaliseText("a  b")).toBe("a  b");
 	});
 
 	it("is idempotent", () => {
 		for (const [input] of cases) {
-			const once = normalizeText(input);
-			expect(normalizeText(once)).toBe(once);
+			const once = normaliseText(input);
+			expect(normaliseText(once)).toBe(once);
 		}
 	});
 
@@ -53,7 +53,7 @@ describe("normalizeText", () => {
 			// Cyrillic: ё decomposes to е + diaeresis
 			["Всё Хорошо", "все хорошо"],
 		])("folds %j to %j", (input, expected) => {
-			expect(normalizeText(input)).toBe(expected);
+			expect(normaliseText(input)).toBe(expected);
 		});
 
 		it("folds typographic apostrophes and quotes to their ASCII forms", () => {
@@ -61,25 +61,25 @@ describe("normalizeText", () => {
 			// macOS smart quotes and faker emit U+2019); without folding, a
 			// query in one form can never match a field in the other — the
 			// char-class mask rejects it before any tier runs.
-			expect(normalizeText("O’Keefe")).toBe("o'keefe");
-			expect(normalizeText("‘quoted’")).toBe("'quoted'");
-			expect(normalizeText("“double”")).toBe('"double"');
+			expect(normaliseText("O’Keefe")).toBe("o'keefe");
+			expect(normaliseText("‘quoted’")).toBe("'quoted'");
+			expect(normaliseText("“double”")).toBe('"double"');
 		});
 
 		it("leaves non-decomposable letters alone", () => {
 			// ø, đ, ß, ı have no NFD decomposition and no special-case entry;
 			// folding them to o/d/ss/i would be a (separate) transliteration
 			// decision, not diacritic removal.
-			expect(normalizeText("Søren")).toBe("søren");
-			expect(normalizeText("straße")).toBe("straße");
-			expect(normalizeText("ırmak")).toBe("ırmak");
+			expect(normaliseText("Søren")).toBe("søren");
+			expect(normaliseText("straße")).toBe("straße");
+			expect(normaliseText("ırmak")).toBe("ırmak");
 		});
 	});
 
 	describe("offset preservation (1:1 in code units)", () => {
 		const oneToOne = (input: string) => {
 			const canonical = input.normalize("NFC").trim();
-			expect(normalizeText(input)).toHaveLength(canonical.length);
+			expect(normaliseText(input)).toHaveLength(canonical.length);
 		};
 
 		it("holds for every fold case in this file", () => {
@@ -89,12 +89,12 @@ describe("normalizeText", () => {
 		it("absorbs the İ expansion", () => {
 			// U+0130 is Unicode's only unconditional one-to-two lowercase
 			// mapping; the fold must swallow the combining dot it produces.
-			expect(normalizeText("İstanbul")).toBe("istanbul");
+			expect(normaliseText("İstanbul")).toBe("istanbul");
 			oneToOne("İZMİR İstanbul");
 		});
 
 		it("keeps Hangul syllables whole instead of exploding to jamo", () => {
-			expect(normalizeText("한국어 검색")).toBe("한국어 검색");
+			expect(normaliseText("한국어 검색")).toBe("한국어 검색");
 			oneToOne("한국어 검색");
 		});
 
@@ -106,7 +106,7 @@ describe("normalizeText", () => {
 
 		it("keeps astral pairs intact", () => {
 			oneToOne("𝔘nicode 😀");
-			expect(normalizeText("𐐀𐐀")).toBe("𐐨𐐨"); // Deseret lowercases 1:1 in code points
+			expect(normaliseText("𐐀𐐀")).toBe("𐐨𐐨"); // Deseret lowercases 1:1 in code points
 		});
 	});
 
@@ -117,19 +117,19 @@ describe("normalizeText", () => {
 			["Việt", "Việt"],
 		])("normalises %j and %j identically", (nfc, nfd) => {
 			expect(nfc).not.toBe(nfd); // the inputs genuinely differ
-			expect(normalizeText(nfd)).toBe(normalizeText(nfc));
+			expect(normaliseText(nfd)).toBe(normaliseText(nfc));
 		});
 	});
 
 	describe("whitespace", () => {
 		it("trims tabs and newlines like spaces", () => {
-			expect(normalizeText("\thello\n")).toBe("hello");
-			expect(normalizeText(" \t ")).toBe("");
+			expect(normaliseText("\thello\n")).toBe("hello");
+			expect(normaliseText(" \t ")).toBe("");
 		});
 
 		it("trims non-ASCII strings the same way", () => {
 			// The trim happens on the slow path too, not just the ASCII shortcut.
-			expect(normalizeText("  Café  ")).toBe("cafe");
+			expect(normaliseText("  Café  ")).toBe("cafe");
 		});
 	});
 
@@ -139,9 +139,9 @@ describe("normalizeText", () => {
 			// U+0500, Map above); the cached path must agree with the computed
 			// path for representatives of both.
 			for (const s of ["Łódź", "τέλος", "Всё", "한국어", "𝔘"]) {
-				const first = normalizeText(s);
-				expect(normalizeText(s)).toBe(first);
-				expect(normalizeText(s)).toBe(first);
+				const first = normaliseText(s);
+				expect(normaliseText(s)).toBe(first);
+				expect(normaliseText(s)).toBe(first);
 			}
 		});
 	});

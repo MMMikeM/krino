@@ -20,7 +20,7 @@ export type HighlightRanges = Range[];
  */
 export type Tier =
 	| "exact"
-	| "normalized-exact"
+	| "normalised-exact"
 	| "prefix"
 	| "boundary-exact"
 	| "boundary"

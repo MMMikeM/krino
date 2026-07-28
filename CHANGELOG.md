@@ -2,6 +2,9 @@
 
 ## 2.0.0 (unreleased)
 
+- **Breaking: `normalizeText` is now `normaliseText`.**
+  The one US-spelled identifier on the public surface goes British with the rest of the prose; no behaviour change.
+  Update imports: `import { normaliseText } from "krino"`.
 - **Added: one-edit corrections inside phrases.**
   A multi-word query with exactly one word the field is missing now rescues that word alone — swap, doubled character, dropped character or wrong character — and rescores the whole corrected phrase (`multiWordRescue`).
   The old restriction to single-word queries existed because a fifteen-character phrase offers fifteen positions to guess from; the rescue inverts that: the literally-occurring words pin the candidate fields first, so the enumeration runs over a handful of fields rather than the corpus, and only the failing word is corrected.
@@ -78,7 +81,7 @@ See [MIGRATION.md](./MIGRATION.md) for a 0.x → 1.0 upgrade guide.
 - Boundary-contains scans past mid-word occurrences; highlights land on the standalone word.
 - Multi-word tier is a flat `1.5` (more words no longer ranks worse).
 - Empty query → `null` / `[]`.
-- Highlight width uses the normalized query length.
+- Highlight width uses the normalised query length.
 
 ### Performance
 

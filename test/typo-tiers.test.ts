@@ -28,7 +28,7 @@ describe("a query missing a character", () => {
 
 	it("scores off the tier the corrected query would have earned", () => {
 		// Corrected query is the whole field but not case-identical → the
-		// normalized-exact tier (0.1), not the raw exact tier (0).
+		// normalised-exact tier (0.1), not the raw exact tier (0).
 		expect(fuzzyMatch("Wooden Table", "wooden tble")?.score).toBeCloseTo(2.2);
 		// Corrected query sits at a word boundary inside a longer field → 1 + 2.1.
 		expect(fuzzyMatch("Tasty Silk Towels", "towls")?.score).toBeCloseTo(3.1);

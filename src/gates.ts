@@ -6,8 +6,8 @@
  */
 
 import { wordChar } from "./boundaries";
-import { foldChar } from "./normalize";
-import { UNFOLD } from "./unfold";
+import { bigramBit, bigramClass } from "./normalise";
+import { unfoldTable } from "./unfold";
 
 export const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -38,8 +38,8 @@ const WORD_CLASS = "[\\p{L}\\p{N}_]";
  * lengthens the subsequence and never changes the first three characters, so
  * both branches only ever admit fewer fields.
  */
-export const buildFuzzyGate = (normalizedQuery: string): RegExp => {
-	const points = [...normalizedQuery];
+export const buildFuzzyGate = (normalisedQuery: string): RegExp => {
+	const points = [...normalisedQuery];
 	const chars = points.map(escapeRegex);
 	// `[^x]*x` rather than `[^]*x`: excluding the character that ends the gap
 	// leaves each step exactly one place to stop, so the scan cannot backtrack.
@@ -52,27 +52,27 @@ export const buildFuzzyGate = (normalizedQuery: string): RegExp => {
 	};
 	const runLength = Math.min(3, chars.length);
 	const run = chars.slice(0, runLength).join("");
-	const afterRun =
-		runLength < chars.length ? `${gap(runLength)}${subsequenceFrom(runLength)}` : "";
+	const afterRun = runLength < chars.length ? `${gap(runLength)}${subsequenceFrom(runLength)}` : "";
 	// Lookbehind rather than a consuming `(?:^|non-word)`: same survivors, ~11%
 	// less scan time, and ES2018 sits inside the ES2022 target tsconfig pins.
 	return new RegExp(`(?:(?<!${WORD_CLASS})${subsequenceFrom(0)}|${run}${afterRun})`, "u");
 };
 
 /**
- * `buildFuzzyGate` for text nothing has normalized yet: each character becomes
+ * `buildFuzzyGate` for text nothing has normalised yet: each character becomes
  * the class of code points that fold to it, so the gate runs against the
  * caller's own strings and no prepared copy of the corpus has to exist before
  * the first query can filter.
  *
- * Null when the query holds a character `UNFOLD` doesn't cover — non-Latin
- * scripts, mostly. The caller takes the mask path instead; slower, never wrong.
- * No `i` flag: the classes already carry both cases.
+ * Null when the query holds a character the unfold table doesn't cover —
+ * non-Latin scripts, mostly. The caller takes the mask path instead; slower,
+ * never wrong. No `i` flag: the classes already carry both cases.
  */
-export const buildRawGate = (normalizedQuery: string): RegExp | null => {
+export const buildRawGate = (normalisedQuery: string): RegExp | null => {
+	const unfold = unfoldTable();
 	const classes: string[] = [];
-	for (const ch of normalizedQuery) {
-		const sources = UNFOLD[ch];
+	for (const ch of normalisedQuery) {
+		const sources = unfold[ch];
 		if (sources === undefined) return null;
 		classes.push(classEscape(sources));
 	}
@@ -100,89 +100,15 @@ export const buildRawGate = (normalizedQuery: string): RegExp | null => {
  * `(queryMask & fieldMask) !== queryMask`, some query character class is absent
  * from the field and no tier can match.
  */
-export const charMask = (normalized: string): number => {
+export const charMask = (normalised: string): number => {
 	let mask = 0;
-	for (let i = 0; i < normalized.length; i++) {
-		const c = normalized.charCodeAt(i);
+	for (let i = 0; i < normalised.length; i++) {
+		const c = normalised.charCodeAt(i);
 		if (c >= 97 && c <= 122) mask |= 1 << (c - 97);
 		else if (c >= 48 && c <= 57) mask |= 1 << (26 + (c & 3));
 		else if (c > 127) mask |= 1 << (30 + (c & 1));
 	}
 	return mask;
-};
-
-// `charMask`'s class for one folded code unit, shifted to 1..32 so 0 can mean
-// "not a word character". Buckets collide exactly where charMask's do, so a
-// collision weakens the bigram filter but can never strengthen it.
-const bigramClass = (c: number): number => {
-	if (c >= 97 && c <= 122) return c - 96;
-	if (c >= 65 && c <= 90) return c - 64;
-	if (c >= 48 && c <= 57) return 27 + (c & 3);
-	if (c > 127) return 31 + (c & 1);
-	return 0;
-};
-
-const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur) & 63;
-
-/**
- * Field-side half of the rescue bigram gate: a 64-bit presence set (as two
- * int32s in `acc`) of the field's adjacent same-word character-class pairs,
- * plus consecutive word-initial pairs so an acronym-tier rescue stays
- * reachable. Folds raw text per code unit exactly as `rawCharMask` does, so no
- * normalized copy of the field has to exist.
- *
- * A raw combining mark makes adjacency in the raw string differ from adjacency
- * in the NFC-composed normalized text, so the field degrades to the all-bits
- * mask: the gate may only false-pass, never false-reject.
- */
-export const addRawBigramMask = (raw: string, acc: { lo: number; hi: number }): void => {
-	let lo = 0;
-	let hi = 0;
-	let prev = 0;
-	let lastInitial = 0;
-	const push = (cls: number): void => {
-		if (cls !== 0) {
-			if (prev !== 0) {
-				const bit = bigramBit(prev, cls);
-				if (bit < 32) lo |= 1 << bit;
-				else hi |= 1 << (bit - 32);
-			} else {
-				if (lastInitial !== 0) {
-					const bit = bigramBit(lastInitial, cls);
-					if (bit < 32) lo |= 1 << bit;
-					else hi |= 1 << (bit - 32);
-				}
-				lastInitial = cls;
-			}
-		}
-		prev = cls;
-	};
-	for (let i = 0; i < raw.length; i++) {
-		const c = raw.charCodeAt(i);
-		if (c < 128) {
-			push(bigramClass(c));
-			continue;
-		}
-		if (c >= 0x300 && c <= 0x36f) {
-			acc.lo = -1;
-			acc.hi = -1;
-			return;
-		}
-		const cp = raw.codePointAt(i) as number;
-		if (cp > 0xffff) i++;
-		const folded = foldChar(String.fromCodePoint(cp));
-		for (let k = 0; k < folded.length; k++) {
-			const f = folded.charCodeAt(k);
-			if (f >= 0x300 && f <= 0x36f) {
-				acc.lo = -1;
-				acc.hi = -1;
-				return;
-			}
-			push(bigramClass(f));
-		}
-	}
-	acc.lo |= lo;
-	acc.hi |= hi;
 };
 
 /**
@@ -201,13 +127,13 @@ export const addRawBigramMask = (raw: string, acc: { lo: number; hi: number }): 
  * the window, and a collision on the field side only adds coverage.
  */
 export const buildRescueBigramGate = (
-	normalizedQuery: string,
+	normalisedQuery: string,
 ): { reqLo: Int32Array; reqHi: Int32Array } => {
-	const n = normalizedQuery.length;
+	const n = normalisedQuery.length;
 	const cls = new Int32Array(n);
 	const classBit = new Int32Array(n).fill(-1);
 	for (let p = 0; p < n; p++) {
-		const c = normalizedQuery.charCodeAt(p);
+		const c = normalisedQuery.charCodeAt(p);
 		cls[p] = bigramClass(c);
 		if (c >= 97 && c <= 122) classBit[p] = c - 97;
 		else if (c >= 48 && c <= 57) classBit[p] = 26 + (c & 3);
@@ -256,10 +182,10 @@ export const maskIsExact = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
  * word separators are excluded so `"foo bar"` still gates a field that separates
  * the words differently (`"bar/foo"`). Built once per query, tested per field.
  */
-export const buildPresenceGate = (normalizedQuery: string): RegExp => {
+export const buildPresenceGate = (normalisedQuery: string): RegExp => {
 	const seen = new Set<string>();
 	let src = "^";
-	for (const ch of normalizedQuery) {
+	for (const ch of normalisedQuery) {
 		if (seen.has(ch) || !wordChar.test(ch)) continue;
 		seen.add(ch);
 		src += `(?=[^]*${escapeRegex(ch)})`;

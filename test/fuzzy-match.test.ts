@@ -18,8 +18,8 @@ describe("result shape", () => {
 describe("tier ladder", () => {
 	it.each([
 		["Apple", "Apple", 0, "exact", [[0, 4]]],
-		["Apple", "apple", 0.1, "normalized-exact", [[0, 4]]],
-		["Café", "cafe", 0.1, "normalized-exact", [[0, 3]]],
+		["Apple", "apple", 0.1, "normalised-exact", [[0, 4]]],
+		["Café", "cafe", 0.1, "normalised-exact", [[0, 3]]],
 		["banana", "ban", 0.5, "prefix", [[0, 2]]],
 		["Hello World", "World", 0.9, "boundary-exact", [[6, 10]]],
 		["Hello World", "world", 1, "boundary", [[6, 10]]],
@@ -89,11 +89,11 @@ describe("apostrophe forms match across sources", () => {
 	// Keyboards type U+0027; macOS smart quotes and faker emit U+2019. The
 	// fold makes the two forms interchangeable in either direction.
 	it("ASCII query finds a typographic field", () => {
-		expect(fuzzyMatch("O’Keefe", "o'keefe")?.tier).toBe("normalized-exact");
+		expect(fuzzyMatch("O’Keefe", "o'keefe")?.tier).toBe("normalised-exact");
 	});
 
 	it("typographic query finds an ASCII field", () => {
-		expect(fuzzyMatch("O'Keefe", "o’keefe")?.tier).toBe("normalized-exact");
+		expect(fuzzyMatch("O'Keefe", "o’keefe")?.tier).toBe("normalised-exact");
 	});
 
 	it("boundary tier treats both forms alike", () => {

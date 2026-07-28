@@ -36,7 +36,7 @@ const DENSITY_FLOOR = 0.18;
 
 const scoreChunks = (
 	chunks: Chunk[],
-	normalizedField: string,
+	normalisedField: string,
 ): [number, HighlightRanges] | null => {
 	let matched = 0;
 	for (const [start, end] of chunks) matched += end - start + 1;
@@ -49,9 +49,9 @@ const scoreChunks = (
 		// Same boundary definition the matcher used to admit the chunk —
 		// a chunk admitted because a hyphen is a boundary must not then be
 		// priced as if it weren't.
-		const isStartOfWord = start === 0 || isBoundaryChar(normalizedField[start - 1]);
+		const isStartOfWord = start === 0 || isBoundaryChar(normalisedField[start - 1]);
 		const isEndOfWord =
-			end === normalizedField.length - 1 || isBoundaryChar(normalizedField[end + 1]);
+			end === normalisedField.length - 1 || isBoundaryChar(normalisedField[end + 1]);
 		if (isStartOfWord && isEndOfWord) score += CHUNK_SCORES.WHOLE_WORD;
 		else if (isStartOfWord) score += CHUNK_SCORES.WORD_START;
 		else if (chunkLen >= 3) score += CHUNK_SCORES.LONG;
@@ -64,54 +64,54 @@ const scoreChunks = (
 // either it opens a word, or it runs 3+ characters (short tails exempt, since a
 // query with fewer than 3 characters left could never satisfy the run rule).
 const admitsChunk = (
-	normalizedField: string,
-	normalizedQuery: string,
+	normalisedField: string,
+	normalisedQuery: string,
 	idx: number,
 	queryIdx: number,
 ): boolean => {
-	if (idx === 0 || isBoundaryChar(normalizedField[idx - 1])) return true;
-	const queryCharsLeft = normalizedQuery.length - queryIdx;
-	const fieldCharsLeft = normalizedField.length - idx;
+	if (idx === 0 || isBoundaryChar(normalisedField[idx - 1])) return true;
+	const queryCharsLeft = normalisedQuery.length - queryIdx;
+	const fieldCharsLeft = normalisedField.length - idx;
 	const minChunkLen = Math.min(3, queryCharsLeft, fieldCharsLeft);
-	return normalizedField.startsWith(normalizedQuery.slice(queryIdx, queryIdx + minChunkLen), idx);
+	return normalisedField.startsWith(normalisedQuery.slice(queryIdx, queryIdx + minChunkLen), idx);
 };
 
 // Assemble the whole query starting from a chunk at `start` (already admitted),
 // taking the leftmost admissible placement for every later chunk. Returns null
 // if the chain dead-ends before consuming the query.
 const chainFrom = (
-	normalizedField: string,
-	normalizedQuery: string,
+	normalisedField: string,
+	normalisedQuery: string,
 	start: number,
 ): Chunk[] | null => {
-	const normalizedFieldLen = normalizedField.length;
-	const normalizedQueryLen = normalizedQuery.length;
+	const normalisedFieldLen = normalisedField.length;
+	const normalisedQueryLen = normalisedQuery.length;
 	const chunks: Chunk[] = [];
 	let queryIdx = 0;
-	let queryChar = normalizedQuery[queryIdx];
+	let queryChar = normalisedQuery[queryIdx];
 	let chunkStart = start;
 
 	while (true) {
 		// The chunk start is a known occurrence of queryChar, so this always
 		// consumes at least one character and chunkEnd lands at or after it.
 		let chunkEnd = chunkStart;
-		while (chunkEnd < normalizedFieldLen && normalizedField[chunkEnd] === queryChar) {
+		while (chunkEnd < normalisedFieldLen && normalisedField[chunkEnd] === queryChar) {
 			queryIdx++;
-			queryChar = normalizedQuery[queryIdx];
+			queryChar = normalisedQuery[queryIdx];
 			chunkEnd++;
 		}
 		chunkEnd--;
 		chunks.push([chunkStart, chunkEnd]);
 
-		if (queryIdx === normalizedQueryLen) return chunks;
+		if (queryIdx === normalisedQueryLen) return chunks;
 
 		// Resume the scan after each rejected occurrence. `indexOf` returned the
 		// first occurrence at or past the cursor, so nothing between the cursor
 		// and `idx` can match; advancing one char at a time instead re-finds the
 		// same occurrence per step and turns a far-away reject into O(gap²).
-		let idx = normalizedField.indexOf(queryChar, chunkEnd + 1);
-		while (idx > -1 && !admitsChunk(normalizedField, normalizedQuery, idx, queryIdx)) {
-			idx = normalizedField.indexOf(queryChar, idx + 1);
+		let idx = normalisedField.indexOf(queryChar, chunkEnd + 1);
+		while (idx > -1 && !admitsChunk(normalisedField, normalisedQuery, idx, queryIdx)) {
+			idx = normalisedField.indexOf(queryChar, idx + 1);
 		}
 		if (idx === -1) return null;
 		chunkStart = idx;
@@ -141,8 +141,8 @@ const chainFrom = (
 const MAX_CHUNK_STARTS = 4;
 
 export const fuzzyChainMatch = (
-	normalizedField: string,
-	normalizedQuery: string,
+	normalisedField: string,
+	normalisedQuery: string,
 ): [number, HighlightRanges] | null => {
 	// Retry the assembly from the first few admissible placements of the first
 	// chunk and keep the cheapest. Taking only the leftmost one strands the
@@ -152,20 +152,20 @@ export const fuzzyChainMatch = (
 	// a lone 1-character chunk it never needed. Later chunks stay
 	// leftmost-greedy: the first chunk is where the corpus showed the divergence
 	// to be, and reconsidering those too is what starts leaking junk.
-	const firstChar = normalizedQuery[0];
+	const firstChar = normalisedQuery[0];
 	let best: [number, HighlightRanges] | null = null;
 	let starts = 0;
 
 	for (
-		let start = normalizedField.indexOf(firstChar);
+		let start = normalisedField.indexOf(firstChar);
 		start > -1;
-		start = normalizedField.indexOf(firstChar, start + 1)
+		start = normalisedField.indexOf(firstChar, start + 1)
 	) {
-		if (!admitsChunk(normalizedField, normalizedQuery, start, 0)) continue;
+		if (!admitsChunk(normalisedField, normalisedQuery, start, 0)) continue;
 		if (++starts > MAX_CHUNK_STARTS) break;
-		const chunks = chainFrom(normalizedField, normalizedQuery, start);
+		const chunks = chainFrom(normalisedField, normalisedQuery, start);
 		if (chunks === null) continue;
-		const scored = scoreChunks(chunks, normalizedField);
+		const scored = scoreChunks(chunks, normalisedField);
 		if (scored !== null && (best === null || scored[0] < best[0])) best = scored;
 	}
 	return best;

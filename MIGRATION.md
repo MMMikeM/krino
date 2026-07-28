@@ -2,7 +2,7 @@
 
 v1.0 renames the package from `@mmmike/mikrofuzz` to `Krino` and redesigns the API primitive-first — a smaller surface and new result shapes.
 Here's everything that breaks.
-`normalizeText` is unchanged.
+`normalizeText` is unchanged (it becomes `normaliseText` in 2.0 — see CHANGELOG).
 
 ## Update the dependency and imports
 
