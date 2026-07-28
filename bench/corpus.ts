@@ -1,33 +1,22 @@
 /**
- * Shared bench corpora + queries, loaded from the committed corpus-*.json
- * snapshots (regenerate deliberately via corpus-gen.test.ts — every rank/MRR
- * table derives from these sequences). Freezing the data keeps bench processes
- * fast (no faker generation per run) and immune to faker changing generator
- * output between versions. Two variants:
- * - `ascii` — en locale only, effectively no diacritics.
- * - `mixed` — mostly en with every 7th item from fr/pl generators, landing at
- *   ~5% of items carrying a diacritic (a realistic international dataset;
- *   the fr/pl generators alone measure ~33%, en ~0%).
- * Items are ~97% unique at 10k — faker repeats a few names; duplicates are
- * interchangeable strings, so rank checks use the first occurrence.
- * Every non-miss query records the corpus item it was derived from (`source`),
- * so hits.test.ts can check each library actually surfaces it — and where it
- * ranks. Used by the speed benches (compare.bench.ts), the gate-funnel
- * diagnostics (funnel.test.ts), and the match-count checks (hits.test.ts).
+ * Corpora + queries from the committed corpus-*.json snapshots. Frozen on
+ * purpose: every published rank and MRR derives from these exact sequences,
+ * and regeneration (corpus-gen.test.ts, GEN_CORPUS=1) changes the probes too.
+ * `ascii` is en-locale; `mixed` lands ~5% of items with a diacritic (every
+ * 7th item from fr/pl generators). Every non-miss query records its `source`
+ * item so hits.test.ts can check each library surfaces it, and where.
  */
 import { readFileSync } from "node:fs";
 
-// readFileSync rather than JSON module imports so this file loads under plain
-// node too (bench/run.ts children) — import attributes for JSON differ between
-// vitest's bundler and node's ESM loader.
+// readFileSync, not JSON module imports: import attributes differ between
+// vitest's bundler and plain node (bench/run.ts children).
 const loadCorpus = (file: string): string[] =>
 	JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8")) as string[];
 const asciiJson: string[] = loadCorpus("./corpus-ascii.json");
 const mixedJson: string[] = loadCorpus("./corpus-mixed.json");
 
-// The snapshots hold the full 100k sequence; generation was a single reseed
-// followed by sequential appends, so a prefix slice equals a smaller build
-// (1k ⊂ 10k ⊂ 100k) and the queries derived from a 2k sample hit at any size.
+// Generation was one reseed + sequential appends, so a prefix slice equals a
+// smaller build (1k ⊂ 10k ⊂ 100k) and 2k-sample queries hit at any size.
 const slicer =
 	(data: string[]) =>
 	(n: number): string[] => {
@@ -67,10 +56,8 @@ export type QuerySpec = {
 	source: string | null;
 };
 
-// Swap the first adjacent pair of distinct characters at or after the middle.
-// Usually breaks the subsequence property (the swapped pair arrives out of
-// order), which is the point: transposition is edit-distance territory, not
-// subsequence territory.
+// Swaps at/after the middle, breaking the subsequence property on purpose:
+// transposition is edit-distance territory, not subsequence territory.
 const transpose = (w: string): string => {
 	for (let k = Math.max(1, Math.floor(w.length / 2) - 1); k + 1 < w.length; k++) {
 		if (w[k] !== w[k + 1]) return w.slice(0, k) + w[k + 1] + w[k] + w.slice(k + 2);
@@ -78,10 +65,8 @@ const transpose = (w: string): string => {
 	return w;
 };
 
-// The other two single-character typos, both of which also break the
-// subsequence property: one character too many (a doubled keystroke) and one
-// character wrong. Deletion is already covered by `scatter-light`, which drops
-// exactly one middle character.
+// The other subsequence-breaking one-char typos; deletion is covered by
+// `scatter-light`.
 const doubleChar = (w: string): string => {
 	const k = Math.floor(w.length / 2);
 	return w.slice(0, k) + w[k] + w.slice(k);
@@ -89,17 +74,13 @@ const doubleChar = (w: string): string => {
 
 const substitute = (w: string): string => {
 	const k = Math.floor(w.length / 2);
-	// A character the word does not contain, so the query's character-class mask
-	// genuinely loses one — the case a strict mask gate rejects outright.
+	// A character the word does not contain, so the query's mask genuinely
+	// loses a class.
 	const replacement = w.includes("x") ? "q" : "x";
 	return w.slice(0, k) + replacement + w.slice(k + 1);
 };
 
-// Queries derived from a fixed sample so they actually match: a real word, a
-// second word, a two-word phrase (in order and reversed), a raw prefix, a
-// mid-word infix, a scattered subsequence (fuzzy tier), a transposition typo
-// (edit-distance path), and one guaranteed miss (reject path). Corpora with
-// accented items add an accent-stripped word (diacritic-folding path).
+// Derived from a fixed sample so every probe (bar the misses) actually matches.
 const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 	const sample = build(2000);
 	const wordAt = (i: number): string => wordsOf(sample[i])[0] ?? "steel";
@@ -111,21 +92,16 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 			kind: "two-words",
 			source: sample[8],
 		},
-		// Same two words, reversed: substring engines pass the in-order phrase
-		// for free; only genuinely tokenized matching survives the reversal.
+		// Substring engines pass the in-order phrase for free; only genuinely
+		// tokenised matching survives the reversal.
 		{
 			query: wordsOf(sample[8]).slice(0, 2).reverse().join(" ").toLowerCase(),
 			kind: "two-words-reversed",
 			source: sample[8],
 		},
-		// A typo inside a phrase. Every other typo probe is single-word, and a
-		// multi-word query takes a different route entirely: the presence gate
-		// rather than the subsequence gate, with the rescue correcting only the
-		// word the field is missing (multiWordRescue). Four variations stress
-		// the rescue from each side: typo in the first word, typo in the
-		// second, typo with the words reversed (the correction must survive
-		// order-independence), and both words mistyped — two edits, which the
-		// one-edit rescue must refuse rather than guess at.
+		// Phrase typos take a different route entirely (presence gate + per-word
+		// rescue): typo in the first word, the second, reversed order, and both
+		// words mistyped — two edits, which a one-edit rescue must refuse.
 		{
 			query: [substitute(wordsOf(sample[8])[0] ?? "steel"), wordsOf(sample[8])[1] ?? "chair"]
 				.join(" ")
@@ -147,8 +123,7 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 			kind: "two-words-typo-reversed",
 			source: sample[8],
 		},
-		// No source: like the garbage probe, the right answer is nothing, and
-		// what an engine returns instead is the diagnostic.
+		// No source: the right answer is nothing.
 		{
 			query: [substitute(wordsOf(sample[8])[0] ?? "steel"), substitute(wordsOf(sample[8])[1] ?? "chair")]
 				.join(" ")
@@ -159,8 +134,8 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 		{ query: sample[42].slice(0, 5).toLowerCase(), kind: "prefix", source: sample[42] },
 	];
 
-	// Infix probe: an interior slice of a long word — never a prefix, so it
-	// separates contains-anywhere matching from start-anchored ranking.
+	// An interior slice, never a prefix: separates contains-anywhere matching
+	// from start-anchored ranking.
 	for (let i = 900; i < sample.length; i++) {
 		const infixWord = wordsOf(sample[i])[0] ?? "";
 		if (infixWord.length >= 8) {
@@ -168,17 +143,11 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 			break;
 		}
 	}
-	// Graded scatter probes, all from ONE ≥7-char source word: drop one middle
-	// char (light — a realistic sloppy keystroke), drop every third char
-	// (medium), keep only every other char (heavy — 1-char fragments, past any
-	// sane fuzzy threshold). Where a library stops surfacing the source is its
-	// effective fuzzy limit.
-	// The word must be near-unique in the 10k corpus (≤ 2 items contain it):
-	// faker template words ("Generic", "Ergonomic") appear in ~80 items, every
-	// engine that matches the word ties across the whole block, and the source's
-	// rank inside that tie block is stable-sort corpus order — noise, not
-	// ranking. A near-unique source makes rank mean rank on all four typo
-	// probes derived from this word.
+	// Graded scatter probes from ONE ≥7-char source word; where a library stops
+	// surfacing the source is its effective fuzzy limit. The word must be
+	// near-unique: faker template words appear in ~80 items, and a source's
+	// rank inside such a tie block is stable-sort corpus order — noise. This is
+	// what makes rank mean rank on every probe derived from this word.
 	const corpus10k = build(10_000).map((item) => item.toLowerCase());
 	const isNearUnique = (word: string): boolean => {
 		const needle = word.toLowerCase();
@@ -188,11 +157,9 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 		}
 		return true;
 	};
-	// A plural typed against a corpus that holds only the singular: one deletion,
-	// which is the whole of what the one-edit rescue can reach. Derived, not
-	// hardcoded, and the word must be absent in plural form (or the query matches
-	// outright and measures nothing) and near-unique by the same argument the
-	// scatter probes make — otherwise the source's rank is tie-block order.
+	// A plural against a singular-only corpus: one deletion. The word must be
+	// absent in plural form (or the probe measures nothing) and near-unique by
+	// the same tie-block argument.
 	{
 		const present = new Set(sample.flatMap((s) => wordsOf(s).map((w) => w.toLowerCase())));
 		outer: for (let i = 0; i < sample.length; i++) {
@@ -224,11 +191,8 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 					source: sample[i],
 				},
 				{ query: everyOther(scatterWord).toLowerCase(), kind: "scatter-heavy", source: sample[i] },
-				// A different axis: the three edits that break the subsequence
-				// property outright, where a pure subsequence engine returns
-				// nothing and only edit-distance matching recovers the item.
-				// (`scatter-light` above is the fourth edit — one dropped
-				// character — which does stay a subsequence.)
+				// The three edits that break the subsequence property outright —
+				// only edit-distance matching recovers these.
 				{ query: transpose(scatterWord).toLowerCase(), kind: "transposition", source: sample[i] },
 				{ query: doubleChar(scatterWord).toLowerCase(), kind: "insertion", source: sample[i] },
 				{ query: substitute(scatterWord).toLowerCase(), kind: "substitution", source: sample[i] },
@@ -236,10 +200,8 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 			break;
 		}
 	}
-	// Acronym probe: the initials of the first sample item with 3+ words (e.g.
-	// "Rath, Streich and Witting" -> "rsaw"). krino's opt-in acronym tier and
-	// match-sorter's ACRONYM ranking target initials deliberately; subsequence
-	// engines can only hit them as scattered chains.
+	// Initials of the first 3+-word item ("Rath, Streich and Witting" → "rsaw");
+	// subsequence engines can only hit these as scattered chains.
 	const acronymItem = sample.find((item) => wordsOf(item).length >= 3);
 	if (acronymItem) {
 		specs.push({

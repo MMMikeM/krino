@@ -1,13 +1,5 @@
-/**
- * One-edit typo rescues, exercised through the primitive. Every kind reports the
- * `corrected` tier and carries the fixed query; the adjacent swap has its own
- * file, and this covers a query with one character too many ("generric"), one
- * missing ("genric"), and one wrong ("genaric").
- *
- * They share one penalty over whatever tier the *corrected* query earns, sized
- * so that even the best correction sorts below the weakest genuine tier: a
- * certain match always beats a speculative one.
- */
+// One extra ("generric"), one missing ("genric"), one wrong ("genaric");
+// the adjacent swap has its own file.
 import { describe, expect, it } from "vitest";
 import { createFuzzySearch, fuzzyMatch, SCORES } from "../src/index";
 
@@ -21,8 +13,6 @@ describe("a query missing a character", () => {
 	});
 
 	it("highlights the whole corrected word, not the two fragments", () => {
-		// The chain matched "ergon" + "mic"; what the caller wants underlined is
-		// the word the query meant, which is the field's own span.
 		expect(fuzzyMatch("ergonomic", "ergonmic")?.ranges).toEqual([[0, 8]]);
 	});
 
@@ -35,9 +25,8 @@ describe("a query missing a character", () => {
 	});
 
 	it("holds the same 4-character minimum as every other rescue", () => {
-		// A 3-character query corrects into noise. The chain may still survive —
-		// "cat" is a genuine subsequence of "coat" — but not the typo tier and
-		// the rank that comes with it.
+		// The chain may still survive ("cat" is a genuine subsequence of "coat"),
+		// just not the typo tier and the rank that comes with it.
 		expect(fuzzyMatch("coat", "cat")?.tier).toBe("fuzzy");
 		expect(fuzzyMatch("axb", "ab")?.tier).toBe("fuzzy");
 		expect(fuzzyMatch("the", "hte")).toBeNull(); // transposed, for comparison
@@ -54,9 +43,7 @@ describe("a query missing a character", () => {
 	});
 
 	describe("a skipped separator is not a typo", () => {
-		// "bigcat" for "big cat" is ordinary concatenated-word matching, and the
-		// chunk scorer already prices it as the cheapest fuzzy shape there is.
-		// Promoting it to a typo tier would rank it above genuine tier hits on
+		// Promoting concatenated-word matching to a typo tier would rank it on
 		// the strength of a space the user never had to type.
 		it("stays in the fuzzy tier when the gap is a word separator", () => {
 			const r = fuzzyMatch("big cat", "bigcat");
@@ -90,10 +77,8 @@ describe("a query with one character too many", () => {
 	});
 
 	it("recovers an extra character the field does not contain at all", () => {
-		// "x" is absent from the field, so this only survives the mask gate
-		// because that gate tolerates one missing character class. Dropping a
-		// character can only shrink the query's mask, so the drop family is what
-		// explains it — not a substitution.
+		// Only survives because the mask gate tolerates one missing class, and
+		// only the drop family can explain it.
 		const r = fuzzyMatch("generic", "genexric");
 		expect(r?.tier).toBe("corrected");
 		expect(r?.score).toBeCloseTo(2.1);
@@ -110,22 +95,16 @@ describe("a query with one wrong character", () => {
 	});
 
 	it("works when the wrong character is absent from the field entirely", () => {
-		// The case the mask gate used to reject outright.
 		expect(fuzzyMatch("ergonomic", "ergonomiq")?.corrected).toBe("ergonomic");
 	});
 
 	it("finds the window when the surviving half is the second one", () => {
-		// The pigeonhole split means the *first* half is damaged here, so the
-		// anchor has to come from the back half of the query.
 		expect(fuzzyMatch("ergonomic", "ergonomic".replace("e", "z"))?.corrected).toBe("ergonomic");
 	});
 
 	it("applies a length floor that scales with the field", () => {
-		// The chance that a one-character-off window matches is a
-		// multiple-comparisons problem: it grows with how many windows the field
-		// offers. So the floor is a function of field length, not a constant —
-		// six characters is specific enough to identify a short label, and pure
-		// noise inside a document.
+		// Chance windows are a multiple-comparisons problem: six characters
+		// identify a short label and are pure noise inside a document.
 		expect(fuzzyMatch("wooden", "woaden")?.corrected).toBe("wooden");
 
 		const document = `${"lorem ipsum dolor sit amet ".repeat(60)}wooden`;
@@ -135,9 +114,6 @@ describe("a query with one wrong character", () => {
 });
 
 describe("the rescue takes the cheapest explanation", () => {
-	// Every rescue entry point competes against the others and against the fuzzy
-	// chain, rather than the first one found winning.
-
 	it("a decoy chain does not pre-empt a clean one-edit reading", () => {
 		expect(fuzzyMatch("Small Bronze Ball", "smaall")).toMatchObject({
 			score: 2.6,
@@ -268,9 +244,7 @@ describe("a certain match always beats a speculative one", () => {
 	});
 
 	it("a literal infix hit outranks another item's typo correction", () => {
-		// "eneri" is a genuine infix of "Generic Widget" (contains, 2.0); it is
-		// also one substitution from "enero" in the other item. The literal hit
-		// must come first.
+		// "eneri" is a genuine infix of one item and one substitution from the other.
 		const search = createFuzzySearch(["Enero Calendar", "Generic Widget"]);
 		const results = search("eneri");
 		expect(results[0]?.item).toBe("Generic Widget");
@@ -286,8 +260,6 @@ describe("a certain match always beats a speculative one", () => {
 	});
 
 	it("a corrected hit still beats no hit at all", () => {
-		// The point of the tiers: when nothing matches literally, the correction
-		// is what surfaces the item.
 		const search = createFuzzySearch(["Silk Towels", "Cotton Rug"]);
 		const results = search("towles");
 		expect(results[0]?.item).toBe("Silk Towels");

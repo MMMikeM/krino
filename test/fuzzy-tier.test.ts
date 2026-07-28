@@ -1,8 +1,4 @@
-/**
- * Fuzzy chunk assembly, chunk scoring, and the density floor (the "fuzzy"
- * tier), exercised through the primitive.
- * Fuzzy scores are runtime sums → toBeCloseTo.
- */
+// Fuzzy scores are runtime float sums, so every score assertion is toBeCloseTo.
 import { describe, expect, it } from "vitest";
 import { fuzzyMatch } from "../src/index";
 
@@ -49,10 +45,8 @@ describe("smart chunk scoring", () => {
 });
 
 describe("scorer honors the same word boundaries as the matcher", () => {
-	// The matcher admits chunks after any valid word boundary (hyphens, dots,
-	// quotes...); the scorer must credit them like space-delimited chunks, or
-	// punctuated corpora get systematically over-penalized for the exact
-	// chunks the matcher went out of its way to admit.
+	// The scorer must credit every chunk the matcher admits, or punctuated
+	// corpora get over-penalised for the exact chunks admission allowed.
 	it("scores a chunk after a hyphen like one after a space", () => {
 		expect(fuzzyMatch("foo-bar", "fbar")?.score).toBeCloseTo(
 			fuzzyMatch("foo bar", "fbar")?.score as number,
@@ -71,14 +65,8 @@ describe("scorer honors the same word boundaries as the matcher", () => {
 	});
 
 	describe("one boundary definition: any non-word character", () => {
-		// The boundary set used to be an enumerated allowlist that silently
-		// diverged from the tokenizer's word class: "?" separated words for
-		// splitWords but wasn't a boundary for the boundary tier or the chunk
-		// scorer. One predicate now: a boundary is any non-word character.
-		it("the boundary tiers fire across every separator splitWords honors", () => {
+		it("the boundary tiers fire across every separator splitWords honours", () => {
 			for (const sep of ["?", "&", "!", "+", "@", "#", "*", "\t"]) {
-				// Same case → the raw boundary-exact tier (0.9); previously these
-				// all fell through to contains (2).
 				expect(fuzzyMatch(`foo${sep}bar`, "bar")?.tier, `sep ${JSON.stringify(sep)}`).toBe(
 					"boundary-exact",
 				);
@@ -97,21 +85,12 @@ describe("scorer honors the same word boundaries as the matcher", () => {
 });
 
 describe("chunk assembly reconsiders its first choice", () => {
-	// The matcher used to take the leftmost admissible occurrence of each query
-	// character and never look back. In natural-language fields the first query
-	// character almost always also opens an *earlier* word ("towls" → the "T" of
-	// "Tasty", not the "T" of "Towels"), and committing to that decoy strands the
-	// rest of the query: it must then assemble from whatever follows, or fail
-	// outright. Measured over the ascii bench corpus: 307 outright misses and 131
-	// needlessly expensive assemblies.
+	// Leftmost-only first chunks strand on decoy word-initials: 307 misses and
+	// 131 needlessly expensive assemblies over the ascii bench corpus.
 
 	describe("finds the intended word past a decoy initial", () => {
-		// These land on the "corrected" tier rather than "fuzzy", and that is the
-		// point: retrying the first chunk is what produces the clean two-chunk
-		// assembly, and a two-chunk assembly split by one character is exactly
-		// what the dropped-keystroke rescue recognises. Without the retry the
-		// chain returns nothing (or a three-chunk scatter) and there is nothing
-		// for the rescue to read.
+		// "corrected" is the point: the first-chunk retry produces the clean
+		// two-chunk assembly the dropped-keystroke rescue then recognises.
 		it("matches inside the intended word past an earlier word-initial", () => {
 			const r = fuzzyMatch("Tasty Silk Towels", "towls");
 			expect(r?.tier).toBe("corrected");
@@ -132,9 +111,7 @@ describe("chunk assembly reconsiders its first choice", () => {
 			expect(r?.ranges).toEqual([[17, 22]]);
 		});
 
-		it("absorbs a decoy that the old matcher paid for as a lone chunk", () => {
-			// Previously assembled as [[0,0],[12,14],[16,18]] — a 1-char chunk on
-			// the "M" of "Milwaukee" plus two fragments — and scored 4.0.
+		it("absorbs a decoy instead of paying for it as a lone chunk", () => {
 			const r = fuzzyMatch("Milwaukee, Malaysia", "malasia");
 			expect(r?.score).toBeCloseTo(3.1);
 			expect(r?.ranges).toEqual([[11, 18]]);
@@ -154,8 +131,6 @@ describe("chunk assembly reconsiders its first choice", () => {
 	});
 
 	describe("still assembles when no single edit explains the query", () => {
-		// Pure fuzzy-tier coverage: three chunks, so the dropped-keystroke rescue
-		// cannot fire and what is asserted is the assembly itself.
 		it("recovers a three-chunk assembly the leftmost path missed", () => {
 			const r = fuzzyMatch("Wiegand, Weissnat and Harris", "wead");
 			expect(r?.tier).toBe("fuzzy");
@@ -168,9 +143,6 @@ describe("chunk assembly reconsiders its first choice", () => {
 		});
 
 		it("skips a stranding decoy when the gap is a separator, not a typo", () => {
-			// One decoy "a" at index 0 strands the chain; the real assembly sits at
-			// the end. The gap between its two chunks is "-", a word separator, so
-			// this stays an assembly rather than being read as a dropped keystroke.
 			const r = fuzzyMatch(`a${"z".repeat(60)}abc-e`, "abce");
 			expect(r?.tier).toBe("fuzzy");
 			expect(r?.score).toBeCloseTo(3); // 2 + 0.8 (mid-word "abc") + 0.2 (whole-word "e")
@@ -182,9 +154,6 @@ describe("chunk assembly reconsiders its first choice", () => {
 	});
 
 	describe("reconsidering does not widen what the tier accepts", () => {
-		// Exploring more assemblies means more chances to slip past the density
-		// floor and the chunk-admission rules — and over long text that is exactly
-		// what happens (see fuzzy.ts). These pin the rules that hold the line.
 		it("still rejects sparse chains scattered across long text", () => {
 			expect(fuzzyMatch("alpha xxxxxx beta xxxxxx cat", "abc")).toBeNull();
 		});
@@ -194,19 +163,14 @@ describe("chunk assembly reconsiders its first choice", () => {
 		});
 
 		it("gives up after a bounded number of first-chunk placements", () => {
-			// The bound is deliberate and load-bearing, not a speed knob: the
-			// density floor is a ratio, so every extra assembly attempted is
-			// another chance at a dense coincidence, and an unbounded search
-			// makes the long-text junk rate climb with field length (measured in
-			// fuzzy.ts). Four decoy word-initials before the real word is past
-			// the cap, so this correctly-spelled-but-buried match is refused —
-			// the price of holding the junk rate at zero.
+			// Load-bearing bound, not a speed knob (see MAX_CHUNK_STARTS): four
+			// decoy initials is past the cap, so this buried match is refused —
+			// the price of holding the long-text junk rate at zero.
 			expect(fuzzyMatch("Tasty Tidy Trim Tall Towels", "towls")).toBeNull();
-			// Three decoys is still within it.
 			expect(fuzzyMatch("Tasty Tidy Trim Towels", "towls")?.tier).toBe("corrected");
 		});
 
-		it("leaves the documented long-text hazard scored exactly as before", () => {
+		it("leaves the documented zebra hazard scored exactly as before", () => {
 			const r = fuzzyMatch("zero cost branch prediction and other stories", "zebra");
 			expect(r?.score).toBeCloseTo(2.8); // 2 + 0.4 ("ze") + 0.4 ("bra")
 			expect(r?.ranges).toEqual([
@@ -219,21 +183,19 @@ describe("chunk assembly reconsiders its first choice", () => {
 
 describe("fuzzy density floor", () => {
 	it("rejects sparse chains scattered across long text", () => {
-		// Word-start single-char chunks across ~25 chars: density 3/21 ≈ 0.14,
-		// below the 0.18 floor — the junk-chain shape that plagued documents.
+		// Density 3/21 ≈ 0.14, below the 0.18 floor — the junk-chain shape.
 		expect(fuzzyMatch("alpha xxxxxx beta xxxxxx cat", "abc")).toBeNull();
 	});
 
 	it("keeps compact word-start assemblies", () => {
-		// "hewo" over "hello world": density 4/8 = 0.5 — well above the floor.
+		// Densities 0.5 and 0.38 — the zebra anecdote is structurally identical
+		// to wanted word-start matches.
 		expect(fuzzyMatch("hello world", "hewo")?.tier).toBe("fuzzy");
-		// Adjacent-word assembly at 0.38 (the documented zebra anecdote) stays:
-		// structurally identical to wanted word-start matches.
 		expect(fuzzyMatch("zero cost branch prediction", "zebra")?.tier).toBe("fuzzy");
 	});
 
 	it("keeps initials scattered across a multi-word name", () => {
-		// The sparsest genuine shape measured: 4/19 ≈ 0.21, just above the floor.
+		// The sparsest genuine shape measured: 4/19 ≈ 0.21.
 		expect(fuzzyMatch("Rath, Streich and Witting", "rsaw")?.tier).toBe("fuzzy");
 	});
 });

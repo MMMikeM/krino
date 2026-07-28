@@ -1,7 +1,5 @@
-// Every code point that folds to ASCII lives in these ranges: ASCII itself,
-// Latin-1 Supplement through Latin Extended-B, Latin Extended Additional, and
-// the letterlike Kelvin/Angstrom signs. test/unfold.test.ts walks the whole
-// BMP and fails if a fold source ever appears outside them.
+// Every code point that folds to ASCII lives in these ranges; test/unfold.test.ts
+// walks the whole BMP and fails if a fold source ever appears outside them.
 const SOURCE_RANGES: readonly (readonly [number, number])[] = [
 	[0x30, 0x39],
 	[0x41, 0x5a],
@@ -11,36 +9,24 @@ const SOURCE_RANGES: readonly (readonly [number, number])[] = [
 	[0x212a, 0x212b],
 ];
 
+const DIACRITICS = /[\u0300-\u036f]/g;
+
 let table: Record<string, string> | null = null;
 
 /**
  * For each ASCII letter and digit, every code point that `normaliseText` folds
- * to it — the inverse of the fold, which cannot be computed forwards.
+ * to it — so a gate built from a normalised query can run against the caller's
+ * own un-normalised strings. A query character outside the table gets no raw
+ * gate and takes the mask path: slower, never wrong.
  *
- * Lets a gate built from a normalised query run against the caller's own
- * un-normalised strings: `e` becomes a class holding `e E é É ế …`, so no
- * normalised copy of the corpus has to exist before the first query can filter.
- *
- * ASCII targets only, and deliberately: that is 554 code points, where every
- * fold target in the BMP would be 1,275 of them. A query carrying anything
- * outside the table gets no raw gate and takes the mask path instead — slower,
- * never wrong.
- *
- * Generated on first use rather than shipped as a literal: the fold logic
- * already ships, so the ~1 kB precomputed inverse was redundant bytes, and the
- * build lands in the first raw-gate construction a session pays for anyway —
- * never at import. Multi-unit folds and identity folds of non-ASCII stay out,
- * matching `buildRawGate`'s null contract.
- *
- * Folds in bulk — one `toLowerCase` and one NFD pass over the whole
- * separator-joined range, mirroring `computeFold`'s per-character rules —
- * because per-character folding measured ~0.7 ms where this is ~0.2. The
- * classes cannot be built per query character: they gate the FIELD side, so a
- * class missing any rare source would false-reject a field that carries it.
- * test/unfold.test.ts pins equivalence with `normaliseText` per code point.
+ * Generated on first use rather than shipped (the fold logic already ships;
+ * the precomputed inverse was ~1 kB of redundant bytes), and folded in bulk —
+ * one `toLowerCase` and one NFD pass over the separator-joined range,
+ * mirroring `computeFold`'s rules — because per-character folding measured
+ * ~0.7 ms where this is ~0.2. Never per query character: the classes gate the
+ * FIELD side, so a class missing any rare source would false-reject a field
+ * that carries it. test/unfold.test.ts pins equivalence with `normaliseText`.
  */
-const DIACRITICS = /[\u0300-\u036f]/g;
-
 export const unfoldTable = (): Record<string, string> => {
 	if (table !== null) return table;
 	let sources = "";
