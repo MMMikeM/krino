@@ -2,7 +2,8 @@
 
 Tiny, typed fuzzy matching. Zero dependencies, dual ESM/CJS, no platform assumptions — browsers, Node, Deno, Bun, edge runtimes.
 
-The package is `krino`; the working directory is still `mikrofuzz` and the old published name `@mmmike/mikrofuzz` is deprecated (see MIGRATION.md).
+The package is `krino`; the working directory is still `mikrofuzz` from before the rename.
+Nothing has been published yet, so public-surface changes are cheap until launch; the CHANGELOG is a single initial-release section recording the measured design decisions.
 
 ## Hard constraints
 
@@ -11,7 +12,7 @@ The package is `krino`; the working directory is still `mikrofuzz` and the old p
 - **`isolatedDeclarations` is on.** Declarations come from oxc, not from the TypeScript compiler, so every export needs an explicit type annotation (`export const wordChar: RegExp = …`). Inference a human finds obvious still fails the build.
 - **`normaliseText` is offset-preserving.** Exactly one code unit out per code unit of `NFC(text).trim()` in. Every `Range` the library returns indexes the caller's own string, so a fold that changes length silently corrupts every highlight. New folds go through `computeFold`'s length check — no exceptions, however tempting the Unicode edge case.
 - **Gates may only false-pass, never false-reject.** `charMask`, `buildPresenceGate`, `buildFuzzyGate` and the prefix-narrowing survivor cache exist purely to skip work. A gate that rejects a field some tier would have matched is a correctness bug, not a tuning question. The monotonicity argument in `search.ts` is what licenses reusing survivors across keystrokes; changing any gate means rechecking it.
-- **`SCORES.CONTAINS` is a published dividing line.** At or below it means "the query text appears here"; above it is a fuzzy chain or a one-edit rescue, and only `tier` tells those apart. `TYPO_PENALTY` (2.1) is sized so even a corrected exact hit sorts below a true `contains`; shrinking it inverts the guarantee and measurably costs MRR (CHANGELOG 2.0.0 records the measured inversion).
+- **`SCORES.CONTAINS` is a published dividing line.** At or below it means "the query text appears here"; above it is a fuzzy chain or a one-edit rescue, and only `tier` tells those apart. `TYPO_PENALTY` (2.1) is sized so even a corrected exact hit sorts below a true `contains`; shrinking it inverts the guarantee and measurably costs MRR (CHANGELOG records the measured inversion).
 - Score values and `Tier` strings are public API. README documents them and `test/tier-constants.test.ts` pins them, so a tier rename or a re-priced rung is a breaking change with a CHANGELOG entry.
 
 ## Commands
@@ -95,7 +96,7 @@ Statistical claims live in `bench/`, where the corpora and the measurement do: t
 
 ## Prose
 
-README.md, CHANGELOG.md, MIGRATION.md, docs/ and BLOG-DRAFT.md: one sentence per line, no hard wrapping mid-sentence. EU spelling everywhere — prose (behaviour, optimise, normalisation) and identifiers alike (`normaliseText`, `normalisedField`); only platform builtins keep theirs (`String.prototype.normalize`).
+README.md, CHANGELOG.md, docs/ and BLOG-DRAFT.md: one sentence per line, no hard wrapping mid-sentence. EU spelling everywhere — prose (behaviour, optimise, normalisation) and identifiers alike (`normaliseText`, `normalisedField`); only platform builtins keep theirs (`String.prototype.normalize`).
 
 Claims about behaviour cite the table or command that produced them, and a claim that no longer matches a regenerated table gets rewritten rather than softened.
 

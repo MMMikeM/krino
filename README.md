@@ -18,7 +18,6 @@ Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz), and [benchma
 npm i krino  # or pnpm add krino
 ```
 
-> **Coming from `@mmmike/mikrofuzz`?** See [MIGRATION.md](./MIGRATION.md).
 
 ## Usage
 
@@ -169,7 +168,6 @@ One workload genuinely points elsewhere:
 - **Typos beyond a single edit must still match** (user-typed queries over messy data): the four typo tiers cover every one-character mistake, but two or more edits in one query need real edit distance. Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 1.7–2× the bundle, ~7–19 ms queries, and ~90–450-row result sets.
 
 The rest of the field is dominated on these benchmarks; the full argument, per-library, is in [the recommendation](./docs/benchmarks.md#the-recommendation).
-(Already on `@nozbe/microfuzz`? Krino is its rebuild: same subsequence approach plus tier, ESM, and ~14–28× faster at 100k. See [MIGRATION.md](./MIGRATION.md).)
 
 ## Building blocks
 
