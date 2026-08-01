@@ -2,7 +2,7 @@
 
 > Tiny, typed fuzzy matching
 
-- **~5.4 kB** gzip, zero dependencies, TS-first, ESM/CJS
+- **~5.5 kB** gzip, zero dependencies, TS-first, ESM/CJS
 - **~1 ms per query** across a real 10k session (3.9 ms at 100k), measured process-cold, optimised for search-as-you-type
 - **Tops match-quality scorecard** across 20 probes
 - **Returns** `tier`, `ranges` and `score` on every match: easily rank, highlight and explain
@@ -161,7 +161,7 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 ### What to pick when
 
 **Pick Krino.** It tops the quality scorecard on both benchmark corpora outright and runs the cheapest realistic session of anything above 0.5 MRR at every published size.
-At ~5.4 kB gzip it sits mid-pack on size: the one-edit rescue machinery bought the quality lead (the unfold table is generated from the fold logic at first use, not shipped), and Fuse.js and fast-fuzzy are 1.7–2× larger.
+At ~5.5 kB gzip it sits mid-pack on size: the one-edit rescue machinery bought the quality lead (the unfold table is generated from the fold logic at first use, not shipped), and Fuse.js and fast-fuzzy are 1.7–2× larger.
 One workload genuinely points elsewhere:
 
 - **Typos beyond a single edit must still match** (user-typed queries over messy data): the four typo tiers cover every one-character mistake, but two or more edits in one query need real edit distance. Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 1.7–2× the bundle, ~7–19 ms queries, and ~90–450-row result sets.

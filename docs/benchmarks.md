@@ -42,7 +42,7 @@ Size and type, by bundle size ascending.
 <!-- bench:libraries -->
 | Library          | Gzip    | Deps | Type                 |
 |------------------|---------|------|----------------------|
-| **Krino**        | ~5.4 kB | 0    | subsequence (tiered) |
+| **Krino**        | ~5.5 kB | 0    | subsequence (tiered) |
 | fuzzy            | ~0.8 kB | 0    | substring            |
 | @nozbe/microfuzz | ~1.7 kB | 0    | subsequence          |
 | match-sorter     | ~3.4 kB | 2    | subsequence (tiered) |
@@ -813,7 +813,7 @@ Everything above condenses to one recommendation: _pick Krino for list matching_
 Three things carry the claim, each measured in its own section:
 
 - **Quality**: Krino (acronym) tops the scorecard on both corpora outright (0.87 mixed / 0.82 ascii), with the smallest result sets of the subsequence engines (median 7 rows on structured queries where Fuse.js ships ~90); the phrase-typo probes are what pushed the lead past the tie band.
-- **Cost, measured cold**: the cheapest twenty-query session of anything above 0.5 MRR at both sizes (batch 20.9 ms at mixed 10k, ~1 ms per query after the first; 2.5–42× under every typo-tolerant or tiered alternative), a near-zero constructor, ~5.4 kB gzip, zero deps. The honest asterisk is the first call: Krino's lazy preparation lands its whole bill on query one (~5.5 ms at 10k, ~23 ms at 100k), and a workload that only ever asks one question of one searcher should read the one-shot ledger, where bare `fuzzy` is cheaper.
+- **Cost, measured cold**: the cheapest twenty-query session of anything above 0.5 MRR at both sizes (batch 20.9 ms at mixed 10k, ~1 ms per query after the first; 2.5–42× under every typo-tolerant or tiered alternative), a near-zero constructor, ~5.5 kB gzip, zero deps. The honest asterisk is the first call: Krino's lazy preparation lands its whole bill on query one (~5.5 ms at 10k, ~23 ms at 100k), and a workload that only ever asks one question of one searcher should read the one-shot ledger, where bare `fuzzy` is cheaper.
 - **Long text**: the density floor holds `fuzzyMatch` junk at 0% at every measured document length — phrase probes included — so the same engine covers documents, not just labels.
 
 The carve-outs:
