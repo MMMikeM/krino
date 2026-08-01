@@ -36,8 +36,11 @@ const SEQUENCES: [string, string[]][] = [
 ];
 
 const load = (corpus: string): string[] =>
-	(JSON.parse(readFileSync(new URL(`./corpus-${corpus}.json`, import.meta.url), "utf8")) as string[])
-		.slice(0, SIZE);
+	(
+		JSON.parse(
+			readFileSync(new URL(`./corpus-${corpus}.json`, import.meta.url), "utf8"),
+		) as string[]
+	).slice(0, SIZE);
 
 type Cell = { build: number; cold: number; hot: number; total: number; hits: number[] };
 
@@ -51,15 +54,20 @@ if (cell) {
 	const t0 = performance.now();
 	const search =
 		library === "uFuzzy"
-			? ((uf: uFuzzy) =>
+			? (
+					(uf: uFuzzy) =>
 					(q: string): number => {
 						const [idxs, info, order] = uf.search(list, q, 0, RANK_EVERYTHING);
 						if (idxs?.length && (!info || !order)) {
 							throw new Error(`uFuzzy declined to rank ${idxs.length} matches for ${q}`);
 						}
 						return idxs?.length ?? 0;
-					})(new uFuzzy())
-			: ((s: (q: string) => unknown[]) => (q: string) => s(q).length)(createFuzzySearch(list));
+					}
+				)(new uFuzzy())
+			: (
+					(s: (q: string) => unknown[]) => (q: string) =>
+						s(q).length
+				)(createFuzzySearch(list));
 	const build = performance.now() - t0;
 
 	const t1 = performance.now();

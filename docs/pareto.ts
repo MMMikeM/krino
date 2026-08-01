@@ -33,28 +33,31 @@ const FALLBACK: Placement = lab("start", 4);
 
 type Point = { name: string; mrr: number; query: number; total: number };
 
-const METRICS: Record<Metric, {
-	file: string;
-	X0: number;
-	X1: number;
-	ticks: number[];
-	heading: string;
-	subtitle: (probes: number) => string;
-	axis: string;
-	title: string;
-	tail: string;
-}> = {
+const METRICS: Record<
+	Metric,
+	{
+		file: string;
+		X0: number;
+		X1: number;
+		ticks: number[];
+		heading: string;
+		subtitle: (probes: number) => string;
+		axis: string;
+		title: string;
+		tail: string;
+	}
+> = {
 	query: {
 		file: "pareto-query",
 		X0: 0.15,
 		X1: 40,
 		ticks: [0.2, 0.5, 1, 2, 5, 10, 20],
 		heading: "Ranking quality vs. per-query session cost",
-		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · one searcher, all probes once (batch)`,
+		subtitle: (probes) =>
+			`MRR over ${probes} probes · mixed 10k corpus · one searcher, all probes once (batch)`,
 		axis: "Batch per-query: searcher built once, twenty distinct queries. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs per-query cost across a 20-query session",
-		tail:
-			"Krino owns the accurate end of the frontier; the cheaper points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
+		tail: "Krino owns the accurate end of the frontier; the cheaper points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
 	},
 	total: {
 		file: "pareto-total",
@@ -65,24 +68,43 @@ const METRICS: Record<Metric, {
 		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · fresh process per search`,
 		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs cold one-shot cost",
-		tail:
-			"The no-index engines own the cheapest cold one-shots; the two Krino configurations share one pooled build cost and differ only in query time, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
+		tail: "The no-index engines own the cheapest cold one-shots; the two Krino configurations share one pooled build cost and differ only in query time, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
 	},
 };
 
 const LIGHT = {
-	surface: "#fcfcfb", ink: "#0b0b0b", ink2: "#52514e", muted: "#898781",
-	grid: "#e1e0d9", axis: "#c3c2b7", krino: "#2a78d6", frontier: "#1baf7a", dom: "#898781",
+	surface: "#fcfcfb",
+	ink: "#0b0b0b",
+	ink2: "#52514e",
+	muted: "#898781",
+	grid: "#e1e0d9",
+	axis: "#c3c2b7",
+	krino: "#2a78d6",
+	frontier: "#1baf7a",
+	dom: "#898781",
 };
 const DARK = {
-	surface: "#1a1a19", ink: "#ffffff", ink2: "#c3c2b7", muted: "#898781",
-	grid: "#2c2c2a", axis: "#383835", krino: "#3987e5", frontier: "#199e70", dom: "#8f8d86",
+	surface: "#1a1a19",
+	ink: "#ffffff",
+	ink2: "#c3c2b7",
+	muted: "#898781",
+	grid: "#2c2c2a",
+	axis: "#383835",
+	krino: "#3987e5",
+	frontier: "#199e70",
+	dom: "#8f8d86",
 };
 type Palette = typeof LIGHT;
 
-const W = 820, H = 524, ML = 66, MR = 30, MT = 62;
-const plotW = W - ML - MR, plotH = 372; // plot bottom fixed at y=434
-const Y0 = 0.1, Y1 = 0.92;
+const W = 820,
+	H = 524,
+	ML = 66,
+	MR = 30,
+	MT = 62;
+const plotW = W - ML - MR,
+	plotH = 372; // plot bottom fixed at y=434
+const Y0 = 0.1,
+	Y1 = 0.92;
 const lx = Math.log10;
 const Y = (mrr: number): number => MT + ((Y1 - mrr) / (Y1 - Y0)) * plotH;
 const f = (v: number): number => Number(v.toFixed(1));
@@ -130,23 +152,43 @@ const render = (C: Palette, metric: Metric, data: Point[], probes: number): stri
 		M.tail;
 
 	const grid = [
-		...M.ticks.map((t) => `<line x1="${f(X(t))}" y1="${MT}" x2="${f(X(t))}" y2="${MT + plotH}" stroke="${C.grid}"/>`),
-		...yTicks.map((t) => `<line x1="${ML}" y1="${f(Y(t))}" x2="${ML + plotW}" y2="${f(Y(t))}" stroke="${C.grid}"/>`),
+		...M.ticks.map(
+			(t) =>
+				`<line x1="${f(X(t))}" y1="${MT}" x2="${f(X(t))}" y2="${MT + plotH}" stroke="${C.grid}"/>`,
+		),
+		...yTicks.map(
+			(t) =>
+				`<line x1="${ML}" y1="${f(Y(t))}" x2="${ML + plotW}" y2="${f(Y(t))}" stroke="${C.grid}"/>`,
+		),
 	].join("\n    ");
 	const xLabels = M.ticks
-		.map((t) => `<text x="${f(X(t))}" y="${MT + plotH + 18}" text-anchor="middle" fill="${C.muted}" font-size="12" ${tnum}>${t}</text>`)
+		.map(
+			(t) =>
+				`<text x="${f(X(t))}" y="${MT + plotH + 18}" text-anchor="middle" fill="${C.muted}" font-size="12" ${tnum}>${t}</text>`,
+		)
 		.join("\n    ");
 	const yLabels = yTicks
-		.map((t) => `<text x="${ML - 12}" y="${f(Y(t)) + 4}" text-anchor="end" fill="${C.muted}" font-size="12" ${tnum}>${t.toFixed(1)}</text>`)
+		.map(
+			(t) =>
+				`<text x="${ML - 12}" y="${f(Y(t)) + 4}" text-anchor="end" fill="${C.muted}" font-size="12" ${tnum}>${t.toFixed(1)}</text>`,
+		)
 		.join("\n    ");
 	const dots = [...pts]
 		.sort((a, b) => a.y - b.y)
-		.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="${DOT_R}" fill="${color(p)}" fill-opacity="0.9" stroke="${C.surface}" stroke-width="1.5"/>`)
+		.map(
+			(p) =>
+				`<circle cx="${p.x}" cy="${p.y}" r="${DOT_R}" fill="${color(p)}" fill-opacity="0.9" stroke="${C.surface}" stroke-width="1.5"/>`,
+		)
 		.join("\n    ");
 	const labels = [...pts]
 		.sort((a, b) => a.y + a.l.dy - (b.y + b.l.dy))
 		.map((p) => {
-			const tx = p.l.a === "middle" ? f(p.x + p.l.dx) : p.l.a === "end" ? f(p.x - DOT_R - 7) : f(p.x + DOT_R + 7);
+			const tx =
+				p.l.a === "middle"
+					? f(p.x + p.l.dx)
+					: p.l.a === "end"
+						? f(p.x - DOT_R - 7)
+						: f(p.x + DOT_R + 7);
 			const ink = emphasized(p) ? C.ink : C.muted;
 			const weight = emphasized(p) ? ' font-weight="600"' : "";
 			return `<text x="${tx}" y="${f(p.y + p.l.dy)}" text-anchor="${p.l.a}" fill="${ink}" font-size="12.5"${weight}>${p.n}</text>`;
@@ -226,9 +268,17 @@ export const renderPareto = (artifact: Artifact): void => {
 	const probes = artifact.probes.mixed?.length ?? 0;
 	for (const metric of Object.keys(METRICS) as Metric[]) {
 		const { file } = METRICS[metric];
-		writeFileSync(new URL(`./${file}-light.svg`, import.meta.url), render(LIGHT, metric, data, probes));
-		writeFileSync(new URL(`./${file}-dark.svg`, import.meta.url), render(DARK, metric, data, probes));
-		const front = frontierOf(data.map((d) => ({ n: displayName(d.name), mrr: d.mrr, ms: d[metric] })));
+		writeFileSync(
+			new URL(`./${file}-light.svg`, import.meta.url),
+			render(LIGHT, metric, data, probes),
+		);
+		writeFileSync(
+			new URL(`./${file}-dark.svg`, import.meta.url),
+			render(DARK, metric, data, probes),
+		);
+		const front = frontierOf(
+			data.map((d) => ({ n: displayName(d.name), mrr: d.mrr, ms: d[metric] })),
+		);
 		console.error(`${file}: frontier = ${front.map((p) => p.n).join(" -> ")}`);
 	}
 };

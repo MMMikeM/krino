@@ -1,67 +1,78 @@
 {
-  "name": "krino",
-  "version": "1.0.0",
-  "description": "Zero-dependency fuzzy matching with tiered scoring, highlight ranges, and one-edit typo rescue",
-  "type": "module",
-  "sideEffects": false,
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    }
-  },
-  "main": "./dist/index.cjs",
-  "types": "./dist/index.d.mts",
-  "files": [
-    "dist",
-    "CHANGELOG.md",
-    "MIGRATION.md"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "build": "tsdown",
-    "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
-    "format": "oxfmt src test",
-    "lint:types": "tsc --noEmit && tsc -p bench --noEmit",
-    "test": "vitest run",
-    "bench": "pnpm build && node bench/pipeline.ts",
-    "prepublishOnly": "pnpm lint:types && pnpm test && pnpm build"
-  },
-  "keywords": [
-    "fuzzy-search",
-    "fuzzy-match",
-    "search",
-    "filter",
-    "autocomplete",
-    "typescript",
-    "fuse-alternative",
-    "match-sorter",
-    "microfuzz"
-  ],
-  "license": "MIT",
-  "author": "Mike <mikem.tba@gmail.com>",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/MMMikeM/krino.git"
-  },
-  "homepage": "https://github.com/MMMikeM/krino#readme",
-  "bugs": {
-    "url": "https://github.com/MMMikeM/krino/issues"
-  },
-  "devDependencies": {
-    "oxfmt": "^0.59.0",
-    "oxlint": "^1.74.0",
-    "tsdown": "^0.22.12",
-    "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
-  }
+	"name": "krino",
+	"version": "1.0.0",
+	"description": "Zero-dependency fuzzy matching with tiered scoring, highlight ranges, and one-edit typo rescue",
+	"keywords": [
+		"autocomplete",
+		"filter",
+		"fuse-alternative",
+		"fuzzy-match",
+		"fuzzy-search",
+		"match-sorter",
+		"microfuzz",
+		"search",
+		"typescript"
+	],
+	"homepage": "https://github.com/MMMikeM/krino#readme",
+	"bugs": {
+		"url": "https://github.com/MMMikeM/krino/issues"
+	},
+	"license": "MIT",
+	"author": "Mike <contactme@mikem.mozmail.com>",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/MMMikeM/krino.git"
+	},
+	"files": [
+		"dist",
+		"CHANGELOG.md",
+		"MIGRATION.md"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "./dist/index.cjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		}
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "vp pack",
+		"lint": "vp lint",
+		"lint:fix": "vp lint --fix",
+		"format": "vp fmt",
+		"lint:types": "tsc --noEmit && tsc -p bench --noEmit",
+		"test": "vp test run",
+		"bench": "pnpm build && node bench/pipeline.ts",
+		"prepublishOnly": "pnpm lint:types && pnpm test && pnpm build"
+	},
+	"devDependencies": {
+		"@arethetypeswrong/core": "^0.18.5",
+		"@voidzero-dev/vite-plus-core": "^0.2.7",
+		"publint": "^0.3.22",
+		"typescript": "^7.0.2",
+		"vite": "catalog:",
+		"vite-plus": "catalog:"
+	},
+	"devEngines": {
+		"packageManager": {
+			"name": "pnpm",
+			"version": "11.18.0",
+			"onFail": "download"
+		}
+	},
+	"engines": {
+		"node": ""
+	}
 }

@@ -2,7 +2,7 @@
  * createFuzzySearch: string arrays, the getText overload, sort order, stability.
  * (Per-field specs + atBest live in fields.test.ts.)
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch, fuzzyMatch } from "../src/index";
 
 describe("string collections", () => {

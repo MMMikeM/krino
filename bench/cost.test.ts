@@ -7,7 +7,7 @@
  * Reconstructs each stage by hand against `../src` internals, so a stage can be
  * run in isolation and priced by difference.
  */
-import { expect, it } from "vitest";
+import { expect, it } from "vite-plus/test";
 import { splitWords } from "../src/boundaries";
 import { buildRawGate, buildRescueBigramGate, charMask } from "../src/gates";
 import { matchField, prepareQuery } from "../src/match";
@@ -99,7 +99,9 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 					if (miss & (miss - 1)) return false;
 					if (miss === 0) return true;
 					const b = 31 - Math.clz32(miss);
-					return ((gate.requiredLo[b] & ~bigramsLo[i]) | (gate.requiredHi[b] & ~bigramsHi[i])) === 0;
+					return (
+						((gate.requiredLo[b] & ~bigramsLo[i]) | (gate.requiredHi[b] & ~bigramsHi[i])) === 0
+					);
 				};
 				let n = 0;
 				for (let i = 0; i < list.length; i++) if (admits(i)) n++;

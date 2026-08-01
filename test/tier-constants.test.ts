@@ -1,7 +1,7 @@
 /**
  * The exported SCORES tier constants.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch, SCORES } from "../src/index";
 
 describe("SCORES", () => {

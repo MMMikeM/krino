@@ -7,7 +7,7 @@
  * "corrected" tier. It fires only where everything else failed, so existing
  * matches can never change.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch, fuzzyMatch } from "../src/index";
 
 describe("the adjacent-swap rescue", () => {

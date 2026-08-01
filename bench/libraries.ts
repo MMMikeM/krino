@@ -22,36 +22,124 @@ export type LibraryMeta = {
 
 export const META: Record<string, LibraryMeta> = {
 	krino: {
-		gzipKB: 5.4, deps: 0, type: "subsequence (tiered)", module: "esm", updated: null,
-		features: { ranges: "yes", tier: "yes", diacritics: "yes", multiWord: "yes", perField: "yes", typos: "partial" },
+		gzipKB: 5.4,
+		deps: 0,
+		type: "subsequence (tiered)",
+		module: "esm",
+		updated: null,
+		features: {
+			ranges: "yes",
+			tier: "yes",
+			diacritics: "yes",
+			multiWord: "yes",
+			perField: "yes",
+			typos: "partial",
+		},
 	},
 	"@nozbe/microfuzz": {
-		gzipKB: 1.7, deps: 0, type: "subsequence", module: "cjs", updated: "2023-07-18",
-		features: { ranges: "yes", tier: "no", diacritics: "yes", multiWord: "yes", perField: "yes", typos: "no" },
+		gzipKB: 1.7,
+		deps: 0,
+		type: "subsequence",
+		module: "cjs",
+		updated: "2023-07-18",
+		features: {
+			ranges: "yes",
+			tier: "no",
+			diacritics: "yes",
+			multiWord: "yes",
+			perField: "yes",
+			typos: "no",
+		},
 	},
 	fuzzysort: {
-		gzipKB: 3.7, deps: 0, type: "subsequence", module: "cjs", updated: "2024-10-14",
-		features: { ranges: "yes", tier: "no", diacritics: "yes", multiWord: "yes", perField: "yes", typos: "no" },
+		gzipKB: 3.7,
+		deps: 0,
+		type: "subsequence",
+		module: "cjs",
+		updated: "2024-10-14",
+		features: {
+			ranges: "yes",
+			tier: "no",
+			diacritics: "yes",
+			multiWord: "yes",
+			perField: "yes",
+			typos: "no",
+		},
 	},
 	"match-sorter": {
-		gzipKB: 3.4, deps: 2, type: "subsequence (tiered)", module: "dual", updated: "2026-04-15",
-		features: { ranges: "no", tier: "yes", diacritics: "yes", multiWord: "no", perField: "yes", typos: "no" },
+		gzipKB: 3.4,
+		deps: 2,
+		type: "subsequence (tiered)",
+		module: "dual",
+		updated: "2026-04-15",
+		features: {
+			ranges: "no",
+			tier: "yes",
+			diacritics: "yes",
+			multiWord: "no",
+			perField: "yes",
+			typos: "no",
+		},
 	},
 	uFuzzy: {
-		gzipKB: 4.1, deps: 0, type: "subsequence", module: "dual", updated: "2025-08-22",
-		features: { ranges: "yes", tier: "no", diacritics: "opt-in", multiWord: "opt-in", perField: "no", typos: "opt-in" },
+		gzipKB: 4.1,
+		deps: 0,
+		type: "subsequence",
+		module: "dual",
+		updated: "2025-08-22",
+		features: {
+			ranges: "yes",
+			tier: "no",
+			diacritics: "opt-in",
+			multiWord: "opt-in",
+			perField: "no",
+			typos: "opt-in",
+		},
 	},
 	fuzzy: {
-		gzipKB: 0.8, deps: 0, type: "substring", module: "cjs", updated: "2016-10-01",
-		features: { ranges: "partial", tier: "no", diacritics: "no", multiWord: "no", perField: "no", typos: "no" },
+		gzipKB: 0.8,
+		deps: 0,
+		type: "substring",
+		module: "cjs",
+		updated: "2016-10-01",
+		features: {
+			ranges: "partial",
+			tier: "no",
+			diacritics: "no",
+			multiWord: "no",
+			perField: "no",
+			typos: "no",
+		},
 	},
 	"fuse.js": {
-		gzipKB: 9.3, deps: 0, type: "typo-tolerant", module: "dual", updated: "2026-07-13",
-		features: { ranges: "opt-in", tier: "no", diacritics: "opt-in", multiWord: "opt-in", perField: "yes", typos: "yes" },
+		gzipKB: 9.3,
+		deps: 0,
+		type: "typo-tolerant",
+		module: "dual",
+		updated: "2026-07-13",
+		features: {
+			ranges: "opt-in",
+			tier: "no",
+			diacritics: "opt-in",
+			multiWord: "opt-in",
+			perField: "yes",
+			typos: "yes",
+		},
 	},
 	"fast-fuzzy": {
-		gzipKB: 11, deps: 1, type: "typo-tolerant", module: "dual", updated: "2022-11-05",
-		features: { ranges: "partial", tier: "no", diacritics: "no", multiWord: "no", perField: "yes", typos: "yes" },
+		gzipKB: 11,
+		deps: 1,
+		type: "typo-tolerant",
+		module: "dual",
+		updated: "2022-11-05",
+		features: {
+			ranges: "partial",
+			tier: "no",
+			diacritics: "no",
+			multiWord: "no",
+			perField: "yes",
+			typos: "yes",
+		},
 	},
 };
 
@@ -59,7 +147,8 @@ export const META: Record<string, LibraryMeta> = {
 // and share its size, deps and type.
 export const baseName = (name: string): string => name.replace(/ \([^)]+\)$/, "");
 
-export const metaFor = (name: string): LibraryMeta | undefined => META[name] ?? META[baseName(name)];
+export const metaFor = (name: string): LibraryMeta | undefined =>
+	META[name] ?? META[baseName(name)];
 
 const DISPLAY: Record<string, string> = { krino: "Krino", "fuse.js": "Fuse.js" };
 
@@ -71,8 +160,7 @@ export const displayName = (name: string): string => {
 
 /** Size-table order: krino first, then ascending gzip. */
 export const bySize = (a: string, b: string): number =>
-	Number(b === "krino") - Number(a === "krino") ||
-	(META[a]?.gzipKB ?? 0) - (META[b]?.gzipKB ?? 0);
+	Number(b === "krino") - Number(a === "krino") || (META[a]?.gzipKB ?? 0) - (META[b]?.gzipKB ?? 0);
 
 /**
  * Whether a configuration actually does the corpus's task. The accented corpus

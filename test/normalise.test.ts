@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { normaliseText, splitWords } from "../src/index";
 
 const cases: Array<[string, string]> = [

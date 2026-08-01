@@ -14,7 +14,7 @@
  * slice) must always match — `contains` needs no fuzzy assembly.
  */
 import { writeFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch, normaliseText, splitWords } from "krino";
 import { type LongtextRow, ensureRawDir, rawFile } from "./artifact.ts";
 import { CORPORA } from "./corpus";
@@ -73,7 +73,10 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 			const normalisedDoc = normaliseText(doc);
 
 			// Present probes: words from inside this slice.
-			const present = [...new Set(splitWords(normalisedDoc).filter(isPlainWord))].slice(0, PRESENT_PROBES);
+			const present = [...new Set(splitWords(normalisedDoc).filter(isPlainWord))].slice(
+				0,
+				PRESENT_PROBES,
+			);
 
 			let junk = 0;
 			for (const w of absent) if (fuzzyMatch(doc, w)) junk++;
@@ -86,7 +89,9 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 			expect(presentHits).toBe(present.length);
 
 			let i = 0;
-			const missMs = timeQuery(() => (fuzzyMatch(doc, absent[i++ % ABSENT_PROBES] as string) ? 1 : 0));
+			const missMs = timeQuery(() =>
+				fuzzyMatch(doc, absent[i++ % ABSENT_PROBES] as string) ? 1 : 0,
+			);
 
 			rows.push({
 				docChars: len,

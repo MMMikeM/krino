@@ -1,6 +1,6 @@
 // One extra ("generric"), one missing ("genric"), one wrong ("genaric");
 // the adjacent swap has its own file.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch, fuzzyMatch, SCORES } from "../src/index";
 
 describe("a query missing a character", () => {

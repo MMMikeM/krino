@@ -1,7 +1,7 @@
 /**
  * fuzzyMatch options: acronym.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch } from "../src/index";
 
 describe("fuzzy fallback", () => {

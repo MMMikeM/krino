@@ -5,9 +5,7 @@ import { META, bySize, displayName, foldsFor } from "./libraries.ts";
 type Align = "left" | "right";
 
 const mdTable = (header: string[], rows: string[][], align: Align[]): string => {
-	const width = header.map((h, i) =>
-		Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)),
-	);
+	const width = header.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)));
 	const pad = (cell: string, i: number): string =>
 		align[i] === "right" ? cell.padStart(width[i]) : cell.padEnd(width[i]);
 	const line = (cells: string[]): string => `| ${cells.map(pad).join(" | ")} |`;
@@ -43,8 +41,13 @@ const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length
 const PROBE_CORPUS = "mixed";
 const PROBE_SIZE = "10000";
 
-const cellOf = (a: Artifact, corpus: string, kind: string, size: string, lib: string): ColdCell | undefined =>
-	a.coldMatrix[corpus]?.[kind]?.[size]?.[lib];
+const cellOf = (
+	a: Artifact,
+	corpus: string,
+	kind: string,
+	size: string,
+	lib: string,
+): ColdCell | undefined => a.coldMatrix[corpus]?.[kind]?.[size]?.[lib];
 
 const probeKinds = (a: Artifact, corpus: string): string[] =>
 	Object.keys(a.coldMatrix[corpus] ?? {}).filter((k) => k !== "batch");
@@ -91,11 +94,10 @@ const buildTable = (a: Artifact): string => {
 			return cell == null ? "—" : `${ms(cell.indexMs)} ms`;
 		}),
 	]);
-	return mdTable(
-		["build", ...columns.map(([, label]) => label)],
-		rows,
-		["left", ...columns.map((): Align => "right")],
-	);
+	return mdTable(["build", ...columns.map(([, label]) => label)], rows, [
+		"left",
+		...columns.map((): Align => "right"),
+	]);
 };
 
 const librariesTable = (): string =>
@@ -120,7 +122,8 @@ const scaleTable = (a: Artifact, corpus: string): string => {
 		.filter((name) => foldsFor(corpus, name))
 		.sort(speedOrder);
 	const krinoBatch = cellOf(a, corpus, "batch", size, "krino");
-	if (!krinoBatch) throw new Error(`no krino batch cell for '${corpus}' — run the cold stage first`);
+	if (!krinoBatch)
+		throw new Error(`no krino batch cell for '${corpus}' — run the cold stage first`);
 
 	const krinoOneShot = meanOneShotOf(a, corpus, size, "krino") as number;
 	const rows = shown.map((lib) => {
@@ -138,7 +141,9 @@ const scaleTable = (a: Artifact, corpus: string): string => {
 	});
 
 	const agg = {
-		index: geomean(shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).indexMs || 0.01)),
+		index: geomean(
+			shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).indexMs || 0.01),
+		),
 		cold: geomean(shown.map((l) => meanColdOf(a, corpus, size, l) as number)),
 		oneShot: geomean(shown.map((l) => meanOneShotOf(a, corpus, size, l) as number)),
 	};
@@ -152,11 +157,13 @@ const scaleTable = (a: Artifact, corpus: string): string => {
 		pct(agg.oneShot, krinoOneShot),
 	]);
 
-	return mdTable(
-		["Library", "index", "cold query", "total", "total rel"],
-		rows,
-		["left", "right", "right", "right", "right"],
-	);
+	return mdTable(["Library", "index", "cold query", "total", "total rel"], rows, [
+		"left",
+		"right",
+		"right",
+		"right",
+		"right",
+	]);
 };
 
 const batchTable = (a: Artifact, corpus: string): string => {
@@ -165,7 +172,8 @@ const batchTable = (a: Artifact, corpus: string): string => {
 		.filter((name) => foldsFor(corpus, name))
 		.sort(speedOrder);
 	const krinoBatch = cellOf(a, corpus, "batch", size, "krino");
-	if (!krinoBatch) throw new Error(`no krino batch cell for '${corpus}' — run the cold stage first`);
+	if (!krinoBatch)
+		throw new Error(`no krino batch cell for '${corpus}' — run the cold stage first`);
 
 	const rows = shown.map((lib) => {
 		const batch = cellOf(a, corpus, "batch", size, lib) as ColdCell;
@@ -194,11 +202,12 @@ const batchTable = (a: Artifact, corpus: string): string => {
 		pct(agg.batch, krinoBatch.queryMs),
 	]);
 
-	return mdTable(
-		["Library", "batch/query", "batch total", "batch rel"],
-		rows,
-		["left", "right", "right", "right"],
-	);
+	return mdTable(["Library", "batch/query", "batch total", "batch rel"], rows, [
+		"left",
+		"right",
+		"right",
+		"right",
+	]);
 };
 
 export const omittedFrom = (a: Artifact, corpus: string): string[] =>
@@ -309,11 +318,7 @@ const sessionTable = (a: Artifact): string => {
 	if (!session) throw new Error("no session data — run the quality stage first");
 	return mdTable(
 		["Library", ...session.steps.map((s) => `\`${s}\``), "session"],
-		session.rows.map((r) => [
-			displayName(r.library),
-			...r.stepMs.map(ms),
-			ms(r.sessionMs),
-		]),
+		session.rows.map((r) => [displayName(r.library), ...r.stepMs.map(ms), ms(r.sessionMs)]),
 		["left", ...session.steps.map((): Align => "right"), "right"],
 	);
 };

@@ -2,7 +2,7 @@
  * Per-field search: an array of field specs with independent acronym / atBest,
  * plus the FuzzyResult invariants (fields alignment, score = min).
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch, SCORES } from "../src/index";
 
 type Post = { title: string; body: string; tags?: string[] };

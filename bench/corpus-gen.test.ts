@@ -12,7 +12,7 @@
  */
 import { writeFileSync } from "node:fs";
 import { faker, fakerFR, fakerPL } from "@faker-js/faker";
-import { it } from "vitest";
+import { it } from "vite-plus/test";
 
 const MAX = 100_000;
 const SEED = 20240607;

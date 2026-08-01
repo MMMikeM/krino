@@ -62,11 +62,10 @@ const vitest = (args: string, env: Record<string, string> = {}): void => {
 // invocation for the whole matrix — it interleaves cells internally and exits
 // nonzero on a contaminated run.
 const runner = (variant: string, test: string, extra: string[]): void => {
-	execFileSync(
-		process.execPath,
-		[`${here}run.ts`, variant, test, ...extra, `--count=${RUNS}`],
-		{ cwd: here, stdio: ["ignore", "inherit", "inherit"] },
-	);
+	execFileSync(process.execPath, [`${here}run.ts`, variant, test, ...extra, `--count=${RUNS}`], {
+		cwd: here,
+		stdio: ["ignore", "inherit", "inherit"],
+	});
 };
 
 // Overlay measured cells onto the committed ones, leaf by leaf, so a narrowed
@@ -87,8 +86,7 @@ const overlay = <T>(into: Record<string, T>, from: Record<string, T>): void => {
 // Re-time one library the run does NOT touch and require its committed value
 // to reproduce: fail past 25%, warn past 10%.
 const anchorCheck = (artifact: Artifact): void => {
-	const matches = (variant: string): boolean =>
-		variant.toLowerCase().includes(ONLY.toLowerCase());
+	const matches = (variant: string): boolean => variant.toLowerCase().includes(ONLY.toLowerCase());
 	const anchor = ["fuzzysort", "uFuzzy", "krino"].find((v) => !matches(v));
 	if (!anchor) return;
 	console.error(`anchor: re-timing ${anchor} short-word@10k against the committed matrix…`);
@@ -213,14 +211,16 @@ const inject = (doc: string, tables: Record<string, string>): { doc: string; sta
 	const seen = new Set<string>();
 	const next = doc.replace(MARKER, (match, id: string) => {
 		const table = tables[id];
-		if (table == null) throw new Error(`docs/benchmarks.md marks region '${id}', which nothing generates`);
+		if (table == null)
+			throw new Error(`docs/benchmarks.md marks region '${id}', which nothing generates`);
 		seen.add(id);
 		const replacement = `<!-- bench:${id} -->\n${table}\n<!-- bench:end -->`;
 		if (replacement !== match) stale.push(id);
 		return replacement;
 	});
 	const unmarked = Object.keys(tables).filter((id) => !seen.has(id));
-	if (unmarked.length) console.error(`note: generated but not marked in the doc: ${unmarked.join(", ")}`);
+	if (unmarked.length)
+		console.error(`note: generated but not marked in the doc: ${unmarked.join(", ")}`);
 	return { doc: next, stale };
 };
 
@@ -260,10 +260,13 @@ if (CHECK) {
 	writeFileSync(DOC, doc);
 	renderPareto(artifact);
 	console.error(
-		stale.length ? `rewrote ${stale.length} region(s): ${stale.join(", ")}` : "docs already current.",
+		stale.length
+			? `rewrote ${stale.length} region(s): ${stale.join(", ")}`
+			: "docs already current.",
 	);
 	for (const corpus of Object.keys(artifact.coldMatrix)) {
 		const omitted = omittedFrom(artifact, corpus);
-		if (omitted.length) console.error(`[${corpus}] omitted (no diacritic folding): ${omitted.join(", ")}`);
+		if (omitted.length)
+			console.error(`[${corpus}] omitted (no diacritic folding): ${omitted.join(", ")}`);
 	}
 }

@@ -1,5 +1,5 @@
 // Fuzzy scores are runtime float sums, so every score assertion is toBeCloseTo.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch } from "../src/index";
 
 describe("fuzzy chunk scoring", () => {

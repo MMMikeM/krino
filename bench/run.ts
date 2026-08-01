@@ -98,7 +98,8 @@ const variants = CONFIG_NAMES.filter(
 );
 if (!variants.length) throw new Error(`no variant matches '${variantSel}'`);
 const chosen = tests.filter(
-	(t) => testSel === "all" || t.id === testSel || t.id.endsWith(`/${testSel}`) || t.corpus === testSel,
+	(t) =>
+		testSel === "all" || t.id === testSel || t.id.endsWith(`/${testSel}`) || t.corpus === testSel,
 );
 if (!chosen.length) throw new Error(`no test matches '${testSel}'`);
 
@@ -230,7 +231,10 @@ const shaped = (): Record<
 	string,
 	Record<string, Record<string, Record<string, Omit<CellStats, "counts">>>>
 > => {
-	const out: Record<string, Record<string, Record<string, Record<string, Omit<CellStats, "counts">>>>> = {};
+	const out: Record<
+		string,
+		Record<string, Record<string, Record<string, Omit<CellStats, "counts">>>>
+	> = {};
 	for (const size of sizes) {
 		for (const t of chosen) {
 			const kind = t.id.slice(t.corpus.length + 1);

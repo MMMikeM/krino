@@ -3,7 +3,7 @@
  * which is the caller's own string whenever it is NFC-normal and untrimmed —
  * i.e. virtually all real data. Every tier reports the same space.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch, fuzzyMatch, normaliseText } from "../src/index";
 
 describe("ranges index the caller's string", () => {

@@ -2,7 +2,7 @@
  * Acronym tier ranking/precedence. (Basic match is in primitive.test.ts; the
  * per-field toggle is in fields.test.ts.)
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch, fuzzyMatch, SCORES } from "../src/index";
 
 describe("acronym tier", () => {

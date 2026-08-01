@@ -125,7 +125,10 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 		},
 		// No source: the right answer is nothing.
 		{
-			query: [substitute(wordsOf(sample[8])[0] ?? "steel"), substitute(wordsOf(sample[8])[1] ?? "chair")]
+			query: [
+				substitute(wordsOf(sample[8])[0] ?? "steel"),
+				substitute(wordsOf(sample[8])[1] ?? "chair"),
+			]
 				.join(" ")
 				.toLowerCase(),
 			kind: "two-words-double-typo",

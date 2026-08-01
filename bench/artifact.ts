@@ -24,10 +24,7 @@ export type ColdCell = {
 };
 
 /** corpus → test kind (probe kinds + "batch") → list size → variant → cell. */
-export type ColdMatrix = Record<
-	string,
-	Record<string, Record<string, Record<string, ColdCell>>>
->;
+export type ColdMatrix = Record<string, Record<string, Record<string, Record<string, ColdCell>>>>;
 
 export type ScorecardRow = { library: string; mrr: number };
 export type ProbeCell = { count: number; rank: number | null };

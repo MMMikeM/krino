@@ -6,7 +6,7 @@
  * for multi-word queries).
  */
 import uFuzzy from "@leeoniya/ufuzzy";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch, fuzzyMatch } from "krino";
 
 const uf = new uFuzzy(); // defaults: in-order, no diacritic folding

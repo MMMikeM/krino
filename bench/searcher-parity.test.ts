@@ -6,7 +6,7 @@
  * gate — none of which fuzzyMatch runs). Imports ../src on purpose: the guard
  * covers the source the gates live in.
  */
-import { expect, it } from "vitest";
+import { expect, it } from "vite-plus/test";
 import { SCORES } from "../src/scores";
 import { createFuzzySearch, fuzzyMatch } from "../src/index";
 import { CORPORA } from "./corpus";

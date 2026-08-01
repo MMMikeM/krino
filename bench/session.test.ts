@@ -8,7 +8,7 @@
  * typed k-1 and presses the next key". Step 1 resets with a cache bust.
  */
 import { writeFileSync } from "node:fs";
-import { expect, it } from "vitest";
+import { expect, it } from "vite-plus/test";
 import { type SessionRow, ensureRawDir, rawFile } from "./artifact.ts";
 import { configByName, configs } from "./configs.ts";
 import { CORPORA } from "./corpus";
@@ -50,8 +50,13 @@ it("frontend session: three successive queries at 100k", { timeout: 60_000 }, ()
 	// replays the previous prefix); stateless libraries just run cold every
 	// sample.
 	const all = configs(list);
-	const libs = ["krino", "@nozbe/microfuzz", "fuzzysort", "uFuzzy (all opts)", "fuse.js (all opts)"]
-		.map((lib) => configByName(all, lib));
+	const libs = [
+		"krino",
+		"@nozbe/microfuzz",
+		"fuzzysort",
+		"uFuzzy (all opts)",
+		"fuse.js (all opts)",
+	].map((lib) => configByName(all, lib));
 
 	const rows: SessionRow[] = [];
 	for (const { name, count: run, stateful } of libs) {

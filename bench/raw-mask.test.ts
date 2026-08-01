@@ -1,6 +1,6 @@
 // The same false-pass-only invariant test/raw-mask.test.ts pins, swept over
 // every string the published corpora hold — where the real Unicode lives.
-import { expect, it } from "vitest";
+import { expect, it } from "vite-plus/test";
 import { charMask } from "../src/gates";
 import { normaliseText, rawFieldScan } from "../src/normalise";
 import { CORPORA } from "./corpus";

@@ -6,7 +6,7 @@
  * the fixes can't silently regress. (This file used to be an `it.fails` tracker
  * for the unfixed bugs — see git history.)
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch, fuzzyMatch } from "../src/index";
 
 describe("bug 1: punctuation is a word boundary", () => {

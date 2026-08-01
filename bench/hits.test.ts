@@ -7,7 +7,7 @@
  * untimed pass is the whole measurement; MRR@10 falls out of it.
  */
 import { writeFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { type ProbeTable, type ScorecardRow, ensureRawDir, rawFile } from "./artifact.ts";
 import { type Probe, configByName, configs } from "./configs.ts";
 import { CORPORA } from "./corpus";

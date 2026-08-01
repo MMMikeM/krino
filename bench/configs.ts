@@ -208,7 +208,9 @@ const definitions = (list: string[]): Definition[] => [
 		make: () => ({
 			count: (q) => fuzzy.filter(q, list, { pre: "<", post: ">" }).length,
 			probe: (q) =>
-				rankedOnly(fuzzy.filter(q, list, { pre: "<", post: ">" }).map((r) => r.original ?? r.string)),
+				rankedOnly(
+					fuzzy.filter(q, list, { pre: "<", post: ">" }).map((r) => r.original ?? r.string),
+				),
 			index: null,
 		}),
 	},

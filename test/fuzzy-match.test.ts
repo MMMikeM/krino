@@ -2,7 +2,7 @@
  * The fuzzyMatch primitive: score one string → { score, tier, ranges } | null.
  * Every tier is asserted with its score AND its categorical `tier` name.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch } from "../src/index";
 
 describe("result shape", () => {
