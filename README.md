@@ -18,7 +18,6 @@ Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz), and [benchma
 npm i krino  # or pnpm add krino
 ```
 
-
 ## Usage
 
 ### `createFuzzySearch`: search a collection
@@ -36,12 +35,12 @@ byName("john");
 
 // multiple fields, per-field config
 const posts = [
-  { title: "Banana bread", body: "best baked goods" },
-  { title: "Release notes", body: "banana picker shipped" },
+	{ title: "Banana bread", body: "best baked goods" },
+	{ title: "Release notes", body: "banana picker shipped" },
 ];
 const byField = createFuzzySearch(posts, [
-  { text: (p) => p.title },
-  { text: (p) => p.body, atBest: SCORES.CONTAINS }, // body's best hit ranks like a bare contains
+	{ text: (p) => p.title },
+	{ text: (p) => p.body, atBest: SCORES.CONTAINS }, // body's best hit ranks like a bare contains
 ]);
 byField("ban");
 // [
@@ -83,7 +82,7 @@ Options: `fuzzyMatch(text, query, { acronym? })`.
 Lower is better. Each match reports a numeric `score` (for sorting) and a categorical `tier`:
 
 | score | tier               | meaning                                    |
-|-------|--------------------|--------------------------------------------|
+| ----- | ------------------ | ------------------------------------------ |
 | 0     | `exact`            | exact match                                |
 | 0.1   | `normalised-exact` | case / diacritics-insensitive exact        |
 | 0.5   | `prefix`           | starts with query                          |
@@ -116,7 +115,7 @@ if (top?.tier === "corrected") notice(`Showing results for ${top.corrected}`);
 `atBest` shifts `score` but never `tier`, so tier filters stay reliable on demoted fields (a body-field prefix hit can report `score: 2.5, tier: "prefix"`).
 All four typo tiers also score above `CONTAINS` (a rescued contains is 4.1) without being fuzzy chains, so filter by `tier` when you mean the kind of match.
 
-> **Long text:** a fuzzy chain assembled from chunks scattered across a document is junk; unguarded, a word *absent* from the text still "matches" 35% of the time by 512 chars, ~100% by 16k.
+> **Long text:** a fuzzy chain assembled from chunks scattered across a document is junk; unguarded, a word _absent_ from the text still "matches" 35% of the time by 512 chars, ~100% by 16k.
 > The fuzzy tier refuses any assembly covering less than 18% of its span (measured junk density never exceeds 0.143, the sparsest genuine match is 0.211), which holds the junk rate at **0% at every measured length** with label behaviour unchanged ([the long-text table](./docs/benchmarks.md#matching-inside-long-text)).
 
 > **Acronym semantics:** apostrophes are word-internal: `People's` contributes one initial, `p`, so `lpdr` matches `Lao People's Democratic Republic`.
@@ -140,7 +139,7 @@ Accuracy against the total cost of one cold search (index + one query) — the l
 
 Krino is the only library that by default:
 
-- returns a categorical **`tier`** *and* numeric `ranges`
+- returns a categorical **`tier`** _and_ numeric `ranges`
 - folds diacritics
 - matches multi-word
 - takes per-field config
@@ -181,27 +180,34 @@ The rest of the field is dominated on these benchmarks; the full argument, per-l
 ```typescript
 type Range = [number, number]; // [start, end] inclusive
 type Tier =
-  | "exact" | "normalised-exact" | "prefix" | "boundary-exact"
-  | "boundary" | "multi-word" | "acronym" | "contains"
-  | "fuzzy" | "corrected";
+	| "exact"
+	| "normalised-exact"
+	| "prefix"
+	| "boundary-exact"
+	| "boundary"
+	| "multi-word"
+	| "acronym"
+	| "contains"
+	| "fuzzy"
+	| "corrected";
 
 type MatchResult = {
-  score: number;
-  tier: Tier;
-  corrected?: string;    // the fixed query, when tier is "corrected"
-  ranges: Range[];
+	score: number;
+	tier: Tier;
+	corrected?: string; // the fixed query, when tier is "corrected"
+	ranges: Range[];
 };
 
 type FieldSpec<T> = {
-  text: (item: T) => string | null;
-  acronym?: boolean;     // default false
-  atBest?: number;       // shifts this field's scores; its best possible hit ranks here
+	text: (item: T) => string | null;
+	acronym?: boolean; // default false
+	atBest?: number; // shifts this field's scores; its best possible hit ranks here
 };
 
 type FuzzyResult<T> = {
-  item: T;
-  score: number;                       // min effective score across fields
-  fields: (MatchResult | null)[];      // one per field spec
+	item: T;
+	score: number; // min effective score across fields
+	fields: (MatchResult | null)[]; // one per field spec
 };
 ```
 

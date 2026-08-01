@@ -11,11 +11,11 @@ It fired repeatedly, sometimes fatally, and the numbers behind it were incoheren
 
 Individual cells looked like this at 100k:
 
-| cell | samples | median | spread (max/min) | rme |
-|------|--------:|-------:|-----------------:|----:|
-| ascii 10k krino | 20 | 0.293 ms | 214% | 21.4% |
-| ascii 100k krino | 12 | 3.912 ms | 46.8% | 9.5% |
-| mixed 10k krino | 20 | 0.307 ms | 115% | 8.4% |
+| cell             | samples |   median | spread (max/min) |   rme |
+| ---------------- | ------: | -------: | ---------------: | ----: |
+| ascii 10k krino  |      20 | 0.293 ms |             214% | 21.4% |
+| ascii 100k krino |      12 | 3.912 ms |            46.8% |  9.5% |
+| mixed 10k krino  |      20 | 0.307 ms |             115% |  8.4% |
 
 A cell whose own samples span 214% cannot support a claim about a 15% difference between two cells.
 That was true of every published speed number, and nothing in the artifact recorded it, because the stored cell was `{ ms, sd }` and the docs printed `ms`.
@@ -58,16 +58,16 @@ Every intermediate explanation was wrong, and each was plausible enough to act o
 
 Running the same cell two ways, minutes apart on the same machine:
 
-| ascii 10k | full matrix | scoped to one group |
-|-----------|------------:|--------------------:|
-| krino spread | 214% | 28.5% |
-| krino rme | 21.4% | **3.0%** |
-| acronym rme | 12.3% | **2.7%** |
+| ascii 10k    | full matrix | scoped to one group |
+| ------------ | ----------: | ------------------: |
+| krino spread |        214% |               28.5% |
+| krino rme    |       21.4% |            **3.0%** |
+| acronym rme  |       12.3% |            **2.7%** |
 
 Seven times better from isolation alone, and the scoped numbers were physically sensible for the first time: krino 0.281 ms against acronym 0.315 ms, acronym slower by 12%, which is the direction the guard exists to assert.
 
 Isolating further, to one library per process, drops resident memory from ~1.3 GB to 87–98 MB.
-Cross-process reproducibility over five independent processes is then ±1–2% for the well-behaved libraries — far tighter than the 21% *within* a single cell of the shared run.
+Cross-process reproducibility over five independent processes is then ±1–2% for the well-behaved libraries — far tighter than the 21% _within_ a single cell of the shared run.
 
 ## The deeper mistake
 
@@ -76,13 +76,13 @@ That is an asymptote no user ever reaches.
 
 Measured cold, in a fresh process, with nothing warmed (ascii 10k):
 
-| library | build | cold first query | warm | cold / warm |
-|---------|------:|-----------------:|-----:|------------:|
-| krino | 3.7 ms | 3.25 ms | 0.249 ms | **13×** |
-| uFuzzy | 5.2 ms | 2.12 ms | 0.220 ms | 10× |
-| fuzzysort | 0.1 ms | **18.43 ms** | 0.212 ms | **87×** |
-| @nozbe/microfuzz | 12.2 ms | 3.15 ms | 1.145 ms | 2.8× |
-| Fuse.js | 2.9 ms | 23.14 ms | 18.01 ms | 1.3× |
+| library          |   build | cold first query |     warm | cold / warm |
+| ---------------- | ------: | ---------------: | -------: | ----------: |
+| krino            |  3.7 ms |          3.25 ms | 0.249 ms |     **13×** |
+| uFuzzy           |  5.2 ms |          2.12 ms | 0.220 ms |         10× |
+| fuzzysort        |  0.1 ms |     **18.43 ms** | 0.212 ms |     **87×** |
+| @nozbe/microfuzz | 12.2 ms |          3.15 ms | 1.145 ms |        2.8× |
+| Fuse.js          |  2.9 ms |         23.14 ms | 18.01 ms |        1.3× |
 
 The first query costs 9–87× the steady-state number the tables published, and it **reorders the field**.
 On steady state fuzzysort, uFuzzy and krino are within 18% of each other.

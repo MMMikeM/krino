@@ -21,15 +21,15 @@ The eight libraries compared throughout, and the configurations every table belo
 Feature coverage first; each cell is verified against the library's current source:
 
 | Library                                                     | Per-field | Ranges | Diacritics | ESM | Multi-word | Typos | Tiers |
-|-------------------------------------------------------------|:---------:|:------:|:----------:|:---:|:----------:|:-----:|:----:|
-| **Krino**                                                   |    🟢     |   🟢   |     🟢     | 🟢  |     🟢     |  🟢   |  🟢  |
-| [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz)      |    🟢     |   🟢   |     🟢     | 🔴  |     🟢     |  🔴   |  🔴  |
-| [fast-fuzzy](https://github.com/EthanRutherford/fast-fuzzy) |    🟢     |   🟡   |     🔴     | 🟢  |     🔴     |  🟢   |  🔴  |
-| [Fuse.js](https://www.fusejs.io/)                           |    🟢     |   🟡   |     🟡     | 🟢  |     🟡     |  🟢   |  🔴  |
-| [fuzzy](https://github.com/mattyork/fuzzy)                  |    🔴     |   🟡   |     🔴     | 🔴  |     🔴     |  🔴   |  🔴  |
-| [fuzzysort](https://github.com/farzher/fuzzysort)           |    🟢     |   🟢   |     🟢     | 🔴  |     🟢     |  🔴   |  🔴  |
-| [match-sorter](https://github.com/kentcdodds/match-sorter)  |    🟢     |   🔴   |     🟢     | 🟡  |     🔴     |  🔴   |  🟢  |
-| [uFuzzy](https://github.com/leeoniya/uFuzzy)                |    🔴     |   🟢   |     🟡     | 🟡  |     🟡     |  🟡   |  🔴  |
+| ----------------------------------------------------------- | :-------: | :----: | :--------: | :-: | :--------: | :---: | :---: |
+| **Krino**                                                   |    🟢     |   🟢   |     🟢     | 🟢  |     🟢     |  🟢   |  🟢   |
+| [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz)      |    🟢     |   🟢   |     🟢     | 🔴  |     🟢     |  🔴   |  🔴   |
+| [fast-fuzzy](https://github.com/EthanRutherford/fast-fuzzy) |    🟢     |   🟡   |     🔴     | 🟢  |     🔴     |  🟢   |  🔴   |
+| [Fuse.js](https://www.fusejs.io/)                           |    🟢     |   🟡   |     🟡     | 🟢  |     🟡     |  🟢   |  🔴   |
+| [fuzzy](https://github.com/mattyork/fuzzy)                  |    🔴     |   🟡   |     🔴     | 🔴  |     🔴     |  🔴   |  🔴   |
+| [fuzzysort](https://github.com/farzher/fuzzysort)           |    🟢     |   🟢   |     🟢     | 🔴  |     🟢     |  🔴   |  🔴   |
+| [match-sorter](https://github.com/kentcdodds/match-sorter)  |    🟢     |   🔴   |     🟢     | 🟡  |     🔴     |  🔴   |  🟢   |
+| [uFuzzy](https://github.com/leeoniya/uFuzzy)                |    🔴     |   🟢   |     🟡     | 🟡  |     🟡     |  🟡   |  🔴   |
 
 🟢 built-in / on by default
 
@@ -135,7 +135,7 @@ Three rules picked the query set; none of them is "krino looks good here".
 The resulting probes:
 
 | #     | probe                         | query                     | isolates                                              |
-|-------|-------------------------------|---------------------------|-------------------------------------------------------|
+| ----- | ----------------------------- | ------------------------- | ----------------------------------------------------- |
 | 1     | long single word              | `ergonomic`               | baseline agreement; rank on a common word             |
 | 2     | short single word             | `grady`                   | low-signal input, fewer chars for gates and chunking  |
 | 3     | two-word phrase               | `handcrafted wooden`      | tokenization (in corpus order: any engine can pass)   |
@@ -284,7 +284,7 @@ The tokenizing engines keep exactly the five items at rank 1; uFuzzy's default (
 
 The same phrase with one character wrong in the first word.
 This used to be the probe Krino did not answer — a fifteen-character query offers fifteen substitution positions to guess from, and the old restriction to single-word queries is what stopped the rescue inventing matches at that width.
-The multi-word rescue reaches it without reopening that hazard by inverting the search: the words that *do* occur literally pin the candidate fields first, and only the one failing word is corrected, over that handful of fields rather than the corpus.
+The multi-word rescue reaches it without reopening that hazard by inverting the search: the words that _do_ occur literally pin the candidate fields first, and only the one failing word is corrected, over that handful of fields rather than the corpus.
 The three probes after this one stress the same mechanism from each side — the typo in the other word, the phrase reversed, and both words wrong at once, where refusing is the only right answer.
 
 ### two words, second mistyped: `handcrafted wooxen`
@@ -319,7 +319,7 @@ Engines that only tolerate edits near the query's start, or that anchor on the f
 | uFuzzy (all opts)  |    2 |       5 |     6.02 |    4.40 |    10.39 |     0.87 |
 <!-- bench:end -->
 
-Both hard axes at once: the words are out of corpus order *and* one of them is mistyped, so a substring engine has nothing to hold on to and an in-order typo engine loses the phrase.
+Both hard axes at once: the words are out of corpus order _and_ one of them is mistyped, so a substring engine has nothing to hold on to and an in-order typo engine loses the phrase.
 The corrected phrase must still match through the order-independent multi-word tier.
 
 ### two words, both mistyped: `handcxafted wooxen`

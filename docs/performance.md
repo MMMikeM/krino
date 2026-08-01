@@ -7,15 +7,15 @@ Started as the analysis behind "should Krino index its corpus?"
 ## The question: a trie index?
 
 On an early **combinatorial** benchmark corpus (`ADJ × NOUN × SUFFIX`), `fast-fuzzy`
-benchmarked ~4× faster than Krino *while doing typo-tolerant edit-distance matching*.
+benchmarked ~4× faster than Krino _while doing typo-tolerant edit-distance matching_.
 That looked paradoxical — edit distance is expensive per pair. The trick is
 structural, not algorithmic:
 
 1. **Trie index.** `new Searcher(list)` inserts every candidate's normalised key
    into a trie. Shared prefixes are stored — and scored — once.
 2. **Threshold-pruned DFS.** It walks the trie running a bounded Sellers /
-   Damerau-Levenshtein DP. At each node it computes the *best score any string in
-   this subtree could reach*; if that can't clear `threshold` (default 0.6), it
+   Damerau-Levenshtein DP. At each node it computes the _best score any string in
+   this subtree could reach_; if that can't clear `threshold` (default 0.6), it
    prunes the whole subtree. Most candidates are never scored.
 3. **Rolling DP rows.** Two rows extended along trie edges, so a shared prefix's
    DP cells are computed once for everything beneath it.
@@ -31,7 +31,7 @@ slowest here. "Typo-tolerant" says nothing about speed; the data structure and t
 corpus do.)
 
 Krino, by comparison, does **zero corpus indexing**. `createFuzzySearch` caches
-per-field normalisation and word splits, but each query then linearly scans *every*
+per-field normalisation and word splits, but each query then linearly scans _every_
 item through the whole tier ladder (exact → prefix → boundary → multi-word →
 contains → acronym → fuzzy). O(N) full passes with a fat per-item constant and no
 pruning.
@@ -39,7 +39,7 @@ pruning.
 ## Why a prefix trie is a poor fit for Krino specifically
 
 A trie accelerates **prefix** and **exact** lookups. Those are already Krino's
-cheapest tiers (`startsWith`, `===`). Krino's *expensive* tiers match **mid-string
+cheapest tiers (`startsWith`, `===`). Krino's _expensive_ tiers match **mid-string
 and out-of-order**:
 
 - `boundary` / `contains` — the query can sit anywhere in the field.
@@ -47,7 +47,7 @@ and out-of-order**:
 - `fuzzy` — a subsequence chain scattered across the field.
 
 A prefix trie helps none of these. Worse, fast-fuzzy's pruning relies on a **single
-scalar threshold** to cut subtrees. Krino has no such cutoff: it's a *tier ladder*
+scalar threshold** to cut subtrees. Krino has no such cutoff: it's a _tier ladder_
 that returns **every** item that matches at any tier, ranked — there's no "score
 below X, skip it" to prune on. So the exact mechanism that makes fast-fuzzy's trie
 pay off doesn't transfer.
@@ -63,7 +63,7 @@ structure were ever wanted anyway, the right ones are **not** a prefix trie:
   boundary tiers into posting-list intersections instead of an N-item scan. The
   biggest single lever for those tiers.
 - **Trigram (n-gram) index** (`3-gram → items`). Gate the fuzzy/contains tiers by
-  shared trigrams *before* the per-item regex subsequence test — prunes the fuzzy
+  shared trigrams _before_ the per-item regex subsequence test — prunes the fuzzy
   tier the way the L1 regex gate does, but without visiting every item first.
 - **Suffix automaton / suffix array** for arbitrary-substring `contains`. Powerful
   but heavy; likely overkill.
@@ -101,7 +101,7 @@ the gate chosen by query type:
   `"bar … foo"`. (Pinned by `bench/correctness.test.ts`.)
 - **Single-word queries → subsequence gate** (`buildFuzzyGate`, `a[^]*b[^]*c`): with
   one word there's no out-of-order concern, so every tier needs the query's chars
-  *in order*. This gate is both **stricter** (rejects more) and **cheaper** (one
+  _in order_. This gate is both **stricter** (rejects more) and **cheaper** (one
   pass vs the presence gate's k lookaheads).
 
 Both are valid necessary conditions for their query type, so no true match is ever
@@ -109,11 +109,11 @@ dropped — all tests stay green.
 
 Measured (seeded faker corpus), original → presence-only → per-type:
 
-| size | no gate | presence gate | per-type gate |
-| ---- | ------- | ------------- | ------------- |
-| 1k   | 0.093ms | 0.097ms       | **0.073ms**   |
-| 10k  | 0.978ms | 0.969ms       | **0.722ms**   |
-| 100k | 19.998ms| 11.774ms      | **8.944ms**   |
+| size | no gate  | presence gate | per-type gate |
+| ---- | -------- | ------------- | ------------- |
+| 1k   | 0.093ms  | 0.097ms       | **0.073ms**   |
+| 10k  | 0.978ms  | 0.969ms       | **0.722ms**   |
+| 100k | 19.998ms | 11.774ms      | **8.944ms**   |
 
 Net **~2.2× faster at 100k and ~25% at 1k/10k** over the original. The per-type
 split also erased the small-corpus regression the always-presence gate caused (its
@@ -127,7 +127,7 @@ bucketed on 30–31; spaces/punctuation skipped so separators are never required
 the field). The query's mask is built once per query;
 `(queryMask & fieldMask) !== queryMask` rejects an item with **one integer AND**
 before any regex runs. Query and field use the same function, so a bucket
-collision can only cause a false *pass* (weaker filter), never a false reject —
+collision can only cause a false _pass_ (weaker filter), never a false reject —
 asserted per query in `bench/funnel.test.ts` (mask never rejects an item the
 full matcher accepts).
 
@@ -138,18 +138,18 @@ test tolerates one missing class — `missing & (missing - 1)`, where
 prefix-narrowing survivor cache stays sound. This is the single most expensive
 change in the library's history; the numbers are in the typo-tier section.
 
-Bonus found by the funnel diagnostics: for pure a–z queries the mask *is* an
+Bonus found by the funnel diagnostics: for pure a–z queries the mask _is_ an
 exact distinct-char presence check, making the multi-word presence regex
 redundant — measured cutting **0.0%** after the mask — so it's skipped entirely
 (`presenceGateRedundant`).
 
 Measured, same corpus + queries, regex gates only → with bitmask in front:
 
-| size | regex gates | + bitmask   |
-| ---- | ----------- | ----------- |
-| 1k   | 0.07ms      | **0.04ms**  |
-| 10k  | 0.95ms      | **0.39ms**  |
-| 100k | 16ms        | **11ms**    |
+| size | regex gates | + bitmask  |
+| ---- | ----------- | ---------- |
+| 1k   | 0.07ms      | **0.04ms** |
+| 10k  | 0.95ms      | **0.39ms** |
+| 100k | 16ms        | **11ms**   |
 
 ~2.4× at 10k. The funnel tables (`vitest run funnel.test.ts
 --disable-console-intercept`) show the mask alone cutting 55–100% of items per
@@ -169,8 +169,8 @@ current tables.
 ### fieldWords Set removal — DONE (with a stated trade)
 
 The per-field `new Set(splitWords(field))` was build cost and permanent heap: one Set per field, alive for the searcher's lifetime.
-`wholeWordOccurrence` replaced it — an `indexOf` walk for an occurrence bounded by non-word characters on both sides, yielding membership *and* position in one pass (which also fixed a latent highlight bug: the old left-bounded range could underline into "catalog" for `"catalog cat"`).
-Measured wins: build 0.89 → 0.24 ms at 1k, 7.4 → 3.2 at 10k, 98 → 54 at 100k; and the 100k *query* time fell 13 → 3.4 ms — the Sets' heap was GC and cache pressure on every scan.
+`wholeWordOccurrence` replaced it — an `indexOf` walk for an occurrence bounded by non-word characters on both sides, yielding membership _and_ position in one pass (which also fixed a latent highlight bug: the old left-bounded range could underline into "catalog" for `"catalog cat"`).
+Measured wins: build 0.89 → 0.24 ms at 1k, 7.4 → 3.2 at 10k, 98 → 54 at 100k; and the 100k _query_ time fell 13 → 3.4 ms — the Sets' heap was GC and cache pressure on every scan.
 
 **The trade:** multi-word membership went from an O(1) hash hit to an O(field-length) scan per query word.
 For Krino's target fields (names, labels) the scan beats hashing — no hash, native memchr-style walk.
@@ -199,17 +199,17 @@ Lazy range allocation was considered alongside and deliberately skipped — rang
 
 The fuzzy chain took the leftmost admissible placement for every chunk and never
 reconsidered. In natural-language fields the query's first character very often
-also opens an *earlier* word, so the chain committed to a decoy and either
+also opens an _earlier_ word, so the chain committed to a decoy and either
 stranded (no match at all) or paid for a lone 1-char chunk. Measured over the
 ascii corpus at chain level: **307 missed assemblies, 131 suboptimal**.
 
-Retrying the *first* chunk from other admissible placements fixes it. The
+Retrying the _first_ chunk from other admissible placements fixes it. The
 surprise was what happened next: retrying from **every** placement broke the
 long-text guard (`bench/longtext.test.ts`), taking the junk rate from 0 to 45%
 at 16k chars — the exact v1 failure the density floor was built to kill.
 
 **The finding worth keeping: the density floor is not scale-free.** It is a
-ratio, so a compact assembly like `"madel" + "ine"` clears it at *any* field
+ratio, so a compact assembly like `"madel" + "ine"` clears it at _any_ field
 length. What actually kept junk out over long text was not the floor alone — it
 was that a single leftmost-greedy attempt stretched junk chains into sparse
 spans. Remove the leftmost bias and the floor stops rejecting. Junk matching is a
@@ -257,7 +257,7 @@ is where the queried item lands. Measured as MRR over the ascii corpus:
 | transposition | 1.000  | 1.000 |                                |
 | substitution  | 0.000  | 0.996 |                                |
 
-The first version of this scored typo corrections *above* literal matches (the
+The first version of this scored typo corrections _above_ literal matches (the
 inherited 0.9 penalty), which sank infix to 0.906 — other items' guesses
 displacing the item the user's text literally appears in. Raising the penalty
 past `CONTAINS` fixed it with no loss anywhere. **A correction must never
@@ -272,13 +272,13 @@ long text junked 30 probes. `minTypoQueryLength(fieldLength)` gets both.
 
 **The cost.** Query time at 10k, against the pre-change baseline:
 
-| stage                        | scatter | plain word |
-| ---------------------------- | ------- | ---------- |
-| baseline                     | 94.8 ms | 28.0 ms    |
-| + chunk-start retry          | 95.7 ms | 28.0 ms    |
-| + extra / missing character  | 113 ms  | 28.9 ms    |
-| + relaxed mask gate          | 166 ms  | 46.9 ms    |
-| + substitution rescue        | 202 ms  | 73.6 ms    |
+| stage                       | scatter | plain word |
+| --------------------------- | ------- | ---------- |
+| baseline                    | 94.8 ms | 28.0 ms    |
+| + chunk-start retry         | 95.7 ms | 28.0 ms    |
+| + extra / missing character | 113 ms  | 28.9 ms    |
+| + relaxed mask gate         | 166 ms  | 46.9 ms    |
+| + substitution rescue       | 202 ms  | 73.6 ms    |
 
 The substitution rescue is the expensive one, and nearly all of it is the **relaxed mask
 gate** rather than the matcher: tolerating one missing character class is what
@@ -306,7 +306,7 @@ fields, from two facts that pin the edit down:
   one-edit rescue performs, so those fields are rejected outright.
 - Every rescue-eligible tier is a contiguous occurrence (literal tiers by
   definition, acronym via consecutive initials; a fuzzy chain scores above
-  `CONTAINS` and cannot be rescued) — so every query bigram *not touching* the
+  `CONTAINS` and cannot be rescued) — so every query bigram _not touching_ the
   β position must appear in the field.
 
 Per item that is a 64-bit presence set of adjacent same-word character-class
@@ -361,7 +361,7 @@ The bench harness grew several honesty mechanisms worth keeping:
 
 - **Two corpora, benched separately.** `ascii` (en faker) and `accented` (fr/pl
   names/places — measured ~33% of items carry a diacritic; the en generators
-  measured 0%, and faker's *French company names* also measured 0%, so density
+  measured 0%, and faker's _French company names_ also measured 0%, so density
   had to be designed, not assumed). Splitting exposed that diacritics cost
   microfuzz, not Krino: microfuzz ties Krino on ascii at 100k but loses ~2× on
   accented.
@@ -375,12 +375,12 @@ The bench harness grew several honesty mechanisms worth keeping:
   the corpus item it was derived from; the test reports, per library, how many
   items matched and where that queried item ranked (`21 @1`, `959 @315`, `✗`).
   Caught the headline facts: Krino v1's `aggressive` mode reproduced microfuzz
-  cell-for-cell (that mode *was* the parent's behaviour; `smart` is the change,
+  cell-for-cell (that mode _was_ the parent's behaviour; `smart` is the change,
   and v2 removed the legacy mode);
   uFuzzy silently returns 0 on accent-stripped queries without `latinize`; typo
   engines rank well but return 3–10× the true hit count.
 - **Pass column + corpus-wide mean.** The accented perf table marks configs
-  that don't fold diacritics (fast at an easier job), and an *all libraries*
+  that don't fold diacritics (fast at an easier job), and an _all libraries_
   row pools per-query ms across every config — which showed the two corpora are
   equally hard overall (~0.45 / ~4 / ~43 ms at 1k/10k/100k): diacritics shift
   who pays, not the total.
