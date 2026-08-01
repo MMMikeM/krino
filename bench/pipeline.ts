@@ -82,6 +82,72 @@ const overlay = <T>(into: Record<string, T>, from: Record<string, T>): void => {
 	}
 };
 
+// An --only run splices cells measured today into a matrix measured earlier,
+// which is only honest if the machine is comparable across the two sessions.
+// Re-time one library the run does NOT touch and require its committed value
+// to reproduce: fail past 25%, warn past 10%.
+const anchorCheck = (artifact: Artifact): void => {
+	const matches = (variant: string): boolean =>
+		variant.toLowerCase().includes(ONLY.toLowerCase());
+	const anchor = ["fuzzysort", "uFuzzy", "krino"].find((v) => !matches(v));
+	if (!anchor) return;
+	console.error(`anchor: re-timing ${anchor} short-word@10k against the committed matrix…`);
+	const out = execFileSync(
+		process.execPath,
+		[`${here}run.ts`, anchor, "short-word", "--count=3", "--size=10k", "--json"],
+		{ cwd: here, encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] },
+	);
+	const fresh = JSON.parse(out) as ColdMatrix;
+	for (const [corpus, kinds] of Object.entries(fresh)) {
+		for (const sizes of Object.values(kinds)) {
+			for (const [size, variants] of Object.entries(sizes)) {
+				for (const [variant, cell] of Object.entries(variants)) {
+					const committed = artifact.coldMatrix[corpus]?.["short-word"]?.[size]?.[variant];
+					if (!committed) continue;
+					const drift = Math.abs(cell.queryMs - committed.queryMs) / committed.queryMs;
+					const line = `${corpus}/short-word@10k ${variant}: ${committed.queryMs.toFixed(2)} -> ${cell.queryMs.toFixed(2)} ms (${(100 * drift).toFixed(0)}%)`;
+					if (drift > 0.25) {
+						throw new Error(
+							`anchor drifted past 25% — this machine is not comparable to the session that measured the matrix; rerun the full matrix instead.\n  ${line}`,
+						);
+					}
+					if (drift > 0.1) console.error(`WARNING anchor drift: ${line}`);
+				}
+			}
+		}
+	}
+};
+
+// The expected-changed vs expected-stable heuristic: every re-measured cell
+// against its committed value, so the operator can confirm the cells that
+// moved are the ones the change predicts.
+const reportDeltas = (artifact: Artifact, fresh: ColdMatrix): void => {
+	const rows: { cell: string; pct: number; line: string }[] = [];
+	for (const [corpus, kinds] of Object.entries(fresh)) {
+		for (const [kind, sizes] of Object.entries(kinds)) {
+			for (const [size, variants] of Object.entries(sizes)) {
+				for (const [variant, cell] of Object.entries(variants)) {
+					const committed = artifact.coldMatrix[corpus]?.[kind]?.[size]?.[variant];
+					if (!committed) continue;
+					const pct = (100 * (cell.queryMs - committed.queryMs)) / committed.queryMs;
+					rows.push({
+						cell: `${corpus}/${kind}@${Number(size) / 1000}k ${variant}`,
+						pct,
+						line: `${committed.queryMs.toFixed(2)} -> ${cell.queryMs.toFixed(2)} ms  ${pct > 0 ? "+" : ""}${pct.toFixed(0)}%`,
+					});
+				}
+			}
+		}
+	}
+	rows.sort((a, b) => a.pct - b.pct);
+	const moved = rows.filter((r) => Math.abs(r.pct) >= 10);
+	console.error(
+		`\ndelta report: ${rows.length} cells re-measured, ${rows.length - moved.length} within ±10%.`,
+	);
+	for (const r of moved) console.error(`  ${r.cell.padEnd(46)} ${r.line}`);
+	console.error("");
+};
+
 const runCold = (artifact: Artifact): void => {
 	ensureRawDir();
 	if (SCOPE) {
@@ -93,11 +159,14 @@ const runCold = (artifact: Artifact): void => {
 		runner("all", corpus || "all", size ? [`--size=${size}`] : []);
 		return;
 	}
+	if (ONLY) anchorCheck(artifact);
 	console.error(`cold stage: full matrix, ${RUNS} processes per cell…`);
 	const out = fileURLToPath(rawFile("cold-matrix.json"));
 	runner(ONLY || "all", "all", [`--out=${out}`]);
 	if (ONLY) {
-		overlay(artifact.coldMatrix, readRaw<ColdMatrix>("cold-matrix.json"));
+		const fresh = readRaw<ColdMatrix>("cold-matrix.json");
+		reportDeltas(artifact, fresh);
+		overlay(artifact.coldMatrix, fresh);
 	} else {
 		artifact.coldMatrix = readRaw<ColdMatrix>("cold-matrix.json");
 	}
