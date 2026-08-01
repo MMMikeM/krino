@@ -11,7 +11,7 @@ Stage costs are measured by difference, so they overlap slightly.
 ```mermaid
 flowchart LR
     L["createFuzzySearch(list)"] --> S["resolve spec defaults"]
-    S --> B["allocate fieldText, normalisedText, fieldMasks"]
+    S --> B["allocate trimmedFields, normalisedFields, fieldMasks"]
     B --> D(["done — ~0.8 ms at 100k"])
 ```
 

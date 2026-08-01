@@ -20,9 +20,9 @@ const sortByScore = <T>(a: FuzzyResult<T>, b: FuzzyResult<T>): number => a.score
 
 // matchField returns fresh Range tuples per call, so mutating in place is safe.
 const shiftRanges = (ranges: [number, number][], lead: number): void => {
-	for (const r of ranges) {
-		r[0] += lead;
-		r[1] += lead;
+	for (const range of ranges) {
+		range[0] += lead;
+		range[1] += lead;
 	}
 };
 
@@ -48,11 +48,35 @@ export const fuzzyMatch = (
 	return result;
 };
 
+type ResolvedSpec<T> = { text: (item: T) => string | null; acronym: boolean; atBest: number };
+
+// The whole-corpus rescue index: per-item union masks and bigram sets.
+type UnionIndex = { masks: Int32Array; bigramsLo: Int32Array; bigramsHi: Int32Array };
+
+// Resolved once: the per-item loops run count × specs times and shouldn't
+// re-default options or capture per-item closures.
+const resolveFieldSpecs = <T>(
+	extract?: ((item: T) => string | null) | FieldSpec<T>[],
+): ResolvedSpec<T>[] => {
+	const specs: FieldSpec<T>[] = !extract
+		? [{ text: (item) => item as unknown as string }]
+		: typeof extract === "function"
+			? [{ text: extract }]
+			: extract;
+	return specs.map((spec) => ({
+		text: spec.text,
+		acronym: spec.acronym ?? false,
+		atBest: spec.atBest ?? 0,
+	}));
+};
+
 /**
  * Creates a fuzzy search function for a collection.
  *
  * Queries shorter than two characters return no results — one character matches
  * most of any real collection and ranks none of it.
+ * An empty spec array is honoured as written: the searcher has no searchable
+ * fields and every query returns no results.
  *
  * @example
  * // Array of strings
@@ -75,24 +99,12 @@ export function createFuzzySearch<T>(
 	list: T[],
 	getText: (item: T) => string | null,
 ): FuzzySearcher<T>;
-export function createFuzzySearch<T>(list: T[], fields: FieldSpec<T>[]): FuzzySearcher<T>;
+export function createFuzzySearch<T>(list: T[], specs: FieldSpec<T>[]): FuzzySearcher<T>;
 export function createFuzzySearch<T>(
 	list: T[],
 	extract?: ((item: T) => string | null) | FieldSpec<T>[],
 ): FuzzySearcher<T> {
-	const specs: FieldSpec<T>[] = !extract
-		? [{ text: (item) => item as unknown as string }]
-		: typeof extract === "function"
-			? [{ text: extract }]
-			: extract;
-
-	// Resolved once: the per-item loops run count × specs times and shouldn't
-	// re-default options or capture per-item closures.
-	const resolvedSpecs = specs.map((s) => ({
-		text: s.text,
-		acronym: s.acronym ?? false,
-		atBest: s.atBest ?? 0,
-	}));
+	const resolvedSpecs = resolveFieldSpecs(extract);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
 
@@ -100,9 +112,9 @@ export function createFuzzySearch<T>(
 	// are a few percent of the corpus and recur across keystrokes, so this warms
 	// to the working set instead of the whole list.
 	// oxlint-disable-next-line unicorn/no-new-array
-	const fieldText: (string | undefined)[] = new Array(count * specCount);
+	const trimmedFields: (string | undefined)[] = new Array(count * specCount);
 	// oxlint-disable-next-line unicorn/no-new-array
-	const normalisedText: (string | undefined)[] = new Array(count * specCount);
+	const normalisedFields: (string | undefined)[] = new Array(count * specCount);
 	const fieldMasks = new Int32Array(count * specCount);
 	// Allocated only if any field has leading whitespace — real data virtually
 	// never does.
@@ -112,15 +124,13 @@ export function createFuzzySearch<T>(
 	// costs a whole-list pass. Only the one-edit rescue needs it — the literal
 	// gate runs against the caller's own strings — so it is built the first time
 	// a query does, and never for a session whose queries all match literally.
-	let unionMasks: Int32Array | null = null;
-	let bigramLo: Int32Array | null = null;
-	let bigramHi: Int32Array | null = null;
-	const buildUnionMasks = (): Int32Array => {
+	let unionIndex: UnionIndex | null = null;
+	const buildUnionIndex = (): UnionIndex => {
 		// With one field per item (every plain string list) the per-field masks ARE
 		// the union masks, so the arrays are shared rather than duplicated.
 		const masks = specCount === 1 ? fieldMasks : new Int32Array(count);
-		const lo = new Int32Array(count);
-		const hi = new Int32Array(count);
+		const bigramsLo = new Int32Array(count);
+		const bigramsHi = new Int32Array(count);
 		const bigrams = { lo: 0, hi: 0 };
 		for (let i = 0; i < count; i++) {
 			const item = list[i];
@@ -128,35 +138,32 @@ export function createFuzzySearch<T>(
 			bigrams.lo = 0;
 			bigrams.hi = 0;
 			for (let f = 0; f < specCount; f++) {
-				const text = resolvedSpecs[f].text(item) || "";
-				const mask = rawFieldScan(text, bigrams);
+				const raw = resolvedSpecs[f].text(item) || "";
+				const mask = rawFieldScan(raw, bigrams);
 				fieldMasks[i * specCount + f] = mask;
 				union |= mask;
 			}
 			masks[i] = union;
-			lo[i] = bigrams.lo;
-			hi[i] = bigrams.hi;
+			bigramsLo[i] = bigrams.lo;
+			bigramsHi[i] = bigrams.hi;
 		}
-		unionMasks = masks;
-		bigramLo = lo;
-		bigramHi = hi;
-		return masks;
+		return { masks, bigramsLo, bigramsHi };
 	};
 
 	const materialise = (i: number): void => {
 		const base = i * specCount;
-		if (normalisedText[base] !== undefined) return;
+		if (normalisedFields[base] !== undefined) return;
 		const item = list[i];
 		for (let f = 0; f < specCount; f++) {
 			const raw = resolvedSpecs[f].text(item) || "";
 			const lead = raw.length - raw.trimStart().length;
 			if (lead) (leads ??= new Int32Array(count * specCount))[base + f] = lead;
 			const field = raw.trim();
-			fieldText[base + f] = field;
-			const normalised = normaliseText(field);
-			normalisedText[base + f] = normalised;
+			trimmedFields[base + f] = field;
+			const normalisedField = normaliseText(field);
+			normalisedFields[base + f] = normalisedField;
 			// Already filled, with strictly more bits, if the union scan ran.
-			if (unionMasks === null) fieldMasks[base + f] = charMask(normalised);
+			if (unionIndex === null) fieldMasks[base + f] = charMask(normalisedField);
 		}
 	};
 
@@ -167,23 +174,25 @@ export function createFuzzySearch<T>(
 	// match set itself is not monotone (a field can match "fox brown" via the
 	// multi-word tier while failing "fox brow"). The two lists double-buffer so
 	// the query path stays allocation-free.
-	let cachedQuery = "";
-	let cachedMultiWord = false;
-	let cachedSurvivors: Int32Array | null = null;
-	let spare: Int32Array | null = null;
-	let cachedCount = 0;
+	const survivorCache = {
+		query: "",
+		multiWord: false,
+		survivors: null as Int32Array | null,
+		spare: null as Int32Array | null,
+		count: 0,
+	};
 
 	return (query: string) => {
 		const normalisedQuery = normaliseText(query);
 		if (normalisedQuery.length < MIN_QUERY_LENGTH) return [];
 
-		const q = prepareQuery(query, normalisedQuery);
-		const { queryMask } = q;
+		const prepared = prepareQuery(query, normalisedQuery);
+		const { queryMask } = prepared;
 		// Same predicate matchField's mask gate uses, so the two cannot drift.
-		const rescuable = admitsMissingClass(normalisedQuery, q.queryWords);
-		const multiWord = q.queryWords.length > 1;
+		const relaxable = admitsMissingClass(normalisedQuery, prepared.queryWords);
+		const multiWord = prepared.queryWords.length > 1;
 
-		const survivors = (spare ??= new Int32Array(count));
+		const survivors = (survivorCache.spare ??= new Int32Array(count));
 		let survivorCount = 0;
 		let results: FuzzyResult<T>[] = [];
 		// A correction scores at least TYPO_PENALTY (2.1), so once RESCUE_BUDGET
@@ -192,7 +201,7 @@ export function createFuzzySearch<T>(
 		// above 2.1 too, so they cannot crowd a correction out of the count.
 		let literalHits = 0;
 
-		const consider = (i: number, noRescue: boolean, gated = false): void => {
+		const scoreItem = (i: number, mayRescue: boolean, preGated = false): void => {
 			materialise(i);
 			const base = i * specCount;
 			let bestScore = MAX_SAFE_INTEGER;
@@ -201,13 +210,13 @@ export function createFuzzySearch<T>(
 			for (let f = 0; f < specCount; f++) {
 				const spec = resolvedSpecs[f];
 				const result = matchField(
-					fieldText[base + f] as string,
-					normalisedText[base + f] as string,
+					trimmedFields[base + f] as string,
+					normalisedFields[base + f] as string,
 					fieldMasks[base + f],
-					q,
+					prepared,
 					spec.acronym,
-					noRescue || literalHits >= RESCUE_BUDGET,
-					gated,
+					mayRescue && literalHits < RESCUE_BUDGET,
+					preGated,
 				);
 				if (result) {
 					// Fresh object per matchField call, so the atBest shift can mutate.
@@ -229,9 +238,9 @@ export function createFuzzySearch<T>(
 		};
 
 		const narrowed =
-			cachedSurvivors !== null &&
-			normalisedQuery.startsWith(cachedQuery) &&
-			multiWord === cachedMultiWord;
+			survivorCache.survivors !== null &&
+			normalisedQuery.startsWith(survivorCache.query) &&
+			multiWord === survivorCache.multiWord;
 
 		// Every field the ladder can match outright, none of the near-misses only
 		// a correction reaches. Needs no union masks — it runs against the
@@ -239,31 +248,31 @@ export function createFuzzySearch<T>(
 		const literalPass = (): boolean => {
 			if (narrowed) {
 				// The gate runs out here because its verdict is what shrinks the
-				// cached set for the next keystroke; `gated` stops matchField
+				// cached set for the next keystroke; `preGated` stops matchField
 				// repeating it on the same string.
-				const gate: RegExp | null = multiWord ? q.presenceGate : q.fuzzyGate;
-				const cached = cachedSurvivors as Int32Array;
-				for (let k = 0; k < cachedCount; k++) {
+				const gate: RegExp | null = multiWord ? prepared.presenceGate : prepared.fuzzyGate;
+				const cached = survivorCache.survivors as Int32Array;
+				for (let k = 0; k < survivorCache.count; k++) {
 					const i = cached[k];
 					const base = i * specCount;
 					let admitted = gate === null;
 					for (let f = 0; f < specCount && !admitted; f++) {
-						admitted = gate!.test(normalisedText[base + f] as string);
+						admitted = gate!.test(normalisedFields[base + f] as string);
 					}
 					if (!admitted) continue;
 					survivors[survivorCount++] = i;
-					consider(i, true, specCount === 1);
+					scoreItem(i, false, specCount === 1);
 				}
 				return true;
 			}
-			if (unionMasks !== null) {
+			if (unionIndex !== null) {
 				// A superset of what the gate admits, so caching these survivors
 				// keeps the narrowing sound.
-				const masks = unionMasks;
+				const masks = unionIndex.masks;
 				for (let i = 0; i < count; i++) {
 					if ((queryMask & ~masks[i]) !== 0) continue;
 					survivors[survivorCount++] = i;
-					consider(i, true);
+					scoreItem(i, false);
 				}
 				return true;
 			}
@@ -279,7 +288,7 @@ export function createFuzzySearch<T>(
 				}
 				if (!admitted) continue;
 				survivors[survivorCount++] = i;
-				consider(i, true);
+				scoreItem(i, false);
 			}
 			return true;
 		};
@@ -289,25 +298,40 @@ export function createFuzzySearch<T>(
 		// only thing that forces the whole-corpus union scan; most sessions never
 		// reach it.
 		const relaxedPass = (): void => {
-			const masks = unionMasks ?? buildUnionMasks();
-			const pairsLo = bigramLo as Int32Array;
-			const pairsHi = bigramHi as Int32Array;
-			const bigramGate = rescuable ? buildRescueBigramGate(normalisedQuery) : null;
+			const { masks, bigramsLo, bigramsHi } = (unionIndex ??= buildUnionIndex());
+			const bigramGate = relaxable ? buildRescueBigramGate(normalisedQuery) : null;
 			results = [];
 			survivorCount = 0;
 			literalHits = 0;
 			for (let i = 0; i < count; i++) {
 				const missingClasses = queryMask & ~masks[i];
-				if (rescuable ? missingClasses & (missingClasses - 1) : missingClasses) continue;
+				if (relaxable ? missingClasses & (missingClasses - 1) : missingClasses) continue;
 				if (missingClasses !== 0 && bigramGate !== null) {
 					// Exactly one class absent: only an edit at that class's position
 					// can rescue, so the query's remaining bigrams must all be present
 					// (see buildRescueBigramGate).
 					const b = 31 - Math.clz32(missingClasses);
-					if ((bigramGate.reqLo[b] & ~pairsLo[i]) | (bigramGate.reqHi[b] & ~pairsHi[i])) continue;
+					if (
+						(bigramGate.requiredLo[b] & ~bigramsLo[i]) |
+						(bigramGate.requiredHi[b] & ~bigramsHi[i])
+					) {
+						continue;
+					}
 				}
 				survivors[survivorCount++] = i;
-				consider(i, false);
+				scoreItem(i, true);
+			}
+		};
+
+		const commitSurvivorCache = (seedNextQuery: boolean): void => {
+			survivorCache.query = normalisedQuery;
+			survivorCache.multiWord = multiWord;
+			if (seedNextQuery) {
+				survivorCache.spare = survivorCache.survivors; // the retired list becomes the next scratch buffer
+				survivorCache.survivors = survivors;
+				survivorCache.count = survivorCount;
+			} else {
+				survivorCache.survivors = null;
 			}
 		};
 
@@ -315,22 +339,13 @@ export function createFuzzySearch<T>(
 		// A correction can only matter while fewer than a page of literal hits
 		// exist; below that the near-misses have to be looked at.
 		let cacheable = ranLiteral;
-		if (!ranLiteral || (rescuable && literalHits < RESCUE_BUDGET)) {
+		if (!ranLiteral || (relaxable && literalHits < RESCUE_BUDGET)) {
 			// The relaxed set is not a gate-passing set, so it cannot seed the
 			// cache; the next query starts from a full pass.
 			cacheable = false;
 			relaxedPass();
 		}
-
-		cachedQuery = normalisedQuery;
-		cachedMultiWord = multiWord;
-		if (cacheable) {
-			spare = cachedSurvivors; // the retired list becomes the next scratch buffer
-			cachedSurvivors = survivors;
-			cachedCount = survivorCount;
-		} else {
-			cachedSurvivors = null;
-		}
+		commitSurvivorCache(cacheable);
 
 		return results.sort(sortByScore);
 	};

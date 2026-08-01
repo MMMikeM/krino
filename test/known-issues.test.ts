@@ -23,7 +23,7 @@ describe("bug 1: punctuation is a word boundary", () => {
 	});
 });
 
-describe("bug 2: boundary-contains scans past mid-word occurrences", () => {
+describe("bug 2: the boundary tier scans past mid-word occurrences", () => {
 	it("a later occurrence at a word boundary earns the boundary tier", () => {
 		expect(fuzzyMatch("actor factor model", "actor")?.score).toBe(0.5); // prefix
 		expect(fuzzyMatch("factor actor model", "actor")?.score).toBe(0.9); // standalone 'actor'
@@ -59,10 +59,10 @@ describe("bug 6: highlight width uses the normalised query length", () => {
 	});
 });
 
-describe("hazard (documentation, not a bug): smart fuzzy over long text", () => {
+describe("hazard (documentation, not a bug): fuzzy chains over long text", () => {
 	// Still true after the fixes: chunks only need a word-boundary start or a
 	// 3-char run, so short queries assemble junk chains over long vocabulary.
-	// Scope smart to short labels; the density floor rejects sparse chains.
+	// Scope the fuzzy tier to short labels; the density floor rejects sparse chains.
 	it("'zebra' still matches text containing only 'zero' and 'branch'", () => {
 		const result = fuzzyMatch("zero cost branch prediction and other stories", "zebra");
 		expect(result).not.toBeNull();

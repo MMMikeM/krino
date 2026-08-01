@@ -9,7 +9,7 @@ The package is `krino`; the working directory is still `mikrofuzz` and the old p
 - **No runtime dependencies.** Ever. `devDependencies` only. The `bench` workspace is the exception that isn't: it is `private: true`, never published, and depends on the eight comparison libraries on purpose.
 - **Nothing platform-specific in `src/`.** No `node:` imports, no DOM, nothing outside ES2022 — `tsconfig.json` pins `lib: ["ES2022"]` so a stray global is a compile error rather than a runtime surprise on Workers. `node:fs` belongs to `bench/` and `docs/` scripts only.
 - **`isolatedDeclarations` is on.** Declarations come from oxc, not from the TypeScript compiler, so every export needs an explicit type annotation (`export const wordChar: RegExp = …`). Inference a human finds obvious still fails the build.
-- **`normalizeText` is offset-preserving.** Exactly one code unit out per code unit of `NFC(str).trim()` in. Every `Range` the library returns indexes the caller's own string, so a fold that changes length silently corrupts every highlight. New folds go through `computeFold`'s length check — no exceptions, however tempting the Unicode edge case.
+- **`normaliseText` is offset-preserving.** Exactly one code unit out per code unit of `NFC(text).trim()` in. Every `Range` the library returns indexes the caller's own string, so a fold that changes length silently corrupts every highlight. New folds go through `computeFold`'s length check — no exceptions, however tempting the Unicode edge case.
 - **Gates may only false-pass, never false-reject.** `charMask`, `buildPresenceGate`, `buildFuzzyGate` and the prefix-narrowing survivor cache exist purely to skip work. A gate that rejects a field some tier would have matched is a correctness bug, not a tuning question. The monotonicity argument in `search.ts` is what licenses reusing survivors across keystrokes; changing any gate means rechecking it.
 - **`SCORES.CONTAINS` is a published dividing line.** At or below it means "the query text appears here"; above it is a fuzzy chain or a one-edit rescue, and only `tier` tells those apart. `TYPO_PENALTY` (2.1) is sized so even a corrected exact hit sorts below a true `contains`; shrinking it inverts the guarantee and measurably costs MRR (CHANGELOG 2.0.0 records the measured inversion).
 - Score values and `Tier` strings are public API. README documents them and `test/tier-constants.test.ts` pins them, so a tier rename or a re-priced rung is a breaking change with a CHANGELOG entry.
@@ -43,7 +43,7 @@ Three guards to respect rather than route around:
 
 ## Documentation
 
-**Everything re-exported from `src/index.ts` carries JSDoc** — `fuzzyMatch`, `createFuzzySearch`, `normalizeText`, `splitWords`, `SCORES`, and every public type, fields included. Internal exports get whatever the next reader needs, which is usually a `//` note about why the thing exists rather than what it does.
+**Everything re-exported from `src/index.ts` carries JSDoc** — `fuzzyMatch`, `createFuzzySearch`, `normaliseText`, `splitWords`, `SCORES`, `TYPO_PENALTY`, and every public type, fields included. Internal exports get whatever the next reader needs, which is usually a `//` note about why the thing exists rather than what it does.
 
 JSDoc says what the caller needs and nothing more:
 
@@ -72,7 +72,7 @@ let chunkEnd = chunkStart;
 
 Write comments only for what the code genuinely cannot carry:
 
-- **The invariant, and what breaks without it.** Gates may only false-pass; the survivor cache is sound only because mask bits grow monotonically under query extension; `normalizeText` must stay 1:1 or every published range breaks.
+- **The invariant, and what breaks without it.** Gates may only false-pass; the survivor cache is sound only because mask bits grow monotonically under query extension; `normaliseText` must stay 1:1 or every published range breaks.
 - **Why a tuned number is that number** — one line, plus a pointer to where the measurement lives (`@see docs/benchmarks.md`). The evidence table itself belongs in `docs/`, not in twenty lines above a `const`; source keeps the claim, docs keep the data.
 - **Ordering that looks arbitrary but is load-bearing.** Acronym is tried before contains because a field matching both ways must get the better tier.
 - **Toolchain and protocol landmines** that read as mistakes and get "fixed" back: the `oxlint-disable` on `new Array`, the explicit `RegExp` annotations `isolatedDeclarations` demands.
@@ -89,7 +89,7 @@ Vitest, `test/**/*.test.ts`, importing the public surface from `../src/index` �
 
 Name tests as behaviour, not method — `"a dropped keystroke in an otherwise exact word"`, ``"`score <= SCORES.CONTAINS` selects non-fuzzy matches"``. Prefer a failing assertion that reads as a spec sentence over a comment explaining what the assertion means.
 
-A tier with its own semantics gets its own file (`fuzzy-tier`, `transposed`, `typo-tiers`, `acronym`), and regression tests keep their provenance — `known-issues.test.ts` pins the six v0.x bugs and says so.
+A tier with its own semantics gets its own file (`fuzzy-tier`, `adjacent-swap`, `typo-rescue`, `acronym`), and regression tests keep their provenance — `known-issues.test.ts` pins the six v0.x bugs and says so.
 
 Statistical claims live in `bench/`, where the corpora and the measurement do: the long-text junk rate is asserted by `bench/longtext.test.ts`, gate soundness by `bench/funnel.test.ts`, ranks and result-set sizes by `bench/hits.test.ts`. `test/` pins behaviour and the published constants. `bench/funnel.test.ts` reaches into `../src/gates` on purpose — `dist` doesn't export the gates and shouldn't.
 

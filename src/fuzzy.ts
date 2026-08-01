@@ -5,6 +5,9 @@ import type { HighlightRanges, Range } from "./types";
 // run of matched characters.
 type Chunk = Range;
 
+// A priced chain: the fuzzy tier's score plus the chunks that earned it.
+export type ChainScore = { score: number; ranges: HighlightRanges };
+
 // BASE equals SCORES.CONTAINS (2) by design — a fuzzy match must never beat a
 // true contains — but intentionally NOT the same binding: they mean different
 // things and could diverge.
@@ -22,10 +25,7 @@ const CHUNK_SCORES = {
 // is what keeps the fuzzy tier safe over document-length fields.
 const DENSITY_FLOOR = 0.18;
 
-const scoreChunks = (
-	chunks: Chunk[],
-	normalisedField: string,
-): [number, HighlightRanges] | null => {
+const scoreChunks = (chunks: Chunk[], normalisedField: string): ChainScore | null => {
 	let matched = 0;
 	for (const [start, end] of chunks) matched += end - start + 1;
 	const span = chunks[chunks.length - 1][1] - chunks[0][0] + 1;
@@ -43,15 +43,15 @@ const scoreChunks = (
 		else if (end - start + 1 >= 3) score += CHUNK_SCORES.LONG;
 		else score += CHUNK_SCORES.SCATTERED;
 	}
-	return [score, chunks];
+	return { score, ranges: chunks };
 };
 
 // A chunk may start mid-word only by running 3+ characters; short query tails
 // are exempt, since fewer than 3 remaining characters could never satisfy it.
 const admitsChunk = (
 	normalisedField: string,
-	normalisedQuery: string,
 	at: number,
+	normalisedQuery: string,
 	queryFrom: number,
 ): boolean => {
 	if (at === 0 || isBoundaryChar(normalisedField[at - 1])) return true;
@@ -92,7 +92,7 @@ const chainFrom = (
 		// stepping would re-find the same occurrence per step and turn a far-away
 		// reject into O(gap²).
 		let at = normalisedField.indexOf(queryChar, chunkEnd);
-		while (at > -1 && !admitsChunk(normalisedField, normalisedQuery, at, queryAt)) {
+		while (at > -1 && !admitsChunk(normalisedField, at, normalisedQuery, queryAt)) {
 			at = normalisedField.indexOf(queryChar, at + 1);
 		}
 		if (at === -1) return null;
@@ -115,9 +115,9 @@ const MAX_CHUNK_STARTS = 4;
 export const fuzzyChainMatch = (
 	normalisedField: string,
 	normalisedQuery: string,
-): [number, HighlightRanges] | null => {
+): ChainScore | null => {
 	const firstChar = normalisedQuery[0];
-	let best: [number, HighlightRanges] | null = null;
+	let best: ChainScore | null = null;
 	let attempts = 0;
 
 	for (
@@ -125,12 +125,12 @@ export const fuzzyChainMatch = (
 		start > -1;
 		start = normalisedField.indexOf(firstChar, start + 1)
 	) {
-		if (!admitsChunk(normalisedField, normalisedQuery, start, 0)) continue;
+		if (!admitsChunk(normalisedField, start, normalisedQuery, 0)) continue;
 		if (++attempts > MAX_CHUNK_STARTS) break;
 		const chunks = chainFrom(normalisedField, normalisedQuery, start);
 		if (chunks === null) continue;
 		const scored = scoreChunks(chunks, normalisedField);
-		if (scored !== null && (best === null || scored[0] < best[0])) best = scored;
+		if (scored !== null && (best === null || scored.score < best.score)) best = scored;
 	}
 	return best;
 };

@@ -100,7 +100,8 @@ describe("pre-filter funnel", () => {
 					if (bigramOk && missingClasses !== 0 && bigramGate !== null) {
 						const b = 31 - Math.clz32(missingClasses);
 						bigramOk =
-							((bigramGate.reqLo[b] & ~bigrams[i].lo) | (bigramGate.reqHi[b] & ~bigrams[i].hi)) ===
+							((bigramGate.requiredLo[b] & ~bigrams[i].lo) |
+								(bigramGate.requiredHi[b] & ~bigrams[i].hi)) ===
 							0;
 					}
 					const result = fuzzyMatch(list[i], query);

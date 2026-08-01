@@ -9,5 +9,5 @@
 export { createFuzzySearch, fuzzyMatch } from "./search";
 export { splitWords } from "./boundaries";
 export { normaliseText } from "./normalise";
-export { SCORES } from "./scores";
+export { SCORES, TYPO_PENALTY } from "./scores";
 export type * from "./types";

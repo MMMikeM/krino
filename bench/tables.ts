@@ -127,13 +127,13 @@ const scaleTable = (a: Artifact, corpus: string): string => {
 		const batch = cellOf(a, corpus, "batch", size, lib) as ColdCell;
 		const cold = meanColdOf(a, corpus, size, lib) as number;
 		const oneShot = meanOneShotOf(a, corpus, size, lib) as number;
-		const emphasize = (v: string): string => (lib === "krino" ? `**${v}**` : v);
+		const emphasise = (v: string): string => (lib === "krino" ? `**${v}**` : v);
 		return [
 			lib === "krino" ? "**Krino**" : displayName(lib),
 			`${ms(batch.indexMs)} ms`,
 			`${ms(cold)} ms`,
 			`${ms(oneShot)} ms`,
-			emphasize(pct(oneShot, krinoOneShot)),
+			emphasise(pct(oneShot, krinoOneShot)),
 		];
 	});
 
@@ -169,12 +169,12 @@ const batchTable = (a: Artifact, corpus: string): string => {
 
 	const rows = shown.map((lib) => {
 		const batch = cellOf(a, corpus, "batch", size, lib) as ColdCell;
-		const emphasize = (v: string): string => (lib === "krino" ? `**${v}**` : v);
+		const emphasise = (v: string): string => (lib === "krino" ? `**${v}**` : v);
 		return [
 			lib === "krino" ? "**Krino**" : displayName(lib),
 			`${ms(batch.restMs ?? batch.queryMs)} ms`,
 			`${ms(batch.queryMs)} ms`,
-			emphasize(pct(batch.queryMs, krinoBatch.queryMs)),
+			emphasise(pct(batch.queryMs, krinoBatch.queryMs)),
 		];
 	});
 

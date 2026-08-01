@@ -1,10 +1,10 @@
 import { isBoundaryChar, splitWords, wordChar } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
-import { buildFuzzyGate, buildPresenceGate, charMask, maskIsExact } from "./gates";
+import { buildFuzzyGate, buildPresenceGate, charMask, isExactMask } from "./gates";
 import {
 	admitsMissingClass,
-	cheaper,
 	isRescuableQuery,
+	preferCheaper,
 	missingCharRescue,
 	type RescueContext,
 	rescueField,
@@ -12,11 +12,12 @@ import {
 	type RescueVariant,
 } from "./rescue";
 import { SCORES } from "./scores";
-import type { MatchResult, Range, Tier } from "./types";
+import type { MatchResult, Range } from "./types";
 
 // Query-derived state, built once per query and reused across every field. The
-// lazy fields share one protocol: undefined = not built yet, null = the query
-// admits none.
+// lazy rescue fields share one protocol: undefined = not built yet, null = the
+// query admits none. Declared required so every PreparedQuery keeps one object
+// shape as rescue.ts fills them in.
 export type PreparedQuery = {
 	query: string;
 	normalisedQuery: string;
@@ -24,10 +25,10 @@ export type PreparedQuery = {
 	queryMask: number;
 	presenceGate: RegExp | null;
 	fuzzyGate: RegExp;
-	rescue?: RescueState | null;
-	lastRescue?: PreparedQuery;
-	wordOffsets?: number[];
-	wordVariants?: (RescueVariant[] | null)[];
+	rescueState: RescueState | null | undefined;
+	lastCorrection: PreparedQuery | undefined;
+	wordStarts: number[] | undefined;
+	wordVariants: (RescueVariant[] | null)[] | undefined;
 };
 
 // The raw query is stored trimmed so the exact-case tiers treat padding as
@@ -37,7 +38,7 @@ export type PreparedQuery = {
 export const prepareQuery = (query: string, normalisedQuery: string): PreparedQuery => {
 	const queryMask = charMask(normalisedQuery);
 	const queryWords = splitWords(normalisedQuery);
-	const needsPresenceGate = queryWords.length > 1 && !maskIsExact(queryMask);
+	const needsPresenceGate = queryWords.length > 1 && !isExactMask(queryMask);
 	return {
 		query: query.trim(),
 		normalisedQuery,
@@ -45,6 +46,10 @@ export const prepareQuery = (query: string, normalisedQuery: string): PreparedQu
 		queryMask,
 		presenceGate: needsPresenceGate ? buildPresenceGate(normalisedQuery) : null,
 		fuzzyGate: buildFuzzyGate(normalisedQuery),
+		rescueState: undefined,
+		lastCorrection: undefined,
+		wordStarts: undefined,
+		wordVariants: undefined,
 	};
 };
 
@@ -54,26 +59,26 @@ const sortByRangeStart = (a: Range, b: Range): number => a[0] - b[0];
 // initial "p", or "Lao People's Democratic Republic" could never match "lpdr".
 const wordRun = /[\p{L}\p{N}_]+(?:'[\p{L}\p{N}_]+)*/gu;
 
-const wholeWordOccurrence = (haystack: string, word: string): number => {
-	let idx = haystack.indexOf(word);
-	while (idx > -1) {
-		const end = idx + word.length;
+const wholeWordOccurrence = (haystack: string, needle: string): number => {
+	let at = haystack.indexOf(needle);
+	while (at > -1) {
+		const end = at + needle.length;
 		if (
-			(idx === 0 || !wordChar.test(haystack[idx - 1])) &&
+			(at === 0 || !wordChar.test(haystack[at - 1])) &&
 			(end === haystack.length || !wordChar.test(haystack[end]))
 		) {
-			return idx;
+			return at;
 		}
-		idx = haystack.indexOf(word, idx + 1);
+		at = haystack.indexOf(needle, at + 1);
 	}
 	return -1;
 };
 
 const boundaryOccurrence = (haystack: string, needle: string): number => {
-	let idx = haystack.indexOf(needle);
-	while (idx > -1) {
-		if (idx === 0 || isBoundaryChar(haystack[idx - 1])) return idx;
-		idx = haystack.indexOf(needle, idx + 1);
+	let at = haystack.indexOf(needle);
+	while (at > -1) {
+		if (at === 0 || isBoundaryChar(haystack[at - 1])) return at;
+		at = haystack.indexOf(needle, at + 1);
 	}
 	return -1;
 };
@@ -81,54 +86,57 @@ const boundaryOccurrence = (haystack: string, needle: string): number => {
 const boundaryTier = (
 	haystack: string,
 	needle: string,
-	score: number,
-	tier: Tier,
+	tier: "boundary-exact" | "boundary",
 ): MatchResult | null => {
-	const idx = boundaryOccurrence(haystack, needle);
-	return idx > -1 ? { score, tier, ranges: [[idx, idx + needle.length - 1]] } : null;
+	const at = boundaryOccurrence(haystack, needle);
+	if (at === -1) return null;
+	const score = tier === "boundary-exact" ? SCORES.BOUNDARY_EXACT : SCORES.BOUNDARY;
+	return { score, tier, ranges: [[at, at + needle.length - 1]] };
 };
 
 const multiWordTier = (normalisedField: string, queryWords: string[]): MatchResult | null => {
 	const ranges: Range[] = [];
-	for (const w of queryWords) {
-		const i = wholeWordOccurrence(normalisedField, w);
-		if (i === -1) return null;
-		ranges.push([i, i + w.length - 1]);
+	for (const word of queryWords) {
+		const at = wholeWordOccurrence(normalisedField, word);
+		if (at === -1) return null;
+		ranges.push([at, at + word.length - 1]);
 	}
 	return { score: SCORES.MULTI_WORD, tier: "multi-word", ranges: ranges.sort(sortByRangeStart) };
 };
 
-const acronymMatch = (normalisedField: string, normalisedQuery: string): MatchResult | null => {
+const acronymTier = (normalisedField: string, normalisedQuery: string): MatchResult | null => {
 	if (normalisedQuery.length < 2) return null;
-	const offsets: number[] = [];
+	const wordStarts: number[] = [];
 	let initials = "";
-	for (const m of normalisedField.matchAll(wordRun)) {
-		offsets.push(m.index);
-		initials += m[0][0];
+	for (const match of normalisedField.matchAll(wordRun)) {
+		wordStarts.push(match.index);
+		initials += match[0][0];
 	}
-	const hit = initials.indexOf(normalisedQuery);
-	if (hit === -1) return null;
+	const at = initials.indexOf(normalisedQuery);
+	if (at === -1) return null;
 	return {
 		score: SCORES.ACRONYM,
 		tier: "acronym",
-		ranges: offsets.slice(hit, hit + normalisedQuery.length).map((o) => [o, o] as Range),
+		ranges: wordStarts
+			.slice(at, at + normalisedQuery.length)
+			.map((wordStart) => [wordStart, wordStart] as Range),
 	};
 };
 
 const containsTier = (normalisedField: string, normalisedQuery: string): MatchResult | null => {
-	const idx = normalisedField.indexOf(normalisedQuery);
-	return idx > -1
+	const at = normalisedField.indexOf(normalisedQuery);
+	return at > -1
 		? {
 				score: SCORES.CONTAINS,
 				tier: "contains",
-				ranges: [[idx, idx + normalisedQuery.length - 1]],
+				ranges: [[at, at + normalisedQuery.length - 1]],
 			}
 		: null;
 };
 
 const fuzzyOrRescue = (
 	rescue: RescueContext,
-	rescued: boolean,
+	mayRescue: boolean,
 	rescuable: boolean,
 ): MatchResult | null => {
 	const { normalisedField, prepared } = rescue;
@@ -141,58 +149,37 @@ const fuzzyOrRescue = (
 	}
 	const fuzzy = fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
 	if (fuzzy) {
-		const chain: MatchResult = { score: fuzzy[0], tier: "fuzzy", ranges: fuzzy[1] };
-		if (rescued) return chain;
+		const chain: MatchResult = { score: fuzzy.score, tier: "fuzzy", ranges: fuzzy.ranges };
+		if (!mayRescue) return chain;
 		// A chain assembling is not evidence it is the best reading: the field may
 		// literally contain the corrected word, so both rescues are still priced.
-		const dropped = missingCharRescue(rescue, fuzzy[1]);
+		const dropped = missingCharRescue(rescue, fuzzy.ranges);
 		const corrected = rescuable ? rescueField(rescue) : null;
-		return cheaper(cheaper(dropped, corrected), chain);
+		return preferCheaper(preferCheaper(dropped, corrected), chain);
 	}
 	// The chain can refuse past the gate via its density floor.
 	return rescuable ? rescueField(rescue) : null;
 };
 
-export const matchField = (
+// The literal rungs in ladder order: exact → normalised-exact → prefix →
+// boundary ×2 → multi-word → acronym → contains. Acronym (1.8) outranks
+// contains (2), so it must be tried first — a field matching both ways must
+// get the better tier, or cross-item ordering inverts. Initials never contain
+// a separator, so a multi-word query can never acronym-match.
+const literalTiers = (
 	field: string,
 	normalisedField: string,
-	fieldMask: number,
-	q: PreparedQuery,
+	prepared: PreparedQuery,
 	acronym: boolean,
-	rescued = false,
-	gated = false,
 ): MatchResult | null => {
-	const { query, normalisedQuery, queryWords } = q;
-
-	// `n & (n - 1)` clears the lowest set bit, so it is zero iff at most one
-	// class is absent — and only a substitution or a drop can account for
-	// exactly one, so a genuinely missing class goes straight to the rescue.
-	const rescuable = !rescued && isRescuableQuery(normalisedQuery, queryWords);
-	const missingClasses = q.queryMask & ~fieldMask;
-	const relaxed = rescuable && admitsMissingClass(normalisedQuery, queryWords);
-	if (relaxed ? missingClasses & (missingClasses - 1) : missingClasses) return null;
-
-	let rescue: RescueContext | null = null;
-	const rescueContext = (): RescueContext =>
-		(rescue ??= { field, normalisedField, fieldMask, prepared: q, acronym, missingClasses });
-
-	if (missingClasses !== 0) return rescueField(rescueContext());
-
-	// Multi-word queries must front-gate on the order-independent presence gate:
-	// the multi-word tier matches words out of order, and the subsequence gate
-	// would false-reject them. `gated` means the searcher already ran this exact
-	// gate on this exact string.
-	const frontGate = gated ? null : queryWords.length > 1 ? q.presenceGate : q.fuzzyGate;
-	if (frontGate && !frontGate.test(normalisedField)) {
-		return rescuable ? rescueField(rescueContext()) : null;
-	}
+	const { query, normalisedQuery, queryWords } = prepared;
 
 	if (field === query) {
 		return { score: SCORES.EXACT, tier: "exact", ranges: [[0, field.length - 1]] };
 	}
 	if (normalisedField === normalisedQuery) {
 		return {
-			score: SCORES.NORMALIZED_EXACT,
+			score: SCORES.NORMALISED_EXACT,
 			tier: "normalised-exact",
 			ranges: [[0, normalisedField.length - 1]],
 		};
@@ -201,8 +188,8 @@ export const matchField = (
 		return { score: SCORES.PREFIX, tier: "prefix", ranges: [[0, normalisedQuery.length - 1]] };
 	}
 	const boundary =
-		boundaryTier(field, query, SCORES.BOUNDARY_EXACT, "boundary-exact") ??
-		boundaryTier(normalisedField, normalisedQuery, SCORES.BOUNDARY, "boundary");
+		boundaryTier(field, query, "boundary-exact") ??
+		boundaryTier(normalisedField, normalisedQuery, "boundary");
 	if (boundary) return boundary;
 
 	if (queryWords.length > 1) {
@@ -210,17 +197,54 @@ export const matchField = (
 		if (multi) return multi;
 	}
 
-	// Acronym (1.8) outranks contains (2), so it must be tried first — a field
-	// matching both ways must get the better tier, or cross-item ordering
-	// inverts. Initials never contain a separator, so a multi-word query can
-	// never acronym-match.
 	if (acronym && queryWords.length === 1) {
-		const result = acronymMatch(normalisedField, normalisedQuery);
+		const result = acronymTier(normalisedField, normalisedQuery);
 		if (result) return result;
 	}
 
-	const contains = containsTier(normalisedField, normalisedQuery);
-	if (contains) return contains;
+	return containsTier(normalisedField, normalisedQuery);
+};
 
-	return fuzzyOrRescue(rescueContext(), rescued, rescuable);
+export const matchField = (
+	field: string,
+	normalisedField: string,
+	fieldMask: number,
+	prepared: PreparedQuery,
+	acronym: boolean,
+	mayRescue: boolean = true,
+	preGated: boolean = false,
+): MatchResult | null => {
+	const { normalisedQuery, queryWords } = prepared;
+
+	// `n & (n - 1)` clears the lowest set bit, so it is zero iff at most one
+	// class is absent — and only a substitution or a drop can account for
+	// exactly one, so a genuinely missing class goes straight to the rescue.
+	const rescuable = mayRescue && isRescuableQuery(normalisedQuery, queryWords);
+	const missingClasses = prepared.queryMask & ~fieldMask;
+	const relaxed = rescuable && admitsMissingClass(normalisedQuery, queryWords);
+	if (relaxed ? missingClasses & (missingClasses - 1) : missingClasses) return null;
+
+	let rescue: RescueContext | null = null;
+	const rescueContext = (): RescueContext =>
+		(rescue ??= { field, normalisedField, fieldMask, prepared, acronym, missingClasses });
+
+	if (missingClasses !== 0) return rescueField(rescueContext());
+
+	// Multi-word queries must front-gate on the order-independent presence gate:
+	// the multi-word tier matches words out of order, and the subsequence gate
+	// would false-reject them. `preGated` means the searcher already ran this
+	// exact gate on this exact string.
+	const frontGate = preGated
+		? null
+		: queryWords.length > 1
+			? prepared.presenceGate
+			: prepared.fuzzyGate;
+	if (frontGate && !frontGate.test(normalisedField)) {
+		return rescuable ? rescueField(rescueContext()) : null;
+	}
+
+	return (
+		literalTiers(field, normalisedField, prepared, acronym) ??
+		fuzzyOrRescue(rescueContext(), mayRescue, rescuable)
+	);
 };

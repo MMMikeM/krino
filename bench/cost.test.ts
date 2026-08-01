@@ -31,16 +31,16 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 		const raw = list.map((s) => s.trim());
 		const norm = raw.map(normaliseText);
 		const fieldMask = new Int32Array(list.length);
-		const bigramLo = new Int32Array(list.length);
-		const bigramHi = new Int32Array(list.length);
+		const bigramsLo = new Int32Array(list.length);
+		const bigramsHi = new Int32Array(list.length);
 		const acc = { lo: 0, hi: 0 };
 		for (let i = 0; i < list.length; i++) {
 			fieldMask[i] = charMask(norm[i]);
 			acc.lo = 0;
 			acc.hi = 0;
 			rawFieldScan(list[i], acc);
-			bigramLo[i] = acc.lo;
-			bigramHi[i] = acc.hi;
+			bigramsLo[i] = acc.lo;
+			bigramsHi[i] = acc.hi;
 		}
 
 		const ms = { rawGate: 0, materialise: 0, ladder: 0, full: 0, maskBuild: 0, relaxed: 0 };
@@ -71,7 +71,7 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 			});
 			ms.ladder += time(() => {
 				for (const i of survivors) {
-					if (matchField(raw[i], norm[i], fieldMask[i], q, false, true, true)) sink++;
+					if (matchField(raw[i], norm[i], fieldMask[i], q, false, false, true)) sink++;
 				}
 			});
 
@@ -99,7 +99,7 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 					if (miss & (miss - 1)) return false;
 					if (miss === 0) return true;
 					const b = 31 - Math.clz32(miss);
-					return ((gate.reqLo[b] & ~bigramLo[i]) | (gate.reqHi[b] & ~bigramHi[i])) === 0;
+					return ((gate.requiredLo[b] & ~bigramsLo[i]) | (gate.requiredHi[b] & ~bigramsHi[i])) === 0;
 				};
 				let n = 0;
 				for (let i = 0; i < list.length; i++) if (admits(i)) n++;
@@ -107,7 +107,7 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 				ms.relaxed += time(() => {
 					for (let i = 0; i < list.length; i++) {
 						if (!admits(i)) continue;
-						if (matchField(raw[i], norm[i], fieldMask[i], q, false, false)) sink++;
+						if (matchField(raw[i], norm[i], fieldMask[i], q, false)) sink++;
 					}
 				});
 			}

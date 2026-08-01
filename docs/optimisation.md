@@ -113,6 +113,6 @@ That is why Krino was the library the old shared-process harness distorted most.
 ## Open
 
 - ~~`rawCharMask` has no soundness test~~ — done: `test/raw-mask.test.ts` and `bench/raw-mask.test.ts` pin that the (now fused) `rawFieldScan` mask never drops a bit over either corpus.
-- ~~`fieldMasks` duplicates `unionMasks` for one-field lists~~ — done: `buildUnionMasks` shares the array when `specCount === 1`.
-- The acronym configuration's 3× allocation: `acronymMatch` builds an offsets array and initials string per surviving field, hit or miss. Speed parity with base holds in every published cell, so this is GC pressure only; fix by streaming over module scratch if a heap number ever moves on it.
+- ~~`fieldMasks` duplicates `unionMasks` for one-field lists~~ — done: `buildUnionIndex` shares the array when `specCount === 1`.
+- The acronym configuration's 3× allocation: `acronymTier` builds an offsets array and initials string per surviving field, hit or miss. Speed parity with base holds in every published cell, so this is GC pressure only; fix by streaming over module scratch if a heap number ever moves on it.
 - ~~Build-time flags in `src/flags.ts`~~ — done: the missing-class dispatch is unconditional (a variant needing a class the field lacks always fails the containment test it skips, so the short-circuit is result-neutral), and `src/flags.ts` plus the `bench/variants.ts` machinery are deleted.

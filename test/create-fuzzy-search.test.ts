@@ -21,6 +21,10 @@ describe("string collections", () => {
 	it("empty collection → []", () => {
 		expect(createFuzzySearch([])("anything")).toEqual([]);
 	});
+
+	it("an empty spec array means no searchable fields, so every query → []", () => {
+		expect(createFuzzySearch(["apple"], [])("apple")).toEqual([]);
+	});
 });
 
 describe("empty and whitespace queries", () => {

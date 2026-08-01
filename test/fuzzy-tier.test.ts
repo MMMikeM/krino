@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { fuzzyMatch } from "../src/index";
 
-describe("smart chunk scoring", () => {
+describe("fuzzy chunk scoring", () => {
 	it("word-boundary chunks", () => {
 		const r = fuzzyMatch("hello world", "hewo");
 		expect(r?.score).toBeCloseTo(2.8); // 2 + 0.4 + 0.4 (two word-start chunks)
@@ -44,7 +44,7 @@ describe("smart chunk scoring", () => {
 	});
 });
 
-describe("scorer honors the same word boundaries as the matcher", () => {
+describe("scorer honours the same word boundaries as the matcher", () => {
 	// The scorer must credit every chunk the matcher admits, or punctuated
 	// corpora get over-penalised for the exact chunks admission allowed.
 	it("scores a chunk after a hyphen like one after a space", () => {

@@ -2,6 +2,12 @@
 
 ## 2.0.0 (unreleased)
 
+- **Breaking: `SCORES.NORMALIZED_EXACT` is now `SCORES.NORMALISED_EXACT`.**
+  The last US-spelled public identifier follows `normaliseText` British, and the key now matches its own tier string `"normalised-exact"`; the value (0.1) is unchanged.
+- **Added: `TYPO_PENALTY` is exported.**
+  It is the published arithmetic behind every `corrected` score (corrected tier + 2.1), so callers can name the threshold instead of hardcoding it.
+- **Internal: the vocabulary and every internal signature were audited and renamed** — one name per concept, no swap-hazard parameter runs, main flows decomposed into named steps (see `docs/vocabulary.md`).
+  No behaviour change; result sets, scores and tiers are byte-identical.
 - **Breaking: `normalizeText` is now `normaliseText`.**
   The one US-spelled identifier on the public surface goes British with the rest of the prose; no behaviour change.
   Update imports: `import { normaliseText } from "krino"`.

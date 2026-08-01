@@ -1,7 +1,7 @@
 {
   "name": "krino",
   "version": "1.0.0",
-  "description": "Zero-dependency fuzzy search library with smart word-boundary matching",
+  "description": "Zero-dependency fuzzy matching with tiered scoring, highlight ranges, and one-edit typo rescue",
   "type": "module",
   "sideEffects": false,
   "exports": {

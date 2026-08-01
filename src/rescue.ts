@@ -16,12 +16,12 @@ export type RescueContext = {
 };
 
 export type RescueVariant = {
-	text: string;
-	rawText: string;
-	shortens: boolean;
-	// A subset of the query mask, so `mask & missingClasses` is exactly "the
-	// field lacks a class this correction still requires".
-	mask: number;
+	normalised: string;
+	raw: string;
+	isDrop: boolean;
+	// A subset of the query mask, so `requiredMask & missingClasses` is exactly
+	// "the field lacks a class this correction still requires".
+	requiredMask: number;
 	prepared: PreparedQuery | null;
 };
 
@@ -46,35 +46,43 @@ const minTypoQueryLength = (fieldLength: number): number =>
 // floor can take, and a larger constant would make that gate false-reject.
 const MIN_TYPO_QUERY_LENGTH = minTypoQueryLength(0);
 
-export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
+const reachesFloor = (normalisedQuery: string, queryWords: string[], floor: number): boolean =>
 	queryWords.length === 1
-		? normalisedQuery.length >= MIN_RESCUE_QUERY_LENGTH
-		: queryWords.some((word) => word.length >= MIN_RESCUE_QUERY_LENGTH);
+		? normalisedQuery.length >= floor
+		: queryWords.some((word) => word.length >= floor);
+
+export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
+	reachesFloor(normalisedQuery, queryWords, MIN_RESCUE_QUERY_LENGTH);
 
 // Whether the mask gate may relax to one missing class for this query.
 // matchField and the searcher's survivor scan must ask this same question, or
 // the searcher silently drops hits the matcher would accept.
 export const admitsMissingClass = (normalisedQuery: string, queryWords: string[]): boolean =>
-	queryWords.length === 1
-		? normalisedQuery.length >= MIN_TYPO_QUERY_LENGTH
-		: queryWords.some((word) => word.length >= MIN_TYPO_QUERY_LENGTH);
+	reachesFloor(normalisedQuery, queryWords, MIN_TYPO_QUERY_LENGTH);
 
 const SCORE_EPSILON = 1e-9;
 
-// Ties break toward the one-edit reading: it names the character the user got
-// wrong, where a chain only says the letters appear in order.
-export const cheaper = (a: MatchResult | null, b: MatchResult | null): MatchResult | null => {
-	if (a === null) return b;
-	if (b === null) return a;
-	if (b.score < a.score - SCORE_EPSILON) return b;
-	if (a.score < b.score - SCORE_EPSILON) return a;
-	return a.tier === "fuzzy" ? b : a;
+// Ties keep the incumbent unless it is a fuzzy chain: the one-edit reading
+// names the character the user got wrong, where a chain only says the letters
+// appear in order.
+export const preferCheaper = (
+	incumbent: MatchResult | null,
+	challenger: MatchResult | null,
+): MatchResult | null => {
+	if (incumbent === null) return challenger;
+	if (challenger === null) return incumbent;
+	if (challenger.score < incumbent.score - SCORE_EPSILON) return challenger;
+	if (incumbent.score < challenger.score - SCORE_EPSILON) return incumbent;
+	return incumbent.tier === "fuzzy" ? challenger : incumbent;
 };
 
-const swapAdjacentAt = (text: string, at: number): string =>
+// The two enumerable one-edit corrections; both fill `addVariant`'s edit slot.
+type Edit = (text: string, at: number) => string;
+
+const swapAdjacentAt: Edit = (text, at) =>
 	text.slice(0, at) + text[at + 1] + text[at] + text.slice(at + 2);
 
-const dropCharAt = (text: string, at: number): string => text.slice(0, at) + text.slice(at + 1);
+const dropCharAt: Edit = (text, at) => text.slice(0, at) + text.slice(at + 1);
 
 // Needs normaliseText's 1:1 mapping to index the raw query by normalised
 // offsets; when NFC shortened decomposed input, callers fall back to the
@@ -110,23 +118,23 @@ const rawInsertion = (
 const prepareCorrection = (
 	prepared: PreparedQuery,
 	rawCorrected: string,
-	corrected: string,
+	normalisedCorrected: string,
 ): PreparedQuery => {
-	const cached = prepared.lastRescue;
+	const cached = prepared.lastCorrection;
 	if (
 		cached !== undefined &&
 		cached.query === rawCorrected &&
-		cached.normalisedQuery === corrected
+		cached.normalisedQuery === normalisedCorrected
 	) {
 		return cached;
 	}
-	return (prepared.lastRescue = prepareQuery(rawCorrected, corrected));
+	return (prepared.lastCorrection = prepareQuery(rawCorrected, normalisedCorrected));
 };
 
 // Only a real-tier hit (`score <= SCORES.CONTAINS`) counts: rescuing a fuzzy
 // chain is an invented edit on top of a speculative assembly
-// (@see docs/benchmarks.md). The rerun's `rescued` flag disables every rescue
-// inside it, so the penalty cannot apply twice.
+// (@see docs/benchmarks.md). The rerun passes `mayRescue: false`, disabling
+// every rescue inside it, so the penalty cannot apply twice.
 const scoreCorrectedQuery = (
 	rescue: RescueContext,
 	correctedQuery: PreparedQuery,
@@ -137,7 +145,7 @@ const scoreCorrectedQuery = (
 		rescue.fieldMask,
 		correctedQuery,
 		rescue.acronym,
-		true,
+		false,
 	);
 	return result && result.score <= SCORES.CONTAINS
 		? {
@@ -149,7 +157,7 @@ const scoreCorrectedQuery = (
 		: null;
 };
 
-const atRescueFloor = (best: MatchResult | null): best is MatchResult =>
+const hitsRescueFloor = (best: MatchResult | null): best is MatchResult =>
 	best !== null && best.score <= TYPO_PENALTY;
 
 // Swaps and drops never collide — they differ in length. A *missing* character
@@ -159,15 +167,15 @@ const buildRescueVariants = (query: string, normalisedQuery: string): RescueVari
 	const seen = new Set<string>();
 	const variants: RescueVariant[] = [];
 	const aligned = offsetsAligned(query, normalisedQuery);
-	const addVariant = (at: number, edit: (text: string, at: number) => string): void => {
-		const text = edit(normalisedQuery, at);
-		if (seen.has(text)) return;
-		seen.add(text);
+	const addVariant = (at: number, edit: Edit): void => {
+		const normalised = edit(normalisedQuery, at);
+		if (seen.has(normalised)) return;
+		seen.add(normalised);
 		variants.push({
-			text,
-			rawText: aligned ? edit(query, at) : text,
-			shortens: text.length < normalisedQuery.length,
-			mask: charMask(text),
+			normalised,
+			raw: aligned ? edit(query, at) : normalised,
+			isDrop: normalised.length < normalisedQuery.length,
+			requiredMask: charMask(normalised),
 			prepared: null,
 		});
 	};
@@ -186,7 +194,7 @@ const buildRescueVariants = (query: string, normalisedQuery: string): RescueVari
 // window phase.
 const buildRescueGates = (prepared: PreparedQuery): RescueState | null => {
 	const variants = buildRescueVariants(prepared.query, prepared.normalisedQuery);
-	const literals = variants.map((variant) => escapeRegex(variant.text));
+	const literals = variants.map((variant) => escapeRegex(variant.normalised));
 	const variantGate = literals.length ? new RegExp(literals.join("|")) : null;
 	if (prepared.normalisedQuery.length >= MIN_TYPO_QUERY_LENGTH) {
 		const splitAt = prepared.normalisedQuery.length >> 1;
@@ -195,7 +203,7 @@ const buildRescueGates = (prepared: PreparedQuery): RescueState | null => {
 			escapeRegex(prepared.normalisedQuery.slice(splitAt)),
 		);
 	}
-	return (prepared.rescue = literals.length
+	return (prepared.rescueState = literals.length
 		? { variants, variantGate, gate: new RegExp(literals.join("|")) }
 		: null);
 };
@@ -210,7 +218,7 @@ const substitutedWindows = (normalisedField: string, subjectText: string): strin
 		[0, subjectText.slice(0, splitAt)],
 		[splitAt, subjectText.slice(splitAt)],
 	];
-	const corrections: string[] = [];
+	const windows: string[] = [];
 	for (const [offset, half] of halves) {
 		for (
 			let halfAt = normalisedField.indexOf(half);
@@ -226,25 +234,25 @@ const substitutedWindows = (normalisedField: string, subjectText: string): strin
 			// Exactly one: zero would mean the contains tier already owns it.
 			if (mismatches !== 1) continue;
 			const corrected = normalisedField.slice(windowStart, windowStart + subjectLength);
-			if (!corrections.includes(corrected)) corrections.push(corrected);
+			if (!windows.includes(corrected)) windows.push(corrected);
 		}
 	}
-	return corrections;
+	return windows;
 };
 
-const wordOffsetsOf = (prepared: PreparedQuery): number[] => {
-	let offsets = prepared.wordOffsets;
-	if (offsets === undefined) {
-		offsets = [];
-		let cursor = 0;
+const wordStartsOf = (prepared: PreparedQuery): number[] => {
+	let starts = prepared.wordStarts;
+	if (starts === undefined) {
+		starts = [];
+		let from = 0;
 		for (const word of prepared.queryWords) {
-			const wordAt = prepared.normalisedQuery.indexOf(word, cursor);
-			offsets.push(wordAt);
-			cursor = wordAt + word.length;
+			const wordAt = prepared.normalisedQuery.indexOf(word, from);
+			starts.push(wordAt);
+			from = wordAt + word.length;
 		}
-		prepared.wordOffsets = offsets;
+		prepared.wordStarts = starts;
 	}
-	return offsets;
+	return starts;
 };
 
 const wordVariantsOf = (prepared: PreparedQuery, wordIndex: number): RescueVariant[] => {
@@ -252,7 +260,7 @@ const wordVariantsOf = (prepared: PreparedQuery, wordIndex: number): RescueVaria
 	let variants = cache[wordIndex];
 	if (variants === null) {
 		const word = prepared.queryWords[wordIndex];
-		const wordStart = wordOffsetsOf(prepared)[wordIndex];
+		const wordStart = wordStartsOf(prepared)[wordIndex];
 		const rawWord = offsetsAligned(prepared.query, prepared.normalisedQuery)
 			? prepared.query.slice(wordStart, wordStart + word.length)
 			: word;
@@ -268,7 +276,7 @@ const rawWordSubstitution = (
 ): string => {
 	if (!offsetsAligned(prepared.query, prepared.normalisedQuery)) return corrected;
 	const word = prepared.queryWords[wordIndex];
-	const wordStart = wordOffsetsOf(prepared)[wordIndex];
+	const wordStart = wordStartsOf(prepared)[wordIndex];
 	const rawWord = prepared.query.slice(wordStart, wordStart + word.length);
 	for (let i = 0; i < corrected.length; i++) {
 		if (corrected[i] !== word[i]) return rawWord.slice(0, i) + corrected[i] + rawWord.slice(i + 1);
@@ -280,13 +288,13 @@ const spliceCorrectedWord = (
 	prepared: PreparedQuery,
 	wordIndex: number,
 	rawWord: string,
-	corrected: string,
+	normalisedWord: string,
 ): PreparedQuery => {
-	const wordStart = wordOffsetsOf(prepared)[wordIndex];
+	const wordStart = wordStartsOf(prepared)[wordIndex];
 	const wordEnd = wordStart + prepared.queryWords[wordIndex].length;
 	const normalisedCorrected =
 		prepared.normalisedQuery.slice(0, wordStart) +
-		corrected +
+		normalisedWord +
 		prepared.normalisedQuery.slice(wordEnd);
 	const rawCorrected = offsetsAligned(prepared.query, prepared.normalisedQuery)
 		? prepared.query.slice(0, wordStart) + rawWord + prepared.query.slice(wordEnd)
@@ -309,7 +317,7 @@ const wholeQuerySubject = (
 ): CorrectionSubject => ({
 	text: prepared.normalisedQuery,
 	variants,
-	fromVariant: (variant) => (variant.prepared ??= prepareQuery(variant.rawText, variant.text)),
+	fromVariant: (variant) => (variant.prepared ??= prepareQuery(variant.raw, variant.normalised)),
 	fromWindow: (corrected) =>
 		prepareCorrection(prepared, rawSubstitution(prepared, corrected), corrected),
 });
@@ -317,7 +325,8 @@ const wholeQuerySubject = (
 const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): CorrectionSubject => ({
 	text: prepared.queryWords[wordIndex],
 	variants: wordVariantsOf(prepared, wordIndex),
-	fromVariant: (variant) => spliceCorrectedWord(prepared, wordIndex, variant.rawText, variant.text),
+	fromVariant: (variant) =>
+		spliceCorrectedWord(prepared, wordIndex, variant.raw, variant.normalised),
 	fromWindow: (corrected) =>
 		spliceCorrectedWord(
 			prepared,
@@ -327,6 +336,38 @@ const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): Correcti
 		),
 });
 
+const priceEnumeratedVariants = (
+	rescue: RescueContext,
+	subject: CorrectionSubject,
+	fieldFloor: number,
+): MatchResult | null => {
+	let best: MatchResult | null = null;
+	for (const variant of subject.variants) {
+		// Only a drop shortens the subject, so only it answers to the field-scaled
+		// floor.
+		if (variant.isDrop && subject.text.length < fieldFloor) continue;
+		// A variant still needing a class the field lacks cannot be contained.
+		if ((variant.requiredMask & rescue.missingClasses) !== 0) continue;
+		if (!rescue.normalisedField.includes(variant.normalised)) continue;
+		best = preferCheaper(best, scoreCorrectedQuery(rescue, subject.fromVariant(variant)));
+		if (hitsRescueFloor(best)) return best;
+	}
+	return best;
+};
+
+const priceSubstitutedWindows = (
+	rescue: RescueContext,
+	subject: CorrectionSubject,
+	incumbent: MatchResult | null,
+): MatchResult | null => {
+	let best = incumbent;
+	for (const corrected of substitutedWindows(rescue.normalisedField, subject.text)) {
+		best = preferCheaper(best, scoreCorrectedQuery(rescue, subject.fromWindow(corrected)));
+		if (hitsRescueFloor(best)) return best;
+	}
+	return best;
+};
+
 // Price the whole enumerated family before taking one — enumeration order says
 // nothing about how well a variant reads — then the substituted windows: a
 // subject mistyped at its first or last character has two valid readings
@@ -335,50 +376,37 @@ const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): Correcti
 // A corrected exact hit is unbeatable and exits early.
 const correctSubject = (rescue: RescueContext, subject: CorrectionSubject): MatchResult | null => {
 	const fieldFloor = minTypoQueryLength(rescue.normalisedField.length);
-	let best: MatchResult | null = null;
-	for (const variant of subject.variants) {
-		// Only a drop shortens, so only it answers to the field-scaled floor.
-		if (variant.shortens && subject.text.length < fieldFloor) continue;
-		// A variant still needing a class the field lacks cannot be contained.
-		if ((variant.mask & rescue.missingClasses) !== 0) continue;
-		if (!rescue.normalisedField.includes(variant.text)) continue;
-		best = cheaper(best, scoreCorrectedQuery(rescue, subject.fromVariant(variant)));
-		if (atRescueFloor(best)) return best;
-	}
-	if (subject.text.length < fieldFloor) return best;
-	for (const corrected of substitutedWindows(rescue.normalisedField, subject.text)) {
-		best = cheaper(best, scoreCorrectedQuery(rescue, subject.fromWindow(corrected)));
-		if (atRescueFloor(best)) return best;
-	}
-	return best;
+	const best = priceEnumeratedVariants(rescue, subject, fieldFloor);
+	if (hitsRescueFloor(best) || subject.text.length < fieldFloor) return best;
+	return priceSubstitutedWindows(rescue, subject, best);
 };
 
-const EVERY_WORD_PRESENT = -1;
-const BEYOND_ONE_EDIT = -2;
-
-const soleAbsentWord = (normalisedField: string, words: string[]): number => {
-	let absentAt = EVERY_WORD_PRESENT;
+// The index of the one query word missing from the field, or null when every
+// word is present or more than one is absent — either way, no one-edit rescue.
+const soleAbsentWord = (normalisedField: string, words: string[]): number | null => {
+	let absentIndex: number | null = null;
 	for (let i = 0; i < words.length; i++) {
 		if (normalisedField.includes(words[i])) continue;
-		if (absentAt !== EVERY_WORD_PRESENT) return BEYOND_ONE_EDIT;
-		absentAt = i;
+		if (absentIndex !== null) return null;
+		absentIndex = i;
 	}
-	return absentAt;
+	return absentIndex;
 };
 
 // The literal words have already pinned the field, so only the single absent
 // word is corrected and the whole phrase rerun.
 const multiWordRescue = (rescue: RescueContext): MatchResult | null => {
 	const { prepared, normalisedField } = rescue;
-	const absentAt = soleAbsentWord(normalisedField, prepared.queryWords);
-	if (absentAt < 0) return null;
-	if (prepared.queryWords[absentAt].length < MIN_RESCUE_QUERY_LENGTH) return null;
-	return correctSubject(rescue, absentWordSubject(prepared, absentAt));
+	const absentIndex = soleAbsentWord(normalisedField, prepared.queryWords);
+	if (absentIndex === null) return null;
+	if (prepared.queryWords[absentIndex].length < MIN_RESCUE_QUERY_LENGTH) return null;
+	return correctSubject(rescue, absentWordSubject(prepared, absentIndex));
 };
 
 const typoRescue = (rescue: RescueContext): MatchResult | null => {
 	const { prepared, normalisedField } = rescue;
-	const gates = prepared.rescue !== undefined ? prepared.rescue : buildRescueGates(prepared);
+	const gates =
+		prepared.rescueState !== undefined ? prepared.rescueState : buildRescueGates(prepared);
 	if (gates === null || !gates.gate.test(normalisedField)) return null;
 	const variants = gates.variantGate?.test(normalisedField) ? gates.variants : [];
 	return correctSubject(rescue, wholeQuerySubject(prepared, variants));

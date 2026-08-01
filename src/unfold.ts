@@ -9,7 +9,7 @@ const SOURCE_RANGES: readonly (readonly [number, number])[] = [
 	[0x212a, 0x212b],
 ];
 
-const DIACRITICS = /[\u0300-\u036f]/g;
+const combiningMarks = /[\u0300-\u036f]/g;
 
 let table: Record<string, string> | null = null;
 
@@ -31,13 +31,15 @@ export const unfoldTable = (): Record<string, string> => {
 	if (table !== null) return table;
 	let sources = "";
 	for (const [lo, hi] of SOURCE_RANGES) {
-		for (let cp = lo; cp <= hi; cp++) sources += String.fromCharCode(cp);
+		for (let codePoint = lo; codePoint <= hi; codePoint++) {
+			sources += String.fromCharCode(codePoint);
+		}
 	}
 	const joined = sources.split("").join(" ");
 	const lowered = joined.toLowerCase();
 	const lowers = lowered.split(" ");
-	const candidates = lowered.normalize("NFD").replace(DIACRITICS, "").split(" ");
-	const t: Record<string, string> = {};
+	const candidates = lowered.normalize("NFD").replace(combiningMarks, "").split(" ");
+	const built: Record<string, string> = {};
 	for (let i = 0; i < sources.length; i++) {
 		const lower = lowers[i];
 		let candidate = candidates[i];
@@ -45,9 +47,11 @@ export const unfoldTable = (): Record<string, string> => {
 		else if (candidate === "ς") candidate = "σ";
 		const folded = candidate.length === 1 ? candidate : lower.length === 1 ? lower : sources[i];
 		if (folded.length !== 1) continue;
-		const c = folded.charCodeAt(0);
-		if ((c >= 97 && c <= 122) || (c >= 48 && c <= 57)) t[folded] = (t[folded] ?? "") + sources[i];
+		const unit = folded.charCodeAt(0);
+		if ((unit >= 97 && unit <= 122) || (unit >= 48 && unit <= 57)) {
+			built[folded] = (built[folded] ?? "") + sources[i];
+		}
 	}
-	table = t;
-	return t;
+	table = built;
+	return built;
 };

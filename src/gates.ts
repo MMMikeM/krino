@@ -1,38 +1,39 @@
-import { wordChar } from "./boundaries";
+import { WORD_CHARS, wordChar } from "./boundaries";
 import { bigramBit, bigramClass } from "./normalise";
 import { unfoldTable } from "./unfold";
 
-export const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+export const escapeRegex = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // Inside a character class only these four are special, and `-` needs escaping
 // there while `escapeRegex` leaves it alone.
-const classEscape = (s: string): string => s.replace(/[\^\]\\-]/g, "\\$&");
+const escapeCharClass = (text: string): string => text.replace(/[\^\]\\-]/g, "\\$&");
 
-// Mirrors WORD_CLASS in boundaries.ts. Kept as a class body rather than reusing
-// `wordChar` because this one goes inside a lookbehind in a larger pattern.
-const WORD_CLASS = "[\\p{L}\\p{N}_]";
+// One query position in the subsequence gate: `matcher` matches the position,
+// `gapBody` is the char-class body excluded from the gap before it.
+type GatePosition = { matcher: string; gapBody: string };
 
 // One native test for "this field can hold the query as an admissible
 // subsequence": the query's positions in order with anything between, anchored
 // where the chunk assembler would actually start — a word boundary, or the
-// first three positions run consecutively. `matchers[i]` matches position i,
-// `gapBodies[i]` is the class body excluded from the gap before it —
-// `[^x]*x` leaves the scan exactly one place to stop per step, so it cannot
-// backtrack (same survivors, 16%/8% less gate time on ascii/mixed).
-// The lookbehind beats a consuming `(?:^|non-word)`: same survivors, ~11%
-// less scan time.
-const subsequenceGate = (matchers: string[], gapBodies: string[]): RegExp => {
-	const gap = (i: number): string => `[^${gapBodies[i]}]*`;
+// first three positions run consecutively. `[^x]*x` leaves the scan exactly
+// one place to stop per step, so it cannot backtrack (same survivors, 16%/8%
+// less gate time on ascii/mixed). The lookbehind beats a consuming
+// `(?:^|non-word)`: same survivors, ~11% less scan time.
+const subsequenceGate = (positions: GatePosition[]): RegExp => {
+	const gap = (i: number): string => `[^${positions[i].gapBody}]*`;
 	const subsequenceFrom = (i: number): string => {
-		let out = matchers[i];
-		for (let k = i + 1; k < matchers.length; k++) out += `${gap(k)}${matchers[k]}`;
+		let out = positions[i].matcher;
+		for (let k = i + 1; k < positions.length; k++) out += `${gap(k)}${positions[k].matcher}`;
 		return out;
 	};
-	const runLength = Math.min(3, matchers.length);
-	const run = matchers.slice(0, runLength).join("");
+	const runLength = Math.min(3, positions.length);
+	const run = positions
+		.slice(0, runLength)
+		.map((position) => position.matcher)
+		.join("");
 	const afterRun =
-		runLength < matchers.length ? `${gap(runLength)}${subsequenceFrom(runLength)}` : "";
-	return new RegExp(`(?:(?<!${WORD_CLASS})${subsequenceFrom(0)}|${run}${afterRun})`, "u");
+		runLength < positions.length ? `${gap(runLength)}${subsequenceFrom(runLength)}` : "";
+	return new RegExp(`(?:(?<![${WORD_CHARS}])${subsequenceFrom(0)}|${run}${afterRun})`, "u");
 };
 
 /**
@@ -47,10 +48,13 @@ const subsequenceGate = (matchers: string[], gapBodies: string[]): RegExp => {
  * lengthens the subsequence and never changes the first three characters, so
  * the gate only ever admits fewer fields.
  */
-export const buildFuzzyGate = (normalisedQuery: string): RegExp => {
-	const points = [...normalisedQuery];
-	return subsequenceGate(points.map(escapeRegex), points.map(classEscape));
-};
+export const buildFuzzyGate = (normalisedQuery: string): RegExp =>
+	subsequenceGate(
+		[...normalisedQuery].map((point) => ({
+			matcher: escapeRegex(point),
+			gapBody: escapeCharClass(point),
+		})),
+	);
 
 /**
  * `buildFuzzyGate` for text nothing has normalised yet: each character becomes
@@ -62,16 +66,14 @@ export const buildFuzzyGate = (normalisedQuery: string): RegExp => {
  */
 export const buildRawGate = (normalisedQuery: string): RegExp | null => {
 	const unfold = unfoldTable();
-	const classes: string[] = [];
-	for (const ch of normalisedQuery) {
-		const sources = unfold[ch];
+	const positions: GatePosition[] = [];
+	for (const char of normalisedQuery) {
+		const sources = unfold[char];
 		if (sources === undefined) return null;
-		classes.push(classEscape(sources));
+		const gapBody = escapeCharClass(sources);
+		positions.push({ matcher: `[${gapBody}]`, gapBody });
 	}
-	return subsequenceGate(
-		classes.map((sources) => `[${sources}]`),
-		classes,
-	);
+	return subsequenceGate(positions);
 };
 
 /**
@@ -85,10 +87,10 @@ export const buildRawGate = (normalisedQuery: string): RegExp | null => {
 export const charMask = (normalised: string): number => {
 	let mask = 0;
 	for (let i = 0; i < normalised.length; i++) {
-		const c = normalised.charCodeAt(i);
-		if (c >= 97 && c <= 122) mask |= 1 << (c - 97);
-		else if (c >= 48 && c <= 57) mask |= 1 << (26 + (c & 3));
-		else if (c > 127) mask |= 1 << (30 + (c & 1));
+		const unit = normalised.charCodeAt(i);
+		if (unit >= 97 && unit <= 122) mask |= 1 << (unit - 97);
+		else if (unit >= 48 && unit <= 57) mask |= 1 << (26 + (unit & 3));
+		else if (unit > 127) mask |= 1 << (30 + (unit & 1));
 	}
 	return mask;
 };
@@ -99,55 +101,63 @@ export const charMask = (normalised: string): number => {
  * the query's sole character of the missing class β (two β characters would
  * need two edits), and every rescue-eligible tier is a contiguous occurrence —
  * so every query bigram NOT touching the β position must appear in the field's
- * bigram set: `reqLo/reqHi[β]` hold exactly those. Two or more β characters
- * store all-ones, which no real field covers (a hazard-degraded field is
- * all-ones too and still passes). Hash collisions stay false-pass-only on both
- * sides: a required bit colliding with a touching pair's is still owed by the
- * intact remainder of the window, and field-side collisions only add coverage.
+ * bigram set: `requiredLo/requiredHi[β]` hold exactly those. Two or more β
+ * characters store all-ones, which no real field covers (a hazard-degraded
+ * field is all-ones too and still passes). Hash collisions stay
+ * false-pass-only on both sides: a required bit colliding with a touching
+ * pair's is still owed by the intact remainder of the window, and field-side
+ * collisions only add coverage.
  */
-export const buildRescueBigramGate = (
-	normalisedQuery: string,
-): { reqLo: Int32Array; reqHi: Int32Array } => {
-	const n = normalisedQuery.length;
-	const cls = new Int32Array(n);
-	const classBit = new Int32Array(n).fill(-1);
-	for (let p = 0; p < n; p++) {
-		const c = normalisedQuery.charCodeAt(p);
-		cls[p] = bigramClass(c);
-		if (c >= 97 && c <= 122) classBit[p] = c - 97;
-		else if (c >= 48 && c <= 57) classBit[p] = 26 + (c & 3);
-		else if (c > 127) classBit[p] = 30 + (c & 1);
+export type RescueBigramGate = { requiredLo: Int32Array; requiredHi: Int32Array };
+
+export const buildRescueBigramGate = (normalisedQuery: string): RescueBigramGate => {
+	const queryLength = normalisedQuery.length;
+	const bigramClasses = new Int32Array(queryLength);
+	const classBit = new Int32Array(queryLength).fill(-1);
+	for (let at = 0; at < queryLength; at++) {
+		const unit = normalisedQuery.charCodeAt(at);
+		bigramClasses[at] = bigramClass(unit);
+		if (unit >= 97 && unit <= 122) classBit[at] = unit - 97;
+		else if (unit >= 48 && unit <= 57) classBit[at] = 26 + (unit & 3);
+		else if (unit > 127) classBit[at] = 30 + (unit & 1);
 	}
-	const reqLo = new Int32Array(32);
-	const reqHi = new Int32Array(32);
+	const requiredLo = new Int32Array(32);
+	const requiredHi = new Int32Array(32);
 	for (let b = 0; b < 32; b++) {
-		let positions = 0;
-		let at = -1;
-		for (let p = 0; p < n; p++) {
-			if (classBit[p] === b) {
-				positions++;
-				at = p;
+		let occurrences = 0;
+		let soleAt = -1;
+		for (let at = 0; at < queryLength; at++) {
+			if (classBit[at] === b) {
+				occurrences++;
+				soleAt = at;
 			}
 		}
-		if (positions === 0) continue;
-		if (positions > 1) {
-			reqLo[b] = -1;
-			reqHi[b] = -1;
+		if (occurrences === 0) continue;
+		if (occurrences > 1) {
+			requiredLo[b] = -1;
+			requiredHi[b] = -1;
 			continue;
 		}
-		for (let p = 1; p < n; p++) {
-			if (cls[p - 1] === 0 || cls[p] === 0 || p - 1 === at || p === at) continue;
-			const bit = bigramBit(cls[p - 1], cls[p]);
-			if (bit < 32) reqLo[b] |= 1 << bit;
-			else reqHi[b] |= 1 << (bit - 32);
+		for (let at = 1; at < queryLength; at++) {
+			if (
+				bigramClasses[at - 1] === 0 ||
+				bigramClasses[at] === 0 ||
+				at - 1 === soleAt ||
+				at === soleAt
+			) {
+				continue;
+			}
+			const bit = bigramBit(bigramClasses[at - 1], bigramClasses[at]);
+			if (bit < 32) requiredLo[b] |= 1 << bit;
+			else requiredHi[b] |= 1 << (bit - 32);
 		}
 	}
-	return { reqLo, reqHi };
+	return { requiredLo, requiredHi };
 };
 
 // True when the mask is an exact distinct-char presence check: no lossy bucket
 // bits set, so the presence-gate regex could not reject anything further.
-export const maskIsExact = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
+export const isExactMask = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
 
 /**
  * Order-independent presence gate: every distinct word-character of the query
@@ -158,10 +168,10 @@ export const maskIsExact = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
 export const buildPresenceGate = (normalisedQuery: string): RegExp => {
 	const seen = new Set<string>();
 	let src = "^";
-	for (const ch of normalisedQuery) {
-		if (seen.has(ch) || !wordChar.test(ch)) continue;
-		seen.add(ch);
-		src += `(?=[^]*${escapeRegex(ch)})`;
+	for (const char of normalisedQuery) {
+		if (seen.has(char) || !wordChar.test(char)) continue;
+		seen.add(char);
+		src += `(?=[^]*${escapeRegex(char)})`;
 	}
 	return new RegExp(src);
 };

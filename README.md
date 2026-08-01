@@ -173,9 +173,10 @@ The rest of the field is dominated on these benchmarks; the full argument, per-l
 
 ## Building blocks
 
-- `normaliseText(str)`: lowercase, strip diacritics.
-- `splitWords(str)`: tokenize on any non-alphanumeric run (keeps `_`).
+- `normaliseText(text)`: lowercase, strip diacritics.
+- `splitWords(text)`: tokenise on any non-alphanumeric run (keeps `_`).
 - `SCORES`: the tier constants.
+- `TYPO_PENALTY`: the surcharge (2.1) every `corrected` score carries over its corrected tier.
 
 ## Types
 

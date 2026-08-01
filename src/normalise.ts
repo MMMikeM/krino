@@ -1,4 +1,4 @@
-const diacriticMarks = /[\u0300-\u036f]/g;
+const combiningMarks = /[\u0300-\u036f]/g;
 const hasCombiningMark = /[\u0300-\u036f]/;
 const hasNonAscii = /[\u0080-\uffff]/;
 
@@ -9,15 +9,19 @@ const QUOTE_FOLDS: Record<string, string> = { "‘": "'", "’": "'", "“": '"'
 // One folded string per code point, never changing the code-unit length — the
 // 1:1 guarantee behind every published Range. Length-changing folds fall back
 // to plain lowercase, then to the original character.
-const computeFold = (ch: string): string => {
-	const quote = QUOTE_FOLDS[ch];
+const computeFold = (char: string): string => {
+	const quote = QUOTE_FOLDS[char];
 	if (quote !== undefined) return quote;
-	const lowered = ch.toLowerCase();
-	let stripped = lowered.normalize("NFD").replace(diacriticMarks, "");
+	const lowered = char.toLowerCase();
+	let stripped = lowered.normalize("NFD").replace(combiningMarks, "");
 	// ł has no NFD decomposition; final sigma folds to medial.
 	if (stripped === "ł") stripped = "l";
 	else if (stripped === "ς") stripped = "σ";
-	return stripped.length === ch.length ? stripped : lowered.length === ch.length ? lowered : ch;
+	return stripped.length === char.length
+		? stripped
+		: lowered.length === char.length
+			? lowered
+			: char;
 };
 
 // Dense array through Latin Extended + Greek + Cyrillic (an indexed load beats
@@ -28,17 +32,17 @@ const DENSE_FOLDS_MAX = 0x4ff;
 const denseFolds: (string | undefined)[] = new Array(DENSE_FOLDS_MAX + 1).fill(undefined);
 const rareFolds = new Map<string, string>();
 
-export const foldChar = (ch: string): string => {
-	const codePoint = ch.codePointAt(0) as number;
+export const foldChar = (char: string): string => {
+	const codePoint = char.codePointAt(0) as number;
 	if (codePoint <= DENSE_FOLDS_MAX) {
 		let folded = denseFolds[codePoint];
-		if (folded === undefined) denseFolds[codePoint] = folded = computeFold(ch);
+		if (folded === undefined) denseFolds[codePoint] = folded = computeFold(char);
 		return folded;
 	}
-	let folded = rareFolds.get(ch);
+	let folded = rareFolds.get(char);
 	if (folded === undefined) {
-		folded = computeFold(ch);
-		rareFolds.set(ch, folded);
+		folded = computeFold(char);
+		rareFolds.set(char, folded);
 	}
 	return folded;
 };
@@ -51,21 +55,21 @@ export const foldChar = (ch: string): string => {
  * - Trim whitespace
  *
  * Offset-preserving by construction: the result has exactly one code unit per
- * unit of `NFC(str).trim()`, so match ranges computed against it index the
+ * unit of `NFC(text).trim()`, so match ranges computed against it index the
  * caller's own string whenever that string is NFC-normal and untrimmed
  * (virtually all real data; decomposed input gets offsets into the
  * visually-identical NFC form).
  */
-export const normaliseText = (str: string): string => {
+export const normaliseText = (text: string): string => {
 	// toLowerCase can itself surface combining marks (İ → i̇), so the pure-ASCII
 	// fast path tests after it.
-	const lowered = str.toLowerCase();
+	const lowered = text.toLowerCase();
 	if (!hasNonAscii.test(lowered)) return lowered.trim();
-	let text = str.trim();
+	let trimmed = text.trim();
 	// Compose first so the per-point fold sees "é", not "e" + combining mark.
-	if (hasCombiningMark.test(text)) text = text.normalize("NFC");
+	if (hasCombiningMark.test(trimmed)) trimmed = trimmed.normalize("NFC");
 	let folded = "";
-	for (const ch of text) folded += foldChar(ch);
+	for (const char of trimmed) folded += foldChar(char);
 	return folded;
 };
 
@@ -83,20 +87,24 @@ export const bigramClass = (unit: number): number => {
 
 export const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur) & 63;
 
+// A field's rescue bigram set — adjacent same-word class pairs and consecutive
+// word-initial pairs, 64 bits in two int32s.
+export type FieldBigrams = { lo: number; hi: number };
+
 /**
- * `charMask(normaliseText(raw))` without building the normalised string, plus
- * the field's rescue bigram set filled into `bigrams` — adjacent same-word
- * class pairs and consecutive word-initial pairs, 64 bits in two int32s. Runs
- * once per field, when a searcher meets its first rescue-shaped query.
+ * `charMask(normaliseText(raw))` without building the normalised string:
+ * returns the field's char mask and accumulates its bigram set into `into`
+ * (degraded = all-ones). Runs once per field, when a searcher meets its first
+ * rescue-shaped query.
  *
  * Both halves may only false-pass: skipping NFC can only ADD mask bits, and a
  * combining mark — where raw adjacency stops matching normalised adjacency —
  * degrades the bigram set to all-bits while the mask keeps folding.
  */
-export const rawFieldScan = (raw: string, bigrams: { lo: number; hi: number }): number => {
+export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 	let mask = 0;
-	let pairsLo = 0;
-	let pairsHi = 0;
+	let bigramsLo = 0;
+	let bigramsHi = 0;
 	let prevClass = 0;
 	let lastWordInitial = 0;
 	let degraded = false;
@@ -121,13 +129,13 @@ export const rawFieldScan = (raw: string, bigrams: { lo: number; hi: number }): 
 			if (unitClass !== 0 && !degraded) {
 				if (prevClass !== 0) {
 					const bit = (prevClass * 37 + unitClass) & 63;
-					if (bit < 32) pairsLo |= 1 << bit;
-					else pairsHi |= 1 << (bit - 32);
+					if (bit < 32) bigramsLo |= 1 << bit;
+					else bigramsHi |= 1 << (bit - 32);
 				} else {
 					if (lastWordInitial !== 0) {
 						const bit = (lastWordInitial * 37 + unitClass) & 63;
-						if (bit < 32) pairsLo |= 1 << bit;
-						else pairsHi |= 1 << (bit - 32);
+						if (bit < 32) bigramsLo |= 1 << bit;
+						else bigramsHi |= 1 << (bit - 32);
 					}
 					lastWordInitial = unitClass;
 				}
@@ -159,13 +167,13 @@ export const rawFieldScan = (raw: string, bigrams: { lo: number; hi: number }): 
 			if (unitClass !== 0 && !degraded) {
 				if (prevClass !== 0) {
 					const bit = (prevClass * 37 + unitClass) & 63;
-					if (bit < 32) pairsLo |= 1 << bit;
-					else pairsHi |= 1 << (bit - 32);
+					if (bit < 32) bigramsLo |= 1 << bit;
+					else bigramsHi |= 1 << (bit - 32);
 				} else {
 					if (lastWordInitial !== 0) {
 						const bit = (lastWordInitial * 37 + unitClass) & 63;
-						if (bit < 32) pairsLo |= 1 << bit;
-						else pairsHi |= 1 << (bit - 32);
+						if (bit < 32) bigramsLo |= 1 << bit;
+						else bigramsHi |= 1 << (bit - 32);
 					}
 					lastWordInitial = unitClass;
 				}
@@ -174,11 +182,11 @@ export const rawFieldScan = (raw: string, bigrams: { lo: number; hi: number }): 
 		}
 	}
 	if (degraded) {
-		bigrams.lo = -1;
-		bigrams.hi = -1;
+		into.lo = -1;
+		into.hi = -1;
 	} else {
-		bigrams.lo |= pairsLo;
-		bigrams.hi |= pairsHi;
+		into.lo |= bigramsLo;
+		into.hi |= bigramsHi;
 	}
 	return mask;
 };

@@ -459,7 +459,7 @@ uFuzzy's default tolerates no intra-word gaps at all, 0 at every level.
 
 The fourth typo probe degrades the same source word along a different axis: two adjacent characters swapped (`huguette` → `hugeutte`), same character count, wrong order.
 Deletions leave a query that is still a subsequence of its source; a transposition does not, so no subsequence _chain_ can represent it: microfuzz and fuzzysort lose the source (✗; their two "matches" are other items the letters happen to chain through) and uFuzzy returns 0.
-Krino does not rely on subsequence here: after every tier in the ladder misses, a dedicated rescue retries each single-edit correction of the query and accepts only real-tier hits, scored as the corrected tier + 2.1 (tiers `transposed`, `inserted`, `deleted`, `substituted`).
+Krino does not rely on subsequence here: after every tier in the ladder misses, a dedicated rescue retries each single-edit correction of the query and accepts only real-tier hits, scored as the corrected query's tier + 2.1 (tier `corrected`).
 That surfaces the source _first, with exactly one row_. The edit-distance engines also rank it first but arrive with 6 candidates.
 The penalty is sized so that even the best correction sorts below the weakest literal tier (`contains`): a correction is a guess at what the user meant, a substring match is something they actually typed, so the literal hit always wins. Sizing it lower sinks infix ranking, because another item's guess then displaces the item the query literally appears in.
 Multi-error edits (two or more) remain the edit-distance engines' territory, and the scorecard prices that boundary.

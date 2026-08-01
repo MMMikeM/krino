@@ -8,7 +8,7 @@ describe("SCORES", () => {
 	it("matches the documented tier ladder", () => {
 		expect(SCORES).toEqual({
 			EXACT: 0,
-			NORMALIZED_EXACT: 0.1,
+			NORMALISED_EXACT: 0.1,
 			PREFIX: 0.5,
 			BOUNDARY_EXACT: 0.9,
 			BOUNDARY: 1,
