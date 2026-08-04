@@ -1,5 +1,5 @@
 {
-	"name": "krino",
+	"name": "ekrina",
 	"version": "1.0.0",
 	"description": "Zero-dependency fuzzy matching with tiered scoring, highlight ranges, and one-edit typo rescue",
 	"keywords": [
@@ -13,15 +13,15 @@
 		"search",
 		"typescript"
 	],
-	"homepage": "https://github.com/MMMikeM/krino#readme",
+	"homepage": "https://github.com/MMMikeM/ekrina#readme",
 	"bugs": {
-		"url": "https://github.com/MMMikeM/krino/issues"
+		"url": "https://github.com/MMMikeM/ekrina/issues"
 	},
 	"license": "MIT",
 	"author": "Mike <contactme@mikem.mozmail.com>",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/MMMikeM/krino.git"
+		"url": "git+https://github.com/MMMikeM/ekrina.git"
 	},
 	"files": [
 		"dist",

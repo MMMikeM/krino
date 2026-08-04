@@ -1,8 +1,8 @@
-# krino
+# ekrina
 
 Tiny, typed fuzzy matching. Zero dependencies, dual ESM/CJS, no platform assumptions — browsers, Node, Deno, Bun, edge runtimes.
 
-The package is `krino`; the working directory is still `mikrofuzz` from before the rename.
+The package is `ekrina`; the working directory is still `mikrofuzz` from before the rename.
 Nothing has been published yet, so public-surface changes are cheap until launch; the CHANGELOG is a single initial-release section recording the measured design decisions.
 
 ## Hard constraints
@@ -19,7 +19,7 @@ Nothing has been published yet, so public-surface changes are cheap until launch
 
 There is no aggregate script. The gate is `pnpm lint && pnpm lint:types && pnpm test`, and it runs before claiming done. `lint:types` covers `src`/`test` and, via `bench/tsconfig.json`, `bench/` and `docs/pareto.ts`. `pnpm format` runs oxfmt over `src` and `test`. `pnpm build` is tsdown → minified ESM/CJS plus declarations in `dist/`; `prepublishOnly` reruns `lint:types`, `test`, `build`.
 
-`pnpm test` covers `test/**` only. The bench workspace has its own suite — `pnpm --filter=krino-bench test` — and it imports the built `krino`, so build first.
+`pnpm test` covers `test/**` only. The bench workspace has its own suite — `pnpm --filter=ekrina-bench test` — and it imports the built `ekrina`, so build first.
 
 ## Benchmarks and published numbers
 
@@ -32,14 +32,14 @@ Never hand-edit a cell inside a `<!-- bench:… -->` region — the next run ove
 - `pnpm bench --check` exits nonzero, naming the regions, if the doc disagrees with the artifact.
 - `pnpm bench --speed` / `--quality` run one half; `--runs=N` sets the scorecard's process count (default 5).
 - `pnpm bench --only=<library>` re-measures one library's rows and merges them over the committed artifact — guarded by a foreign-anchor check (an untouched library's cell must reproduce within 25%) and a printed old→new delta report to confirm only the expected cells moved. The cross-library ordering then spans two sessions; rerun the full matrix before publishing it as evidence.
-- `pnpm --filter=krino-bench test` — the gate funnel and the other assertions. The funnel is a diagnostic, not a published table.
+- `pnpm --filter=ekrina-bench test` — the gate funnel and the other assertions. The funnel is a diagnostic, not a published table.
 
 `bench/results.json` is committed: it is the evidence for every published cell, so a number that moves is a reviewable diff.
 Adding a table means adding a region to `regions()` in `bench/tables.ts` and a marker pair in the doc; headings and prose stay outside the markers.
 
 Three guards to respect rather than route around:
 
-- The pipeline exits nonzero on a contaminated run — base krino measuring slower than `krino (acronym)`, which runs strictly more code per query. That means the run absorbed GC or thermal debt. Rerun on a quiet machine; do not publish it.
+- The pipeline exits nonzero on a contaminated run — base ekrina measuring slower than `ekrina (acronym)`, which runs strictly more code per query. That means the run absorbed GC or thermal debt. Rerun on a quiet machine; do not publish it.
 - `bench/corpus-*.json` is frozen, and regeneration is gated behind `GEN_CORPUS=1` because every published rank and MRR derives from those exact sequences. Regenerating also changes the probe queries, so the hand-written headings and prose around the probe tables need rewriting with them.
 - `pnpm bench --scope=mixed-10k` scopes a dev run: it measures a partial matrix, so it prints and stops without touching `results.json` or the docs. `BENCH=` still works as an alias.
 

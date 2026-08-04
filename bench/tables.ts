@@ -18,13 +18,13 @@ const mdTable = (header: string[], rows: string[][], align: Align[]): string => 
 const ms = (v: number): string => v.toFixed(2);
 const pct = (num: number, den: number): string => `${Math.round((num / den) * 100)}%`;
 
-// Krino leads its own table; the rest are alphabetical, which keeps each
+// Ekrina leads its own table; the rest are alphabetical, which keeps each
 // library's base and (all opts) rows adjacent and orders nothing by result.
 // Code-unit order on the lowercased label, not localeCompare: collation folds
 // the `@` in `@nozbe/microfuzz` away and moves it out of first place.
 const speedOrder = (a: string, b: string): number => {
-	const krino = Number(b.startsWith("krino")) - Number(a.startsWith("krino"));
-	if (krino !== 0) return krino;
+	const ekrina = Number(b.startsWith("ekrina")) - Number(a.startsWith("ekrina"));
+	if (ekrina !== 0) return ekrina;
 	const [x, y] = [displayName(a).toLowerCase(), displayName(b).toLowerCase()];
 	return x < y ? -1 : x > y ? 1 : 0;
 };
@@ -72,7 +72,7 @@ const variantsOf = (a: Artifact, corpus: string): string[] =>
 	Object.keys(a.coldMatrix[corpus]?.batch?.[PROBE_SIZE] ?? {});
 
 const BUILD_COLUMNS: Array<[library: string, label: string]> = [
-	["krino", "Krino"],
+	["ekrina", "Ekrina"],
 	["@nozbe/microfuzz", "@nozbe/microfuzz"],
 	["fast-fuzzy", "fast-fuzzy"],
 	["fuse.js", "Fuse.js"],
@@ -107,7 +107,7 @@ const librariesTable = (): string =>
 			.sort(bySize)
 			.map((name) => {
 				const m = META[name];
-				const label = name === "krino" ? "**Krino**" : displayName(name);
+				const label = name === "ekrina" ? "**Ekrina**" : displayName(name);
 				return [label, `~${m.gzipKB} kB`, String(m.deps), m.type];
 			}),
 		["left", "left", "left", "left"],
@@ -121,22 +121,22 @@ const scaleTable = (a: Artifact, corpus: string): string => {
 	const shown = variantsOf(a, corpus)
 		.filter((name) => foldsFor(corpus, name))
 		.sort(speedOrder);
-	const krinoBatch = cellOf(a, corpus, "batch", size, "krino");
-	if (!krinoBatch)
-		throw new Error(`no krino batch cell for '${corpus}' — run the cold stage first`);
+	const ekrinaBatch = cellOf(a, corpus, "batch", size, "ekrina");
+	if (!ekrinaBatch)
+		throw new Error(`no ekrina batch cell for '${corpus}' — run the cold stage first`);
 
-	const krinoOneShot = meanOneShotOf(a, corpus, size, "krino") as number;
+	const ekrinaOneShot = meanOneShotOf(a, corpus, size, "ekrina") as number;
 	const rows = shown.map((lib) => {
 		const batch = cellOf(a, corpus, "batch", size, lib) as ColdCell;
 		const cold = meanColdOf(a, corpus, size, lib) as number;
 		const oneShot = meanOneShotOf(a, corpus, size, lib) as number;
-		const emphasise = (v: string): string => (lib === "krino" ? `**${v}**` : v);
+		const emphasise = (v: string): string => (lib === "ekrina" ? `**${v}**` : v);
 		return [
-			lib === "krino" ? "**Krino**" : displayName(lib),
+			lib === "ekrina" ? "**Ekrina**" : displayName(lib),
 			`${ms(batch.indexMs)} ms`,
 			`${ms(cold)} ms`,
 			`${ms(oneShot)} ms`,
-			emphasise(pct(oneShot, krinoOneShot)),
+			emphasise(pct(oneShot, ekrinaOneShot)),
 		];
 	});
 
@@ -148,13 +148,13 @@ const scaleTable = (a: Artifact, corpus: string): string => {
 		oneShot: geomean(shown.map((l) => meanOneShotOf(a, corpus, size, l) as number)),
 	};
 	// geomean-of-ratios is the ratio-of-geomeans, so the rel cell is equally
-	// the geomean of the rel column and field-geomean ÷ krino.
+	// the geomean of the rel column and field-geomean ÷ ekrina.
 	rows.push([
 		"_all libraries (geomean)_",
 		`${ms(agg.index)} ms`,
 		`${ms(agg.cold)} ms`,
 		`${ms(agg.oneShot)} ms`,
-		pct(agg.oneShot, krinoOneShot),
+		pct(agg.oneShot, ekrinaOneShot),
 	]);
 
 	return mdTable(["Library", "index", "cold query", "total", "total rel"], rows, [
@@ -171,18 +171,18 @@ const batchTable = (a: Artifact, corpus: string): string => {
 	const shown = variantsOf(a, corpus)
 		.filter((name) => foldsFor(corpus, name))
 		.sort(speedOrder);
-	const krinoBatch = cellOf(a, corpus, "batch", size, "krino");
-	if (!krinoBatch)
-		throw new Error(`no krino batch cell for '${corpus}' — run the cold stage first`);
+	const ekrinaBatch = cellOf(a, corpus, "batch", size, "ekrina");
+	if (!ekrinaBatch)
+		throw new Error(`no ekrina batch cell for '${corpus}' — run the cold stage first`);
 
 	const rows = shown.map((lib) => {
 		const batch = cellOf(a, corpus, "batch", size, lib) as ColdCell;
-		const emphasise = (v: string): string => (lib === "krino" ? `**${v}**` : v);
+		const emphasise = (v: string): string => (lib === "ekrina" ? `**${v}**` : v);
 		return [
-			lib === "krino" ? "**Krino**" : displayName(lib),
+			lib === "ekrina" ? "**Ekrina**" : displayName(lib),
 			`${ms(batch.restMs ?? batch.queryMs)} ms`,
 			`${ms(batch.queryMs)} ms`,
-			emphasise(pct(batch.queryMs, krinoBatch.queryMs)),
+			emphasise(pct(batch.queryMs, ekrinaBatch.queryMs)),
 		];
 	});
 
@@ -199,7 +199,7 @@ const batchTable = (a: Artifact, corpus: string): string => {
 		"_all libraries (geomean)_",
 		`${ms(agg.rest)} ms`,
 		`${ms(agg.batch)} ms`,
-		pct(agg.batch, krinoBatch.queryMs),
+		pct(agg.batch, ekrinaBatch.queryMs),
 	]);
 
 	return mdTable(["Library", "batch/query", "batch total", "batch rel"], rows, [
@@ -238,7 +238,7 @@ const scorecardTable = (a: Artifact, corpus: string): string => {
 // fuzzy track the microfuzz row closely enough that including them only costs
 // readability; the artifact keeps their cells.
 const PROBE_LIBRARIES: Array<{ base: string; opts?: string }> = [
-	{ base: "krino", opts: "krino (acronym)" },
+	{ base: "ekrina", opts: "ekrina (acronym)" },
 	{ base: "@nozbe/microfuzz", opts: "@nozbe/microfuzz (all opts)" },
 	{ base: "fast-fuzzy", opts: "fast-fuzzy (all opts)" },
 	{ base: "fuse.js", opts: "fuse.js (all opts)" },

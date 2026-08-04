@@ -16,8 +16,8 @@ const lab = (a: Anchor, dy: number, dx = 0): Placement => ({ a, dy, dx });
 // Hand-tuned so labels don't collide; positions differ per metric because the
 // points move. Numbers come from the artifact, never from here.
 const PLACEMENT: Record<string, Record<Metric, Placement>> = {
-	"krino (acronym)": { query: lab("start", -8), total: lab("start", -8) },
-	krino: { query: lab("start", 16), total: lab("end", 16) },
+	"ekrina (acronym)": { query: lab("start", -8), total: lab("start", -8) },
+	ekrina: { query: lab("start", 16), total: lab("end", 16) },
 	"fuse.js": { query: lab("middle", -15), total: lab("middle", -15) },
 	"fuse.js (all opts)": { query: lab("end", 20, -10), total: lab("middle", 20) },
 	"@nozbe/microfuzz": { query: lab("start", 4), total: lab("end", 4) },
@@ -57,7 +57,7 @@ const METRICS: Record<
 			`MRR over ${probes} probes · mixed 10k corpus · one searcher, all probes once (batch)`,
 		axis: "Batch per-query: searcher built once, twenty distinct queries. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs per-query cost across a 20-query session",
-		tail: "Krino owns the accurate end of the frontier; the cheaper points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
+		tail: "Ekrina owns the accurate end of the frontier; the cheaper points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
 	},
 	total: {
 		file: "pareto-total",
@@ -68,7 +68,7 @@ const METRICS: Record<
 		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · fresh process per search`,
 		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs cold one-shot cost",
-		tail: "The no-index engines own the cheapest cold one-shots; the two Krino configurations share one pooled build cost and differ only in query time, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
+		tail: "The no-index engines own the cheapest cold one-shots; the two Ekrina configurations share one pooled build cost and differ only in query time, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
 	},
 };
 
@@ -79,7 +79,7 @@ const LIGHT = {
 	muted: "#898781",
 	grid: "#e1e0d9",
 	axis: "#c3c2b7",
-	krino: "#2a78d6",
+	ekrina: "#2a78d6",
 	frontier: "#1baf7a",
 	dom: "#898781",
 };
@@ -90,7 +90,7 @@ const DARK = {
 	muted: "#898781",
 	grid: "#2c2c2a",
 	axis: "#383835",
-	krino: "#3987e5",
+	ekrina: "#3987e5",
 	frontier: "#199e70",
 	dom: "#8f8d86",
 };
@@ -136,13 +136,13 @@ const render = (C: Palette, metric: Metric, data: Point[], probes: number): stri
 		x: f(X(d[metric])),
 		y: f(Y(d.mrr)),
 		l: PLACEMENT[d.name]?.[metric] ?? FALLBACK,
-		isKrino: d.name.startsWith("krino"),
+		isEkrina: d.name.startsWith("ekrina"),
 	}));
 	const front = frontierOf(pts);
 	const onFrontier = new Set(front.map((p) => p.n));
 	const color = (p: (typeof pts)[number]): string =>
-		p.isKrino ? C.krino : onFrontier.has(p.n) ? C.frontier : C.dom;
-	const emphasized = (p: (typeof pts)[number]): boolean => p.isKrino || onFrontier.has(p.n);
+		p.isEkrina ? C.ekrina : onFrontier.has(p.n) ? C.frontier : C.dom;
+	const emphasized = (p: (typeof pts)[number]): boolean => p.isEkrina || onFrontier.has(p.n);
 	const frontierPath = front.map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`).join(" ");
 	const desc =
 		`Scatter plot of ${data.length} configurations of eight JavaScript fuzzy search libraries comparing MRR ` +
@@ -199,8 +199,8 @@ const render = (C: Palette, metric: Metric, data: Point[], probes: number): stri
 	const legend = `<g>
     <line x1="66" y1="${LY}" x2="92" y2="${LY}" stroke="${C.frontier}" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
     <text x="100" y="${LY + 4}" fill="${C.ink2}" font-size="12.5">Pareto frontier</text>
-    <circle cx="222" cy="${LY}" r="${DOT_R}" fill="${C.krino}"/>
-    <text x="234" y="${LY + 4}" fill="${C.ink2}" font-size="12.5">krino</text>
+    <circle cx="222" cy="${LY}" r="${DOT_R}" fill="${C.ekrina}"/>
+    <text x="234" y="${LY + 4}" fill="${C.ink2}" font-size="12.5">ekrina</text>
     <circle cx="310" cy="${LY}" r="${DOT_R}" fill="${C.frontier}"/>
     <text x="322" y="${LY + 4}" fill="${C.ink2}" font-size="12.5">other Pareto-optimal</text>
     <circle cx="480" cy="${LY}" r="${DOT_R}" fill="${C.dom}"/>

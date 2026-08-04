@@ -1,4 +1,4 @@
-# Krino
+# Ekrina
 
 > Tiny, typed fuzzy matching
 
@@ -8,14 +8,14 @@
 - **Returns** `tier`, `ranges` and `score` on every match: easily rank, highlight and explain
 - **Diacritics, multi-word, acronyms, one-edit typos** built in
 
-Krino (Ancient Greek κρίνω, KREE-no, "to sift, separate"; the root of criterion, discern, and critic) is a fuzzy text matcher: it sifts a list and judges each candidate against a criterion.
+Ekrina (Ancient Greek ἔκρινα, eh-KREE-na, "I sifted, I judged" — the aorist of κρίνω, the root of criterion, discern, and critic) is a fuzzy text matcher: it sifts a list and judges each candidate against a criterion.
 Corrects single-character typos, not general edit distance, in exchange for the size and speed.
 Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz), and [benchmarked](./docs/benchmarks.md) against it and six others.
 
 ## Install
 
 ```bash
-npm i krino  # or pnpm add krino
+npm i ekrina  # or pnpm add ekrina
 ```
 
 ## Usage
@@ -23,7 +23,7 @@ npm i krino  # or pnpm add krino
 ### `createFuzzySearch`: search a collection
 
 ```typescript
-import { createFuzzySearch, SCORES } from "krino";
+import { createFuzzySearch, SCORES } from "ekrina";
 
 // array of strings
 const search = createFuzzySearch(["apple", "banana", "cherry"]);
@@ -58,7 +58,7 @@ Results are sorted best-first (stable), and preprocessing is cached; the index i
 Scores one string against a query; reach for it directly when there is no list, e.g. matching inside a document.
 
 ```typescript
-import { fuzzyMatch } from "krino";
+import { fuzzyMatch } from "ekrina";
 
 fuzzyMatch("Hello World", "wor");
 // { score: 1, tier: "boundary", ranges: [[6, 8]] }
@@ -123,21 +123,21 @@ All four typo tiers also score above `CONTAINS` (a rescued contains is 4.1) with
 
 ## The fuzzy tier
 
-Krino ships one opinionated fuzzy mode, always on, with no strategy knob: chunks must start at a word boundary or run 3+ characters (the query's last 1-2 characters are exempt, since a short tail could never satisfy the run rule), and the whole assembly must cover at least 18% of the span it stretches across (the density floor that keeps long text junk-free).
+Ekrina ships one opinionated fuzzy mode, always on, with no strategy knob: chunks must start at a word boundary or run 3+ characters (the query's last 1-2 characters are exempt, since a short tail could never satisfy the run rule), and the whole assembly must cover at least 18% of the span it stretches across (the density floor that keeps long text junk-free).
 Anything it refuses either matched a higher tier already or wasn't worth showing; filter `tier === "fuzzy"` out of the results if you want literal matches only.
 
 ## Comparison
 
 Speed is not the constraint at any realistic size: a twenty-query session over 100,000 items averages ~3.4 ms per query after the first (~1 ms at 10k), every number measured in a fresh, cold process, and `fuzzyMatch` over a 16,000-character document costs 0.29 ms.
 What separates these libraries is **match quality** and **what you get back**.
-Accuracy against the total cost of one cold search (index + one query) — the least flattering ledger for Krino, since a no-index library pays nothing up front (the mixed 10k scorecard from [docs/benchmarks.md](./docs/benchmarks.md); the frontend chart there, query cost only, is a Krino-only frontier):
+Accuracy against the total cost of one cold search (index + one query) — the least flattering ledger for Ekrina, since a no-index library pays nothing up front (the mixed 10k scorecard from [docs/benchmarks.md](./docs/benchmarks.md); the frontend chart there, query cost only, is a Ekrina-only frontier):
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/pareto-total-dark.svg">
-  <img alt="Mixed-corpus accuracy (MRR) vs. cold one-shot cost (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy then Krino (acronym): Krino (acronym) scores 0.87 at ~4.7 ms one-shot, and everything else, including Fuse.js (all opts) at 0.81 and ~25 ms, is dominated." src="./docs/pareto-total-light.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. cold one-shot cost (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy then Ekrina (acronym): Ekrina (acronym) scores 0.87 at ~4.7 ms one-shot, and everything else, including Fuse.js (all opts) at 0.81 and ~25 ms, is dominated." src="./docs/pareto-total-light.svg">
 </picture>
 
-Krino is the only library that by default:
+Ekrina is the only library that by default:
 
 - returns a categorical **`tier`** _and_ numeric `ranges`
 - folds diacritics
@@ -145,14 +145,14 @@ Krino is the only library that by default:
 - takes per-field config
 
 The full feature matrix, verified per cell against each library's current source, is in [docs/benchmarks.md](./docs/benchmarks.md#libraries).
-Originally written for matching in-memory lists on the client, Krino has proven to be a competitive option for serverside work.
+Originally written for matching in-memory lists on the client, Ekrina has proven to be a competitive option for serverside work.
 
 ### Results, in short
 
 Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 
-- **Match quality**: Krino returns the smallest result set of the subsequence libraries and ranks the queried item **first on every structured query**; a one-char slip still matches, and at two dropped chars it returns nothing where its parent returns 67 junk chains.
-  A transposition, an insertion and a substitution each break the subsequence property; Krino's four one-edit tiers take all three at rank 1 with a single row, where the subsequence engines return nothing at all.
+- **Match quality**: Ekrina returns the smallest result set of the subsequence libraries and ranks the queried item **first on every structured query**; a one-char slip still matches, and at two dropped chars it returns nothing where its parent returns 67 junk chains.
+  A transposition, an insertion and a substitution each break the subsequence property; Ekrina's four one-edit tiers take all three at rank 1 with a single row, where the subsequence engines return nothing at all.
   A typo inside a phrase is corrected too: the words that do occur pin the field, and only the failing word is rescued. Two or more edits in one query remain the edit-distance engines' edge.
 - **Speed, measured cold**: a twenty-query session (one searcher, twenty distinct queries, fresh process) runs 19 ms at 10k and 75 ms at 100k — the cheapest of anything above 0.5 MRR, and ~4–47× under every typo-tolerant or tiered alternative, ~1–3.4 ms per query after the first.
   The lazy preparation lands its whole bill on the first query (~4.4 ms at 10k, ~17 ms at 100k), the cold column in [docs/benchmarks.md](./docs/benchmarks.md); only the bare-output engines (uFuzzy, and fuzzysort at 10k) run the session cheaper, at a fraction of the match quality.
@@ -160,7 +160,7 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 
 ### What to pick when
 
-**Pick Krino.** It tops the quality scorecard on both benchmark corpora outright and runs the cheapest realistic session of anything above 0.5 MRR at every published size.
+**Pick Ekrina.** It tops the quality scorecard on both benchmark corpora outright and runs the cheapest realistic session of anything above 0.5 MRR at every published size.
 At ~5.5 kB gzip it sits mid-pack on size: the one-edit rescue machinery bought the quality lead (the unfold table is generated from the fold logic at first use, not shipped), and Fuse.js and fast-fuzzy are 1.7–2× larger.
 One workload genuinely points elsewhere:
 

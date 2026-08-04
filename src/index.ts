@@ -1,5 +1,5 @@
 /**
- * Krino — tiny, typed fuzzy matching. Inspired by @nozbe/microfuzz.
+ * Ekrina — tiny, typed fuzzy matching. Inspired by @nozbe/microfuzz.
  *
  * Scoring is lower = better. `score <= SCORES.CONTAINS` is the test for "the
  * user's text actually appears here"; above it is a fuzzy chain or a one-edit

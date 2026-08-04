@@ -4,7 +4,7 @@
 
 Initial release — nothing has been published before this; earlier version numbers in git history were internal development stages.
 
-Krino is a zero-dependency fuzzy matcher: a rich single-string primitive (`fuzzyMatch`) returning `{ score, tier, ranges }`, and a thin cached collection search (`createFuzzySearch`) built on it.
+Ekrina is a zero-dependency fuzzy matcher: a rich single-string primitive (`fuzzyMatch`) returning `{ score, tier, ranges }`, and a thin cached collection search (`createFuzzySearch`) built on it.
 Scoring is lower = better, and `score <= SCORES.CONTAINS` is exactly "the query text appears here" — everything above it is a fuzzy chain or a one-edit typo rescue, told apart by `tier`.
 
 Design decisions worth recording, with the measurements that made them:

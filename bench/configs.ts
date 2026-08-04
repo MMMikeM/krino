@@ -18,7 +18,7 @@ import Fuse, { type IFuseOptions } from "fuse.js";
 import fuzzy from "fuzzy";
 import fuzzysort from "fuzzysort";
 import { matchSorter } from "match-sorter";
-import { createFuzzySearch } from "krino";
+import { createFuzzySearch } from "ekrina";
 
 // The bundlers behind vitest unwrap a CJS `exports.default`; node's ESM loader
 // hands back the namespace object instead, and memory.ts runs under plain node.
@@ -53,13 +53,13 @@ const FUSE_ALL: IFuseOptions<string> = {
 	ignoreDiacritics: true,
 	includeMatches: true,
 	// Space-separated terms become an AND of fuzzy patterns matched in any
-	// order — the same result set krino's multi-word tier returns. Fuse's other
+	// order — the same result set ekrina's multi-word tier returns. Fuse's other
 	// multi-word switch, `useTokenSearch`, defaults to OR (`tokenMatch: "any"`)
 	// and only reaches these semantics at `tokenMatch: "all"`.
 	useExtendedSearch: true,
 };
 
-// SingleError with all four edits — uFuzzy's closest config to krino's one-edit rescue.
+// SingleError with all four edits — uFuzzy's closest config to ekrina's one-edit rescue.
 const UFUZZY_ALL: uFuzzy.Options = {
 	intraMode: 1,
 	intraIns: 1,
@@ -74,7 +74,7 @@ const UFUZZY_ALL: uFuzzy.Options = {
 // configuration every rank it would have earned.
 const OUT_OF_ORDER = 5;
 
-// `pnpm bench --only=krino` narrows a run to the configurations whose name
+// `pnpm bench --only=ekrina` narrows a run to the configurations whose name
 // contains one of these tokens, so a change to one library can be re-measured
 // without re-timing the other thirteen. Comma-separated, case-insensitive
 // substrings. Read here rather than passed down because every stage reaches its
@@ -143,25 +143,25 @@ const uFuzzyProbe =
 type Definition = { name: string; make: () => Omit<Config, "name"> };
 
 const definitions = (list: string[]): Definition[] => [
-	// krino prepares nothing at construction: the char-class masks are built only
+	// ekrina prepares nothing at construction: the char-class masks are built only
 	// if a query needs the one-edit rescue, and a field's text only once it
 	// survives a filter. The index cell is the constructor alone; everything the
 	// construction deferred lands in the COLD query cell, where a fresh searcher
 	// pays it — the same split every lazy preparer gets.
 	{
-		name: "krino",
+		name: "ekrina",
 		make: () => {
-			const krino = createFuzzySearch(list);
+			const ekrina = createFuzzySearch(list);
 			return {
-				count: (q) => krino(q).length,
-				probe: (q) => rankedOnly(krino(q).map((r) => r.item)),
+				count: (q) => ekrina(q).length,
+				probe: (q) => rankedOnly(ekrina(q).map((r) => r.item)),
 				index: () => consume(createFuzzySearch(list)),
 				stateful: true,
 			};
 		},
 	},
 	{
-		name: "krino (acronym)",
+		name: "ekrina (acronym)",
 		make: () => {
 			const spec = [{ text: (x: string) => x, acronym: true }];
 			const acronym = createFuzzySearch(list, spec);

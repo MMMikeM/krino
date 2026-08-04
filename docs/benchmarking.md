@@ -1,7 +1,7 @@
 # The benchmark machinery, visually
 
 How a number gets from a fresh node process into a published table.
-Companion to [benchmarks.md](./benchmarks.md) (the numbers), [measurement.md](./measurement.md) (how the harness came to be wrong, twice), and [pipeline.md](./pipeline.md) (krino's own query path).
+Companion to [benchmarks.md](./benchmarks.md) (the numbers), [measurement.md](./measurement.md) (how the harness came to be wrong, twice), and [pipeline.md](./pipeline.md) (ekrina's own query path).
 
 ## One `pnpm bench` run
 
@@ -33,7 +33,7 @@ flowchart TD
         SPAWN --> AGG["aggregate: median published,<br/>min + heap kept in the artifact"]
         AGG --> GUARDS{"guards"}
         GUARDS -->|"result counts differ across processes"| DIE1["throw — not comparable work"]
-        GUARDS -->|"base krino slower than acronym"| DIE2["exit 1 — more code cannot be faster"]
+        GUARDS -->|"base ekrina slower than acronym"| DIE2["exit 1 — more code cannot be faster"]
         GUARDS -->|"first cell re-timed last, >25% drift"| WARN["warn — machine moved"]
     end
 
@@ -66,8 +66,8 @@ flowchart LR
     C & D -->|"total · first · rest-mean"| BA[("batch")]
 ```
 
-- **index** — what the constructor builds: fast-fuzzy's trie is expensive here, krino allocates buffers, fuzzysort has no constructor at all.
-- **cold query** — the first answer, every lazy slice unpaid: krino's raw-gate scan and rescue mask build, fuzzysort's prepare-all, microfuzz's first-search slice all surface here, per probe kind.
+- **index** — what the constructor builds: fast-fuzzy's trie is expensive here, ekrina allocates buffers, fuzzysort has no constructor at all.
+- **cold query** — the first answer, every lazy slice unpaid: ekrina's raw-gate scan and rescue mask build, fuzzysort's prepare-all, microfuzz's first-search slice all surface here, per probe kind.
 - **one-shot** — index + first answer summed inside one child's consecutive windows: the whole price of "given a list, get an answer".
 - **batch** — a short-word warmup match, then the twenty distinct probes once each through one process: the realistic session, and the only warmth anywhere — earned by real queries, never repetition. The warmup absorbs JIT and first-scan cost; each probe's own post-warmup time feeds the per-probe tables' `batch ms` column.
 

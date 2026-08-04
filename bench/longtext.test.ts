@@ -15,7 +15,7 @@
  */
 import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
-import { fuzzyMatch, normaliseText, splitWords } from "krino";
+import { fuzzyMatch, normaliseText, splitWords } from "ekrina";
 import { type LongtextRow, ensureRawDir, rawFile } from "./artifact.ts";
 import { CORPORA } from "./corpus";
 

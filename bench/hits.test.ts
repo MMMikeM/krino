@@ -70,24 +70,24 @@ describe("bench validity: per-library match counts and source rank", () => {
 				).toBeGreaterThan(0);
 			}
 
-			const krino = configByName(all, "krino");
+			const ekrina = configByName(all, "ekrina");
 			for (const { query, kind, source } of specs) {
-				const { count, rank } = outcome(krino.probe(query), source);
+				const { count, rank } = outcome(ekrina.probe(query), source);
 				if (kind === "miss") {
-					expect(count, `krino matched garbage "${query}"`).toBe(0);
+					expect(count, `ekrina matched garbage "${query}"`).toBe(0);
 				} else if (kind === "two-words-double-typo") {
 					// Two edits in one phrase: the one-edit rescue must refuse
 					// rather than guess. The edit-distance engines may match it;
-					// krino returning anything here means the multi-word rescue
+					// ekrina returning anything here means the multi-word rescue
 					// invented a correction.
-					expect(count, `krino guessed at the double typo "${query}"`).toBe(0);
+					expect(count, `ekrina guessed at the double typo "${query}"`).toBe(0);
 				} else if (!kind.startsWith("scatter")) {
-					// krino must surface the item each query was derived from.
+					// ekrina must surface the item each query was derived from.
 					// (The scatter kinds are exempt — those probe where chunk
 					// assembly legitimately gives up, and that limit is the
 					// measurement. Every typo kind, phrases included, is held to
 					// the same bar as everything else.)
-					expect(rank, `krino lost source of "${query}" (${kind})`).not.toBeNull();
+					expect(rank, `ekrina lost source of "${query}" (${kind})`).not.toBeNull();
 				}
 			}
 
@@ -96,7 +96,7 @@ describe("bench validity: per-library match counts and source rank", () => {
 			const accentProbe = specs.find((s) => s.kind === "accent-stripped");
 			if (accentProbe) {
 				const { query, source } = accentProbe;
-				expect(countFor("krino", query, source)).toBeGreaterThan(0);
+				expect(countFor("ekrina", query, source)).toBeGreaterThan(0);
 				// Cross-library pairs only exist on a full run; `--only=` narrows the
 				// set, and a comparison against an absent row would assert nothing.
 				const present = new Set(all.map((c) => c.name));

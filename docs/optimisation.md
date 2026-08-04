@@ -21,7 +21,7 @@ Counted per query on the ascii corpus at 100k:
 ```
 
 The shape that matters: **the pre-filter was never the problem.**
-Krino's entire gate — a per-item `Int32Array` mask read plus a native regex on survivors — costs less than uFuzzy's _whole_ query, which has no index at all.
+Ekrina's entire gate — a per-item `Int32Array` mask read plus a native regex on survivors — costs less than uFuzzy's _whole_ query, which has no index at all.
 Everything expensive happens per surviving candidate, and only 53% of candidates that reach the ladder produce a result.
 
 ## What landed
@@ -81,7 +81,7 @@ The negative results are the more useful half, because each was a confident hypo
 | **Bigram presence mask**                        | Slower queries **and** +38% build. Four integer ANDs per variant plus a closure lost to _one_ call into V8's Irregexp, which is compiled machine code with fast literal-alternation dispatch. |
 | **Flattening the index into a string arena**    | The scan it would optimise is 3.4% of query time. The `Int32Array` mask scan was already doing its job.                                                                                       |
 | **Interleaving query samples across libraries** | Inflated fuzzysort 0.178 → 0.646 ms and uFuzzy 0.183 → 0.453 by making every sample run cache-cold. Correct for 1–40 ms index builds, wrong for sub-millisecond queries.                      |
-| **Larger V8 semi-space**                        | krino held at 4.78 / 5.16 / 4.96 / 5.17 ms across default/16/64/128 MB. Young-generation sizing was not the variance.                                                                         |
+| **Larger V8 semi-space**                        | ekrina held at 4.78 / 5.16 / 4.96 / 5.17 ms across default/16/64/128 MB. Young-generation sizing was not the variance.                                                                         |
 | **`limit` option**                              | The sort is ~3.4k comparisons on 392 results — under 0.1 ms. A UX feature, not a speed lever.                                                                                                 |
 | **Lazy ranges**                                 | 1.08–1.67 range entries per result, and the fuzzy tier's ranges fall out of the chain walk that produces the score. Nothing to defer.                                                         |
 | **`missingClasses` dispatch**                   | Sound and free, but its effect sits below the harness's ±3% noise floor, so it cannot be claimed.                                                                                             |
@@ -100,15 +100,15 @@ Churn per query, measured at ascii 100k:
 | ----------------- | --------------: | ------------: |
 | uFuzzy (all opts) |          4.5 kB |           144 |
 | uFuzzy            |          6.3 kB |           115 |
-| Krino             |         33.3 kB |           392 |
+| Ekrina             |         33.3 kB |           392 |
 | @nozbe/microfuzz  |         62.1 kB |           832 |
 | fuzzysort         |         95.0 kB |           832 |
-| Krino (acronym)   |         98.9 kB |           392 |
+| Ekrina (acronym)   |         98.9 kB |           392 |
 
-Churn tracks measurement variance almost exactly: uFuzzy at 4–6 kB is stable to ±5%, Krino at 33 kB swings ±20%, fuzzysort at 95 kB spreads 122–170%.
-That is why Krino was the library the old shared-process harness distorted most.
+Churn tracks measurement variance almost exactly: uFuzzy at 4–6 kB is stable to ±5%, Ekrina at 33 kB swings ±20%, fuzzysort at 95 kB spreads 122–170%.
+That is why Ekrina was the library the old shared-process harness distorted most.
 
-`Krino (acronym)` allocating 3× base for **identical** output is an unexplored defect: same 392 results, three times the garbage.
+`Ekrina (acronym)` allocating 3× base for **identical** output is an unexplored defect: same 392 results, three times the garbage.
 
 ## Open
 

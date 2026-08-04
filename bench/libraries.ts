@@ -21,7 +21,7 @@ export type LibraryMeta = {
 };
 
 export const META: Record<string, LibraryMeta> = {
-	krino: {
+	ekrina: {
 		gzipKB: 5.5,
 		deps: 0,
 		type: "subsequence (tiered)",
@@ -143,14 +143,14 @@ export const META: Record<string, LibraryMeta> = {
 	},
 };
 
-// "krino (acronym)" and "<lib> (all opts)" are configurations of a base library
+// "ekrina (acronym)" and "<lib> (all opts)" are configurations of a base library
 // and share its size, deps and type.
 export const baseName = (name: string): string => name.replace(/ \([^)]+\)$/, "");
 
 export const metaFor = (name: string): LibraryMeta | undefined =>
 	META[name] ?? META[baseName(name)];
 
-const DISPLAY: Record<string, string> = { krino: "Krino", "fuse.js": "Fuse.js" };
+const DISPLAY: Record<string, string> = { ekrina: "Ekrina", "fuse.js": "Fuse.js" };
 
 /** Prose spelling of a configuration name, suffix preserved: `fuse.js (all opts)` → `Fuse.js (all opts)`. */
 export const displayName = (name: string): string => {
@@ -158,9 +158,9 @@ export const displayName = (name: string): string => {
 	return (DISPLAY[base] ?? base) + name.slice(base.length);
 };
 
-/** Size-table order: krino first, then ascending gzip. */
+/** Size-table order: ekrina first, then ascending gzip. */
 export const bySize = (a: string, b: string): number =>
-	Number(b === "krino") - Number(a === "krino") || (META[a]?.gzipKB ?? 0) - (META[b]?.gzipKB ?? 0);
+	Number(b === "ekrina") - Number(a === "ekrina") || (META[a]?.gzipKB ?? 0) - (META[b]?.gzipKB ?? 0);
 
 /**
  * Whether a configuration actually does the corpus's task. The accented corpus

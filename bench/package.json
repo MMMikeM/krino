@@ -1,14 +1,14 @@
 {
-	"name": "krino-bench",
+	"name": "ekrina-bench",
 	"version": "0.0.0",
 	"private": true,
-	"description": "Benchmarks comparing krino against other fuzzy-search libraries. Not published.",
+	"description": "Benchmarks comparing ekrina against other fuzzy-search libraries. Not published.",
 	"type": "module",
 	"scripts": {
 		"test": "vp test run"
 	},
 	"dependencies": {
-		"krino": "workspace:*"
+		"ekrina": "workspace:*"
 	},
 	"devDependencies": {
 		"@faker-js/faker": "^10.5.0",

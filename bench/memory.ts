@@ -6,8 +6,8 @@
  * host program was holding anyway — the number a caller actually pays.
  *
  * The metric is `heapUsed + external`, never `heapUsed` alone: typed arrays are
- * accounted in `external` (`arrayBuffers` is a subset of it), and krino's gate
- * is a per-item Int32Array. A heapUsed-only cell would charge krino nothing for
+ * accounted in `external` (`arrayBuffers` is a subset of it), and ekrina's gate
+ * is a per-item Int32Array. A heapUsed-only cell would charge ekrina nothing for
  * its primary structure while charging the object-based engines for every
  * field.
  *

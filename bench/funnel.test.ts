@@ -5,11 +5,11 @@
  * mirroring matchField's order. Prints a table per corpus size; asserts only
  * that the funnel is monotonic and the mask never rejects a true match.
  *
- * Reads krino internals from ../src directly — dist doesn't (and shouldn't)
+ * Reads ekrina internals from ../src directly — dist doesn't (and shouldn't)
  * export the gates.
  */
 import { describe, expect, it } from "vite-plus/test";
-import { fuzzyMatch } from "krino";
+import { fuzzyMatch } from "ekrina";
 import { buildFuzzyGate, buildPresenceGate, buildRescueBigramGate, charMask } from "../src/gates";
 import { admitsMissingClass } from "../src/rescue";
 import { splitWords } from "../src/boundaries";

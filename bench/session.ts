@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import uFuzzy from "@leeoniya/ufuzzy";
-import { createFuzzySearch } from "krino";
+import { createFuzzySearch } from "ekrina";
 
 const SIZE = 100_000;
 const REPS = 7;
@@ -23,7 +23,7 @@ const REPS = 7;
 // library that ranks everything. Raised, and asserted, rather than left to
 // silently make the comparison meaningless.
 const RANK_EVERYTHING = 1e9;
-const LIBRARIES = ["krino", "uFuzzy"];
+const LIBRARIES = ["ekrina", "uFuzzy"];
 
 // Same words in both corpora so the cells compare: `marble` and `cotton` each
 // occur ~1,500 times in either. A repeated query is not a wasted cell — it is

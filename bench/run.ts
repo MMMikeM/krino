@@ -11,7 +11,7 @@
  *           never repetition.
  *
  *   node bench/run.ts <variant|all> <test|all> [count] [--size=10k|100k] [--out=file] [--json]
- *   node bench/run.ts krino mixed/garbage 10
+ *   node bench/run.ts ekrina mixed/garbage 10
  *   node bench/run.ts all batch 5 --size=10k
  *
  * Variants match by case-insensitive substring; tests by `corpus/kind`, bare
@@ -194,14 +194,14 @@ for (const size of sizes) {
 }
 
 // Physical invariant: the acronym configuration runs strictly more code per
-// query, so base krino measuring slower than it means the run absorbed load.
+// query, so base ekrina measuring slower than it means the run absorbed load.
 for (const size of sizes) {
 	for (const t of chosen) {
-		const base = results.get(key(t.id, size, "krino"));
-		const acr = results.get(key(t.id, size, "krino (acronym)"));
+		const base = results.get(key(t.id, size, "ekrina"));
+		const acr = results.get(key(t.id, size, "ekrina (acronym)"));
 		if (base && acr && base.queryMs > acr.queryMs * 1.25) {
 			console.error(
-				`WARNING contaminated: ${t.id}@${size / 1000}k base krino ${base.queryMs.toFixed(2)} > acronym ${acr.queryMs.toFixed(2)}`,
+				`WARNING contaminated: ${t.id}@${size / 1000}k base ekrina ${base.queryMs.toFixed(2)} > acronym ${acr.queryMs.toFixed(2)}`,
 			);
 			// More code cannot be faster: refuse to publish a run that violates
 			// physics. Only fatal when the run would write an artifact.

@@ -31,7 +31,7 @@ const RUNS = Number(options.get("--runs") ?? 5);
 const SCOPE = options.get("--scope") ?? process.env.BENCH ?? "";
 const CHECK = flags.has("--check");
 const DOCS_ONLY = flags.has("--docs");
-// `--only=krino` re-measures one library's cells and merges them over the
+// `--only=ekrina` re-measures one library's cells and merges them over the
 // committed artifact, leaving every other row at the value it was published
 // with. Unlike --scope this DOES write, because the cells it produces are whole
 // — the matrix is complete, one library of it is fresher than the rest.
@@ -87,7 +87,7 @@ const overlay = <T>(into: Record<string, T>, from: Record<string, T>): void => {
 // to reproduce: fail past 25%, warn past 10%.
 const anchorCheck = (artifact: Artifact): void => {
 	const matches = (variant: string): boolean => variant.toLowerCase().includes(ONLY.toLowerCase());
-	const anchor = ["fuzzysort", "uFuzzy", "krino"].find((v) => !matches(v));
+	const anchor = ["fuzzysort", "uFuzzy", "ekrina"].find((v) => !matches(v));
 	if (!anchor) return;
 	console.error(`anchor: re-timing ${anchor} short-word@10k against the committed matrix…`);
 	const out = execFileSync(

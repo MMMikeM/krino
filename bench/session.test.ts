@@ -1,6 +1,6 @@
 /**
  * Frontend session probe: three keystrokes on the 100k mixed corpus starting at
- * the 3-char UI gate, each extending the last (typing). krino's prefix-narrowing cache rescans only
+ * the 3-char UI gate, each extending the last (typing). ekrina's prefix-narrowing cache rescans only
  * the previous query's mask-gate survivors, so successive keystrokes get
  * cheaper; every other library pays a full scan per keystroke.
  * Each step is timed at its correct cache state: `reset` (untimed) replays the
@@ -51,7 +51,7 @@ it("frontend session: three successive queries at 100k", { timeout: 60_000 }, ()
 	// sample.
 	const all = configs(list);
 	const libs = [
-		"krino",
+		"ekrina",
 		"@nozbe/microfuzz",
 		"fuzzysort",
 		"uFuzzy (all opts)",

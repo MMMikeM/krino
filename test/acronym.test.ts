@@ -71,7 +71,7 @@ describe("acronym tier", () => {
 	});
 
 	it("does not skip stopwords (documented scope limit)", () => {
-		// Real-world "DRC" drops "of the"; krino's tier is contiguous initials
+		// Real-world "DRC" drops "of the"; ekrina's tier is contiguous initials
 		// only — locale stopword lists are deliberately out of scope. The
 		// density floor rejects the sparse d/r/c chain too, so the query
 		// doesn't match at all.

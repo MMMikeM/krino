@@ -9,7 +9,7 @@
 		}
 	},
 	"libraries": {
-		"krino": {
+		"ekrina": {
 			"gzipKB": 5.4,
 			"deps": 0,
 			"type": "subsequence (tiered)",
@@ -132,7 +132,7 @@
 	},
 	"speed": {
 		"ascii": {
-			"krino": {
+			"ekrina": {
 				"10000": {
 					"ms": 0.15978179999999612,
 					"sd": 0.018649569797727063,
@@ -156,7 +156,7 @@
 					"samples": 11
 				}
 			},
-			"krino (acronym)": {
+			"ekrina (acronym)": {
 				"10000": {
 					"ms": 0.1704862749999961,
 					"sd": 0.007163620678033564,
@@ -470,7 +470,7 @@
 			}
 		},
 		"mixed": {
-			"krino": {
+			"ekrina": {
 				"10000": {
 					"ms": 0.09597242499999084,
 					"sd": 0.0053819379915619634,
@@ -494,7 +494,7 @@
 					"samples": 11
 				}
 			},
-			"krino (acronym)": {
+			"ekrina (acronym)": {
 				"10000": {
 					"ms": 0.09125024999999595,
 					"sd": 0.002958924509949608,
@@ -809,7 +809,7 @@
 		}
 	},
 	"build": {
-		"krino": {
+		"ekrina": {
 			"10000": 0.01378515000033076,
 			"100000": 1.1708515999955125
 		},
@@ -839,11 +839,11 @@
 		"corpora": {
 			"ascii": [
 				{
-					"library": "krino (acronym)",
+					"library": "ekrina (acronym)",
 					"mrr": 0.82
 				},
 				{
-					"library": "krino",
+					"library": "ekrina",
 					"mrr": 0.79
 				},
 				{
@@ -897,11 +897,11 @@
 			],
 			"mixed": [
 				{
-					"library": "krino (acronym)",
+					"library": "ekrina (acronym)",
 					"mrr": 0.87
 				},
 				{
-					"library": "krino",
+					"library": "ekrina",
 					"mrr": 0.84
 				},
 				{
@@ -962,11 +962,11 @@
 				"query": "handmade",
 				"source": "Handmade Bronze Chips",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 102,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 102,
 						"rank": 1
 					},
@@ -1025,11 +1025,11 @@
 				"query": "weimann",
 				"source": "Weimann, Bins and Conn",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 12,
 						"rank": 2
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 12,
 						"rank": 2
 					},
@@ -1088,11 +1088,11 @@
 				"query": "practical metal",
 				"source": "Practical Metal Towels",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 8,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 8,
 						"rank": 1
 					},
@@ -1151,11 +1151,11 @@
 				"query": "metal practical",
 				"source": "Practical Metal Towels",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 8,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 8,
 						"rank": 1
 					},
@@ -1214,11 +1214,11 @@
 				"query": "pracxical metal",
 				"source": "Practical Metal Towels",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 8,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 8,
 						"rank": 1
 					},
@@ -1277,11 +1277,11 @@
 				"query": "practical mexal",
 				"source": "Practical Metal Towels",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 8,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 8,
 						"rank": 1
 					},
@@ -1340,11 +1340,11 @@
 				"query": "metal pracxical",
 				"source": "Practical Metal Towels",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 8,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 8,
 						"rank": 1
 					},
@@ -1403,11 +1403,11 @@
 				"query": "pracxical mexal",
 				"source": null,
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 0,
 						"rank": null
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 0,
 						"rank": null
 					},
@@ -1466,11 +1466,11 @@
 				"query": "kasey",
 				"source": "Kasey Conn II",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 2,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 2,
 						"rank": 1
 					},
@@ -1529,11 +1529,11 @@
 				"query": "tting",
 				"source": "Wittingfort, Algeria",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 28,
 						"rank": 3
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 28,
 						"rank": 3
 					},
@@ -1592,11 +1592,11 @@
 				"query": "armands",
 				"source": "Armand Shanahan",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 4,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 4,
 						"rank": 1
 					},
@@ -1655,11 +1655,11 @@
 				"query": "nadiaouth",
 				"source": "Nadiamouth, Ireland",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 1,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 1,
 						"rank": 1
 					},
@@ -1718,11 +1718,11 @@
 				"query": "naiaouh",
 				"source": "Nadiamouth, Ireland",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 0,
 						"rank": null
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 0,
 						"rank": null
 					},
@@ -1781,11 +1781,11 @@
 				"query": "ndaot",
 				"source": "Nadiamouth, Ireland",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 5,
 						"rank": null
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 5,
 						"rank": null
 					},
@@ -1844,11 +1844,11 @@
 				"query": "nadimaouth",
 				"source": "Nadiamouth, Ireland",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 1,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 1,
 						"rank": 1
 					},
@@ -1907,11 +1907,11 @@
 				"query": "nadiammouth",
 				"source": "Nadiamouth, Ireland",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 1,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 1,
 						"rank": 1
 					},
@@ -1970,11 +1970,11 @@
 				"query": "nadiaxouth",
 				"source": "Nadiamouth, Ireland",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 1,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 1,
 						"rank": 1
 					},
@@ -2033,11 +2033,11 @@
 				"query": "sgh",
 				"source": "Soft Gold Hat",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 31,
 						"rank": 3
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 32,
 						"rank": 1
 					},
@@ -2096,11 +2096,11 @@
 				"query": "cote",
 				"source": "North Jamelberg, Côte d'Ivoire",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 392,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 392,
 						"rank": 1
 					},
@@ -2159,11 +2159,11 @@
 				"query": "qxzwkv",
 				"source": null,
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 0,
 						"rank": null
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 0,
 						"rank": null
 					},
@@ -2224,11 +2224,11 @@
 				"query": "ergonomic",
 				"source": "Ergonomic Granite Hat",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 76,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 76,
 						"rank": 1
 					},
@@ -2287,11 +2287,11 @@
 				"query": "grady",
 				"source": "Grady Group",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 19,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 19,
 						"rank": 1
 					},
@@ -2350,11 +2350,11 @@
 				"query": "handcrafted wooden",
 				"source": "Handcrafted Wooden Car",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 5,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 5,
 						"rank": 1
 					},
@@ -2413,11 +2413,11 @@
 				"query": "wooden handcrafted",
 				"source": "Handcrafted Wooden Car",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 5,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 5,
 						"rank": 1
 					},
@@ -2476,11 +2476,11 @@
 				"query": "handcxafted wooden",
 				"source": "Handcrafted Wooden Car",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 5,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 5,
 						"rank": 1
 					},
@@ -2539,11 +2539,11 @@
 				"query": "handcrafted wooxen",
 				"source": "Handcrafted Wooden Car",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 5,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 5,
 						"rank": 1
 					},
@@ -2602,11 +2602,11 @@
 				"query": "wooden handcxafted",
 				"source": "Handcrafted Wooden Car",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 5,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 5,
 						"rank": 1
 					},
@@ -2665,11 +2665,11 @@
 				"query": "handcxafted wooxen",
 				"source": null,
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 0,
 						"rank": null
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 0,
 						"rank": null
 					},
@@ -2728,11 +2728,11 @@
 				"query": "auxen",
 				"source": "Auxence Deschamps",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 16,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 16,
 						"rank": 1
 					},
@@ -2791,11 +2791,11 @@
 				"query": "gonom",
 				"source": "Ergonomic Silk Cheese",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 76,
 						"rank": 5
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 76,
 						"rank": 5
 					},
@@ -2854,11 +2854,11 @@
 				"query": "romanowskis",
 				"source": "Romanowski-Trzeciak",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 2,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 2,
 						"rank": 1
 					},
@@ -2917,11 +2917,11 @@
 				"query": "hugutte",
 				"source": "Huguette Rousseau",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 1,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 1,
 						"rank": 1
 					},
@@ -2980,11 +2980,11 @@
 				"query": "huuete",
 				"source": "Huguette Rousseau",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 1,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 1,
 						"rank": 1
 					},
@@ -3043,11 +3043,11 @@
 				"query": "hget",
 				"source": "Huguette Rousseau",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 0,
 						"rank": null
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 0,
 						"rank": null
 					},
@@ -3106,11 +3106,11 @@
 				"query": "hugeutte",
 				"source": "Huguette Rousseau",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 1,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 1,
 						"rank": 1
 					},
@@ -3169,11 +3169,11 @@
 				"query": "hugueette",
 				"source": "Huguette Rousseau",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 1,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 1,
 						"rank": 1
 					},
@@ -3232,11 +3232,11 @@
 				"query": "huguxtte",
 				"source": "Huguette Rousseau",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 1,
 						"rank": 1
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 1,
 						"rank": 1
 					},
@@ -3295,11 +3295,11 @@
 				"query": "rsaw",
 				"source": "Rath, Streich and Witting",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 7,
 						"rank": 2
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 8,
 						"rank": 1
 					},
@@ -3358,11 +3358,11 @@
 				"query": "kepa",
 				"source": "Marczak-Kępa",
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 7,
 						"rank": 2
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 7,
 						"rank": 2
 					},
@@ -3421,11 +3421,11 @@
 				"query": "qxzwkv",
 				"source": null,
 				"cells": {
-					"krino": {
+					"ekrina": {
 						"count": 0,
 						"rank": null
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"count": 0,
 						"rank": null
 					},
@@ -3491,7 +3491,7 @@
 		],
 		"rows": [
 			{
-				"library": "krino",
+				"library": "ekrina",
 				"stepMs": [
 					3.045417000000043,
 					1.7074999999999818,
@@ -3606,14 +3606,14 @@
 	},
 	"memory": {
 		"ascii": {
-			"krino": {
+			"ekrina": {
 				"heapBytes": 27383888,
 				"externalBytes": 1200040,
 				"totalBytes": 28583928,
 				"residueBytes": 154248,
 				"collected": true
 			},
-			"krino (acronym)": {
+			"ekrina (acronym)": {
 				"heapBytes": 27395208,
 				"externalBytes": 1200040,
 				"totalBytes": 28595248,
@@ -3706,14 +3706,14 @@
 			}
 		},
 		"mixed": {
-			"krino": {
+			"ekrina": {
 				"heapBytes": 27393024,
 				"externalBytes": 1200040,
 				"totalBytes": 28593064,
 				"residueBytes": 200328,
 				"collected": true
 			},
-			"krino (acronym)": {
+			"ekrina (acronym)": {
 				"heapBytes": 27425464,
 				"externalBytes": 1200040,
 				"totalBytes": 28625504,
@@ -3810,7 +3810,7 @@
 		"ascii": {
 			"long-word": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14333299999999838,
 						"queryMs": 2.120750000000001,
 						"firstMs": 2.120750000000001,
@@ -3819,7 +3819,7 @@
 						"minQueryMs": 1.9965420000000051,
 						"heapMB": 18.86981201171875
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14499999999999602,
 						"queryMs": 2.1067500000000052,
 						"firstMs": 2.1067500000000052,
@@ -3938,7 +3938,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3010410000000121,
 						"queryMs": 6.460915999999997,
 						"firstMs": 6.460915999999997,
@@ -3947,7 +3947,7 @@
 						"minQueryMs": 6.417333999999997,
 						"heapMB": 21.582740783691406
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3279579999999953,
 						"queryMs": 6.747124999999997,
 						"firstMs": 6.747124999999997,
@@ -4068,7 +4068,7 @@
 			},
 			"short-word": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1348340000000121,
 						"queryMs": 2.170041999999995,
 						"firstMs": 2.170041999999995,
@@ -4077,7 +4077,7 @@
 						"minQueryMs": 2.1259589999999946,
 						"heapMB": 18.816322326660156
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.13470900000000086,
 						"queryMs": 2.409000000000006,
 						"firstMs": 2.409000000000006,
@@ -4196,7 +4196,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.32954200000000355,
 						"queryMs": 5.525041999999999,
 						"firstMs": 5.525041999999999,
@@ -4205,7 +4205,7 @@
 						"minQueryMs": 5.4750000000000085,
 						"heapMB": 21.063926696777344
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.34312500000000057,
 						"queryMs": 5.892416999999995,
 						"firstMs": 5.892416999999995,
@@ -4326,7 +4326,7 @@
 			},
 			"two-words": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14100000000000534,
 						"queryMs": 4.606875000000002,
 						"firstMs": 4.606875000000002,
@@ -4335,7 +4335,7 @@
 						"minQueryMs": 4.506166000000007,
 						"heapMB": 18.938255310058594
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.15270800000000406,
 						"queryMs": 4.667749999999998,
 						"firstMs": 4.667749999999998,
@@ -4454,7 +4454,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.29154200000000685,
 						"queryMs": 17.5865,
 						"firstMs": 17.5865,
@@ -4463,7 +4463,7 @@
 						"minQueryMs": 17.44854099999999,
 						"heapMB": 21.905723571777344
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.33108400000000415,
 						"queryMs": 17.454041000000004,
 						"firstMs": 17.454041000000004,
@@ -4584,7 +4584,7 @@
 			},
 			"two-words-reversed": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1460830000000044,
 						"queryMs": 4.628667000000007,
 						"firstMs": 4.628667000000007,
@@ -4593,7 +4593,7 @@
 						"minQueryMs": 4.517749999999992,
 						"heapMB": 18.94219970703125
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.1474580000000003,
 						"queryMs": 4.613958000000011,
 						"firstMs": 4.613958000000011,
@@ -4712,7 +4712,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3022500000000008,
 						"queryMs": 17.295500000000004,
 						"firstMs": 17.295500000000004,
@@ -4721,7 +4721,7 @@
 						"minQueryMs": 17.187042000000005,
 						"heapMB": 21.94586944580078
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.2888749999999902,
 						"queryMs": 17.330874999999992,
 						"firstMs": 17.330874999999992,
@@ -4842,7 +4842,7 @@
 			},
 			"two-words-typo": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14391600000000437,
 						"queryMs": 4.306082999999987,
 						"firstMs": 4.306082999999987,
@@ -4851,7 +4851,7 @@
 						"minQueryMs": 4.2606250000000045,
 						"heapMB": 19.272560119628906
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14800000000001035,
 						"queryMs": 4.3401250000000005,
 						"firstMs": 4.3401250000000005,
@@ -4970,7 +4970,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3375000000000057,
 						"queryMs": 17.477334,
 						"firstMs": 17.477334,
@@ -4979,7 +4979,7 @@
 						"minQueryMs": 16.288415999999998,
 						"heapMB": 21.090423583984375
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.323875000000001,
 						"queryMs": 16.305083999999994,
 						"firstMs": 16.305083999999994,
@@ -5100,7 +5100,7 @@
 			},
 			"two-words-typo-second": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.15037499999999682,
 						"queryMs": 4.411000000000001,
 						"firstMs": 4.411000000000001,
@@ -5109,7 +5109,7 @@
 						"minQueryMs": 4.267707999999999,
 						"heapMB": 18.945877075195312
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14708299999999497,
 						"queryMs": 4.355249999999998,
 						"firstMs": 4.355249999999998,
@@ -5228,7 +5228,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.312334000000007,
 						"queryMs": 16.276374999999987,
 						"firstMs": 16.276374999999987,
@@ -5237,7 +5237,7 @@
 						"minQueryMs": 16.125165999999993,
 						"heapMB": 21.059799194335938
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.30587500000000034,
 						"queryMs": 16.325999999999993,
 						"firstMs": 16.325999999999993,
@@ -5358,7 +5358,7 @@
 			},
 			"two-words-typo-reversed": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14454200000000128,
 						"queryMs": 4.525666000000001,
 						"firstMs": 4.525666000000001,
@@ -5367,7 +5367,7 @@
 						"minQueryMs": 4.460707999999997,
 						"heapMB": 18.81365203857422
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14658299999999258,
 						"queryMs": 4.67820900000001,
 						"firstMs": 4.67820900000001,
@@ -5486,7 +5486,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3051659999999998,
 						"queryMs": 16.464375000000004,
 						"firstMs": 16.464375000000004,
@@ -5495,7 +5495,7 @@
 						"minQueryMs": 16.350375,
 						"heapMB": 21.164772033691406
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3149999999999977,
 						"queryMs": 16.48412499999999,
 						"firstMs": 16.48412499999999,
@@ -5616,7 +5616,7 @@
 			},
 			"two-words-double-typo": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14308399999998755,
 						"queryMs": 3.9130830000000003,
 						"firstMs": 3.9130830000000003,
@@ -5625,7 +5625,7 @@
 						"minQueryMs": 3.8419999999999987,
 						"heapMB": 18.701927185058594
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14733299999998906,
 						"queryMs": 3.931167000000002,
 						"firstMs": 3.931167000000002,
@@ -5744,7 +5744,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.32116599999999096,
 						"queryMs": 16.756709,
 						"firstMs": 16.756709,
@@ -5753,7 +5753,7 @@
 						"minQueryMs": 15.71974999999999,
 						"heapMB": 20.816490173339844
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3412090000000063,
 						"queryMs": 15.746875000000003,
 						"firstMs": 15.746875000000003,
@@ -5874,7 +5874,7 @@
 			},
 			"prefix": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1368750000000034,
 						"queryMs": 6.045833000000002,
 						"firstMs": 6.045833000000002,
@@ -5883,7 +5883,7 @@
 						"minQueryMs": 6.012917000000002,
 						"heapMB": 19.151107788085938
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14383300000000077,
 						"queryMs": 6.372291999999987,
 						"firstMs": 6.372291999999987,
@@ -6002,7 +6002,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.28650000000000375,
 						"queryMs": 23.423083000000005,
 						"firstMs": 23.423083000000005,
@@ -6011,7 +6011,7 @@
 						"minQueryMs": 23.399958999999996,
 						"heapMB": 23.049827575683594
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.31970800000000565,
 						"queryMs": 23.775291999999993,
 						"firstMs": 23.775291999999993,
@@ -6132,7 +6132,7 @@
 			},
 			"infix": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1436250000000001,
 						"queryMs": 2.2418750000000074,
 						"firstMs": 2.2418750000000074,
@@ -6141,7 +6141,7 @@
 						"minQueryMs": 2.2344580000000036,
 						"heapMB": 18.819778442382812
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14683300000000088,
 						"queryMs": 2.574666999999991,
 						"firstMs": 2.574666999999991,
@@ -6260,7 +6260,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.287832999999992,
 						"queryMs": 6.659415999999993,
 						"firstMs": 6.659415999999993,
@@ -6269,7 +6269,7 @@
 						"minQueryMs": 6.635916000000009,
 						"heapMB": 21.31812286376953
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.30758299999999394,
 						"queryMs": 7.190583000000004,
 						"firstMs": 7.190583000000004,
@@ -6390,7 +6390,7 @@
 			},
 			"plural-to-singular": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14687500000000853,
 						"queryMs": 7.427791999999997,
 						"firstMs": 7.427791999999997,
@@ -6399,7 +6399,7 @@
 						"minQueryMs": 7.340208000000004,
 						"heapMB": 19.57672882080078
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.1507919999999956,
 						"queryMs": 7.9246669999999995,
 						"firstMs": 7.9246669999999995,
@@ -6518,7 +6518,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3067090000000121,
 						"queryMs": 31.77525,
 						"firstMs": 31.77525,
@@ -6527,7 +6527,7 @@
 						"minQueryMs": 31.183290999999997,
 						"heapMB": 26.557373046875
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.31870899999999835,
 						"queryMs": 32.48712499999999,
 						"firstMs": 32.48712499999999,
@@ -6648,7 +6648,7 @@
 			},
 			"scatter-light": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14629200000000253,
 						"queryMs": 6.102333000000002,
 						"firstMs": 6.102333000000002,
@@ -6657,7 +6657,7 @@
 						"minQueryMs": 6.0008749999999935,
 						"heapMB": 19.08074188232422
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.1409579999999977,
 						"queryMs": 6.366917000000001,
 						"firstMs": 6.366917000000001,
@@ -6776,7 +6776,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3397499999999951,
 						"queryMs": 22.588333000000006,
 						"firstMs": 22.588333000000006,
@@ -6785,7 +6785,7 @@
 						"minQueryMs": 22.530291000000005,
 						"heapMB": 22.147361755371094
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3042909999999921,
 						"queryMs": 22.909875,
 						"firstMs": 22.909875,
@@ -6906,7 +6906,7 @@
 			},
 			"scatter-medium": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1437919999999906,
 						"queryMs": 5.835207999999994,
 						"firstMs": 5.835207999999994,
@@ -6915,7 +6915,7 @@
 						"minQueryMs": 5.809125000000009,
 						"heapMB": 19.18798828125
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.147207999999992,
 						"queryMs": 6.3154169999999965,
 						"firstMs": 6.3154169999999965,
@@ -7034,7 +7034,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3241249999999951,
 						"queryMs": 23.410375000000002,
 						"firstMs": 23.410375000000002,
@@ -7043,7 +7043,7 @@
 						"minQueryMs": 23.214041999999992,
 						"heapMB": 23.209129333496094
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3442500000000024,
 						"queryMs": 23.838791,
 						"firstMs": 23.838791,
@@ -7164,7 +7164,7 @@
 			},
 			"scatter-heavy": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14466699999999832,
 						"queryMs": 7.850540999999993,
 						"firstMs": 7.850540999999993,
@@ -7173,7 +7173,7 @@
 						"minQueryMs": 7.629416000000006,
 						"heapMB": 20.84850311279297
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.1481250000000074,
 						"queryMs": 8.060000000000002,
 						"firstMs": 8.060000000000002,
@@ -7292,7 +7292,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.2943339999999921,
 						"queryMs": 33.550708,
 						"firstMs": 33.550708,
@@ -7301,7 +7301,7 @@
 						"minQueryMs": 32.918334,
 						"heapMB": 23.133407592773438
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.33183300000000315,
 						"queryMs": 33.98616700000001,
 						"firstMs": 33.98616700000001,
@@ -7422,7 +7422,7 @@
 			},
 			"transposition": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14204199999998934,
 						"queryMs": 5.609000000000009,
 						"firstMs": 5.609000000000009,
@@ -7431,7 +7431,7 @@
 						"minQueryMs": 5.5541669999999925,
 						"heapMB": 19.0108642578125
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.1461670000000055,
 						"queryMs": 5.638499999999993,
 						"firstMs": 5.638499999999993,
@@ -7550,7 +7550,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.29375000000000284,
 						"queryMs": 21.502750000000006,
 						"firstMs": 21.502750000000006,
@@ -7559,7 +7559,7 @@
 						"minQueryMs": 21.33475,
 						"heapMB": 21.58331298828125
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.30424999999999613,
 						"queryMs": 21.999167,
 						"firstMs": 21.999167,
@@ -7680,7 +7680,7 @@
 			},
 			"insertion": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14287500000000364,
 						"queryMs": 5.6738750000000095,
 						"firstMs": 5.6738750000000095,
@@ -7689,7 +7689,7 @@
 						"minQueryMs": 5.621290999999999,
 						"heapMB": 19.012420654296875
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.140625,
 						"queryMs": 5.612125000000006,
 						"firstMs": 5.612125000000006,
@@ -7808,7 +7808,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.2960419999999999,
 						"queryMs": 21.562957999999995,
 						"firstMs": 21.562957999999995,
@@ -7817,7 +7817,7 @@
 						"minQueryMs": 21.318167000000003,
 						"heapMB": 21.595619201660156
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3251249999999999,
 						"queryMs": 23.059042000000005,
 						"firstMs": 23.059042000000005,
@@ -7938,7 +7938,7 @@
 			},
 			"substitution": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.147625000000005,
 						"queryMs": 5.553207999999998,
 						"firstMs": 5.553207999999998,
@@ -7947,7 +7947,7 @@
 						"minQueryMs": 5.413499999999999,
 						"heapMB": 18.944244384765625
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.1509580000000028,
 						"queryMs": 5.578417000000002,
 						"firstMs": 5.578417000000002,
@@ -8066,7 +8066,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.31008400000000336,
 						"queryMs": 20.693292,
 						"firstMs": 20.693292,
@@ -8075,7 +8075,7 @@
 						"minQueryMs": 20.528583999999995,
 						"heapMB": 21.068588256835938
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.33141700000000185,
 						"queryMs": 20.727833000000004,
 						"firstMs": 20.727833000000004,
@@ -8196,7 +8196,7 @@
 			},
 			"acronym": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14866600000000574,
 						"queryMs": 2.533042000000009,
 						"firstMs": 2.533042000000009,
@@ -8205,7 +8205,7 @@
 						"minQueryMs": 2.516582999999997,
 						"heapMB": 18.94622039794922
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14533300000000793,
 						"queryMs": 2.8850829999999945,
 						"firstMs": 2.8850829999999945,
@@ -8324,7 +8324,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.30058400000000063,
 						"queryMs": 8.000167000000005,
 						"firstMs": 8.000167000000005,
@@ -8333,7 +8333,7 @@
 						"minQueryMs": 7.8941250000000025,
 						"heapMB": 22.232704162597656
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.33687500000000625,
 						"queryMs": 8.778082999999995,
 						"firstMs": 8.778082999999995,
@@ -8454,7 +8454,7 @@
 			},
 			"accent-stripped": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.13270799999999383,
 						"queryMs": 3.2542080000000055,
 						"firstMs": 3.2542080000000055,
@@ -8463,7 +8463,7 @@
 						"minQueryMs": 3.243667000000002,
 						"heapMB": 20.333450317382812
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14887500000000387,
 						"queryMs": 3.8085829999999987,
 						"firstMs": 3.8085829999999987,
@@ -8582,7 +8582,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.30462499999998727,
 						"queryMs": 11.153915999999995,
 						"firstMs": 11.153915999999995,
@@ -8591,7 +8591,7 @@
 						"minQueryMs": 11.005208999999994,
 						"heapMB": 28.53490447998047
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.319665999999998,
 						"queryMs": 12.907042000000004,
 						"firstMs": 12.907042000000004,
@@ -8712,7 +8712,7 @@
 			},
 			"miss": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14108299999999474,
 						"queryMs": 4.285000000000011,
 						"firstMs": 4.285000000000011,
@@ -8721,7 +8721,7 @@
 						"minQueryMs": 4.220792000000003,
 						"heapMB": 18.84539794921875
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.13916700000000048,
 						"queryMs": 4.205250000000007,
 						"firstMs": 4.205250000000007,
@@ -8840,7 +8840,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.2822089999999946,
 						"queryMs": 18.125917,
 						"firstMs": 18.125917,
@@ -8849,7 +8849,7 @@
 						"minQueryMs": 17.928583000000003,
 						"heapMB": 20.908035278320312
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.31691700000000367,
 						"queryMs": 18.67779200000001,
 						"firstMs": 18.67779200000001,
@@ -8970,7 +8970,7 @@
 			},
 			"batch": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14154099999998948,
 						"queryMs": 22.14400100000003,
 						"firstMs": 2.184624999999997,
@@ -9001,7 +9001,7 @@
 							0.11991600000000346
 						]
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14812499999999318,
 						"queryMs": 23.050163000000012,
 						"firstMs": 2.5260000000000105,
@@ -9406,7 +9406,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3302500000000066,
 						"queryMs": 83.24716700000003,
 						"firstMs": 5.520750000000007,
@@ -9437,7 +9437,7 @@
 							0.4774579999999844
 						]
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.32175000000000864,
 						"queryMs": 87.30299799999997,
 						"firstMs": 5.967791000000005,
@@ -9846,7 +9846,7 @@
 		"mixed": {
 			"long-word": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14379099999999312,
 						"queryMs": 2.8612499999999983,
 						"firstMs": 2.8612499999999983,
@@ -9855,7 +9855,7 @@
 						"minQueryMs": 2.82758299999999,
 						"heapMB": 18.88475799560547
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14691700000000196,
 						"queryMs": 2.8618330000000043,
 						"firstMs": 2.8618330000000043,
@@ -9974,7 +9974,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.2923749999999927,
 						"queryMs": 10.236666,
 						"firstMs": 10.236666,
@@ -9983,7 +9983,7 @@
 						"minQueryMs": 10.180291999999994,
 						"heapMB": 21.448204040527344
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.319082999999992,
 						"queryMs": 10.357292000000001,
 						"firstMs": 10.357292000000001,
@@ -10104,7 +10104,7 @@
 			},
 			"short-word": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14741700000000435,
 						"queryMs": 2.6123330000000067,
 						"firstMs": 2.6123330000000067,
@@ -10113,7 +10113,7 @@
 						"minQueryMs": 2.569874999999996,
 						"heapMB": 18.863906860351562
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.15958399999999529,
 						"queryMs": 2.9208750000000094,
 						"firstMs": 2.9208750000000094,
@@ -10232,7 +10232,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.28487499999999955,
 						"queryMs": 6.869500000000002,
 						"firstMs": 6.869500000000002,
@@ -10241,7 +10241,7 @@
 						"minQueryMs": 6.804292000000004,
 						"heapMB": 21.2279052734375
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.32716700000000287,
 						"queryMs": 7.231915999999998,
 						"firstMs": 7.231915999999998,
@@ -10362,7 +10362,7 @@
 			},
 			"two-words": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.13933399999999097,
 						"queryMs": 4.265416999999999,
 						"firstMs": 4.265416999999999,
@@ -10371,7 +10371,7 @@
 						"minQueryMs": 4.2415419999999955,
 						"heapMB": 18.80663299560547
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.1486670000000032,
 						"queryMs": 4.416665999999992,
 						"firstMs": 4.416665999999992,
@@ -10490,7 +10490,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.29229100000000585,
 						"queryMs": 16.936707999999996,
 						"firstMs": 16.936707999999996,
@@ -10499,7 +10499,7 @@
 						"minQueryMs": 16.88033399999999,
 						"heapMB": 21.15044403076172
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.2974169999999958,
 						"queryMs": 17.185457999999997,
 						"firstMs": 17.185457999999997,
@@ -10620,7 +10620,7 @@
 			},
 			"two-words-reversed": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1443749999999966,
 						"queryMs": 4.301292000000004,
 						"firstMs": 4.301292000000004,
@@ -10629,7 +10629,7 @@
 						"minQueryMs": 4.273875000000004,
 						"heapMB": 18.81201934814453
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.15000000000000568,
 						"queryMs": 4.36808400000001,
 						"firstMs": 4.36808400000001,
@@ -10748,7 +10748,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.29775000000000773,
 						"queryMs": 17.107584000000003,
 						"firstMs": 17.107584000000003,
@@ -10757,7 +10757,7 @@
 						"minQueryMs": 16.91604199999999,
 						"heapMB": 21.210968017578125
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.2848340000000036,
 						"queryMs": 17.062708,
 						"firstMs": 17.062708,
@@ -10878,7 +10878,7 @@
 			},
 			"two-words-typo": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1426659999999913,
 						"queryMs": 3.969583,
 						"firstMs": 3.969583,
@@ -10887,7 +10887,7 @@
 						"minQueryMs": 3.917874999999995,
 						"heapMB": 18.77569580078125
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14724999999999966,
 						"queryMs": 3.9683339999999987,
 						"firstMs": 3.9683339999999987,
@@ -11006,7 +11006,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3454579999999936,
 						"queryMs": 17.63525,
 						"firstMs": 17.63525,
@@ -11015,7 +11015,7 @@
 						"minQueryMs": 17.179208000000003,
 						"heapMB": 21.18750762939453
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3166659999999979,
 						"queryMs": 17.20337500000001,
 						"firstMs": 17.20337500000001,
@@ -11136,7 +11136,7 @@
 			},
 			"two-words-typo-second": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1499589999999955,
 						"queryMs": 3.956125,
 						"firstMs": 3.956125,
@@ -11145,7 +11145,7 @@
 						"minQueryMs": 3.8697499999999962,
 						"heapMB": 18.516029357910156
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.1401249999999976,
 						"queryMs": 3.932333,
 						"firstMs": 3.932333,
@@ -11264,7 +11264,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3200420000000008,
 						"queryMs": 17.72850000000001,
 						"firstMs": 17.72850000000001,
@@ -11273,7 +11273,7 @@
 						"minQueryMs": 16.746042000000003,
 						"heapMB": 20.688064575195312
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.2854159999999979,
 						"queryMs": 17.089375000000004,
 						"firstMs": 17.089375000000004,
@@ -11394,7 +11394,7 @@
 			},
 			"two-words-typo-reversed": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14629200000000253,
 						"queryMs": 4.182749999999999,
 						"firstMs": 4.182749999999999,
@@ -11403,7 +11403,7 @@
 						"minQueryMs": 4.118166000000002,
 						"heapMB": 18.790359497070312
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.1395830000000018,
 						"queryMs": 4.124375000000001,
 						"firstMs": 4.124375000000001,
@@ -11522,7 +11522,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.2932089999999903,
 						"queryMs": 17.223,
 						"firstMs": 17.223,
@@ -11531,7 +11531,7 @@
 						"minQueryMs": 17.087333,
 						"heapMB": 21.27704620361328
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.289709000000002,
 						"queryMs": 17.040042,
 						"firstMs": 17.040042,
@@ -11652,7 +11652,7 @@
 			},
 			"two-words-double-typo": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1401249999999976,
 						"queryMs": 3.367208000000005,
 						"firstMs": 3.367208000000005,
@@ -11661,7 +11661,7 @@
 						"minQueryMs": 3.3097079999999863,
 						"heapMB": 18.6766357421875
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14208299999999952,
 						"queryMs": 3.354875000000007,
 						"firstMs": 3.354875000000007,
@@ -11780,7 +11780,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.31458299999999895,
 						"queryMs": 17.188791999999992,
 						"firstMs": 17.188791999999992,
@@ -11789,7 +11789,7 @@
 						"minQueryMs": 16.84675,
 						"heapMB": 20.903892517089844
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3265839999999969,
 						"queryMs": 17.077167000000003,
 						"firstMs": 17.077167000000003,
@@ -11910,7 +11910,7 @@
 			},
 			"prefix": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14449999999999363,
 						"queryMs": 6.886250000000004,
 						"firstMs": 6.886250000000004,
@@ -11919,7 +11919,7 @@
 						"minQueryMs": 6.742583999999994,
 						"heapMB": 19.285354614257812
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.15279099999999346,
 						"queryMs": 7.2270830000000075,
 						"firstMs": 7.2270830000000075,
@@ -12038,7 +12038,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.30324999999999136,
 						"queryMs": 31.665791999999996,
 						"firstMs": 31.665791999999996,
@@ -12047,7 +12047,7 @@
 						"minQueryMs": 30.869666999999993,
 						"heapMB": 24.475189208984375
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3362079999999992,
 						"queryMs": 32.09958399999999,
 						"firstMs": 32.09958399999999,
@@ -12168,7 +12168,7 @@
 			},
 			"infix": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14424999999999955,
 						"queryMs": 2.594291999999996,
 						"firstMs": 2.594291999999996,
@@ -12177,7 +12177,7 @@
 						"minQueryMs": 2.53804199999999,
 						"heapMB": 18.88335418701172
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.1526670000000081,
 						"queryMs": 2.990667000000002,
 						"firstMs": 2.990667000000002,
@@ -12296,7 +12296,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.28062500000000057,
 						"queryMs": 7.048083000000005,
 						"firstMs": 7.048083000000005,
@@ -12305,7 +12305,7 @@
 						"minQueryMs": 6.997375000000005,
 						"heapMB": 21.44953155517578
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3207079999999962,
 						"queryMs": 7.718833000000004,
 						"firstMs": 7.718833000000004,
@@ -12426,7 +12426,7 @@
 			},
 			"plural-to-singular": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14487499999999898,
 						"queryMs": 6.580624999999998,
 						"firstMs": 6.580624999999998,
@@ -12435,7 +12435,7 @@
 						"minQueryMs": 6.507958000000002,
 						"heapMB": 19.12439727783203
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.15050000000000807,
 						"queryMs": 6.567332999999991,
 						"firstMs": 6.567332999999991,
@@ -12554,7 +12554,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.29983400000000415,
 						"queryMs": 24.989707999999993,
 						"firstMs": 24.989707999999993,
@@ -12563,7 +12563,7 @@
 						"minQueryMs": 24.801541999999998,
 						"heapMB": 22.417221069335938
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3039579999999944,
 						"queryMs": 25.879666999999998,
 						"firstMs": 25.879666999999998,
@@ -12684,7 +12684,7 @@
 			},
 			"scatter-light": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1424159999999972,
 						"queryMs": 6.092375000000004,
 						"firstMs": 6.092375000000004,
@@ -12693,7 +12693,7 @@
 						"minQueryMs": 6.001000000000005,
 						"heapMB": 19.091514587402344
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14479199999999537,
 						"queryMs": 6.343958000000001,
 						"firstMs": 6.343958000000001,
@@ -12812,7 +12812,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.2978339999999946,
 						"queryMs": 23.304584000000006,
 						"firstMs": 23.304584000000006,
@@ -12821,7 +12821,7 @@
 						"minQueryMs": 23.271790999999993,
 						"heapMB": 22.498199462890625
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.2925829999999934,
 						"queryMs": 24.117165999999997,
 						"firstMs": 24.117165999999997,
@@ -12942,7 +12942,7 @@
 			},
 			"scatter-medium": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1375420000000105,
 						"queryMs": 6.209833000000003,
 						"firstMs": 6.209833000000003,
@@ -12951,7 +12951,7 @@
 						"minQueryMs": 6.151499999999999,
 						"heapMB": 19.305625915527344
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14841599999999744,
 						"queryMs": 6.550332999999995,
 						"firstMs": 6.550332999999995,
@@ -13070,7 +13070,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.2977080000000001,
 						"queryMs": 25.269209000000004,
 						"firstMs": 25.269209000000004,
@@ -13079,7 +13079,7 @@
 						"minQueryMs": 24.15954099999999,
 						"heapMB": 24.362625122070312
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.3054169999999914,
 						"queryMs": 24.942125000000004,
 						"firstMs": 24.942125000000004,
@@ -13200,7 +13200,7 @@
 			},
 			"scatter-heavy": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.1388330000000053,
 						"queryMs": 2.404834000000008,
 						"firstMs": 2.404834000000008,
@@ -13209,7 +13209,7 @@
 						"minQueryMs": 2.389417000000009,
 						"heapMB": 18.83160400390625
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14562500000000966,
 						"queryMs": 2.743959000000004,
 						"firstMs": 2.743959000000004,
@@ -13328,7 +13328,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.31629200000000424,
 						"queryMs": 6.511124999999993,
 						"firstMs": 6.511124999999993,
@@ -13337,7 +13337,7 @@
 						"minQueryMs": 6.345500000000001,
 						"heapMB": 21.074844360351562
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.35216700000000856,
 						"queryMs": 6.881874999999994,
 						"firstMs": 6.881874999999994,
@@ -13458,7 +13458,7 @@
 			},
 			"transposition": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14654200000001083,
 						"queryMs": 5.888666000000001,
 						"firstMs": 5.888666000000001,
@@ -13467,7 +13467,7 @@
 						"minQueryMs": 5.786625000000001,
 						"heapMB": 19.085433959960938
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.15341700000000458,
 						"queryMs": 5.844207999999995,
 						"firstMs": 5.844207999999995,
@@ -13586,7 +13586,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3282080000000036,
 						"queryMs": 23.821749999999994,
 						"firstMs": 23.821749999999994,
@@ -13595,7 +13595,7 @@
 						"minQueryMs": 23.465041999999997,
 						"heapMB": 21.92687225341797
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.31262499999999704,
 						"queryMs": 23.537000000000006,
 						"firstMs": 23.537000000000006,
@@ -13716,7 +13716,7 @@
 			},
 			"insertion": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.13754199999999628,
 						"queryMs": 5.8742500000000035,
 						"firstMs": 5.8742500000000035,
@@ -13725,7 +13725,7 @@
 						"minQueryMs": 5.823415999999995,
 						"heapMB": 19.088333129882812
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14195800000000247,
 						"queryMs": 5.842041999999992,
 						"firstMs": 5.842041999999992,
@@ -13844,7 +13844,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3193339999999978,
 						"queryMs": 23.171291999999994,
 						"firstMs": 23.171291999999994,
@@ -13853,7 +13853,7 @@
 						"minQueryMs": 22.815624999999997,
 						"heapMB": 22.397186279296875
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.2753749999999968,
 						"queryMs": 23.08937499999999,
 						"firstMs": 23.08937499999999,
@@ -13974,7 +13974,7 @@
 			},
 			"substitution": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14854200000000617,
 						"queryMs": 5.688874999999996,
 						"firstMs": 5.688874999999996,
@@ -13983,7 +13983,7 @@
 						"minQueryMs": 5.530292000000003,
 						"heapMB": 18.95172119140625
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.15387500000001353,
 						"queryMs": 5.790333000000004,
 						"firstMs": 5.790333000000004,
@@ -14102,7 +14102,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3195830000000086,
 						"queryMs": 21.830375000000004,
 						"firstMs": 21.830375000000004,
@@ -14111,7 +14111,7 @@
 						"minQueryMs": 21.600042000000002,
 						"heapMB": 21.237960815429688
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.31699999999999307,
 						"queryMs": 21.792333,
 						"firstMs": 21.792333,
@@ -14232,7 +14232,7 @@
 			},
 			"acronym": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14612499999999784,
 						"queryMs": 2.751833999999988,
 						"firstMs": 2.751833999999988,
@@ -14241,7 +14241,7 @@
 						"minQueryMs": 2.7025840000000017,
 						"heapMB": 18.88806915283203
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14099999999999113,
 						"queryMs": 3.051917000000003,
 						"firstMs": 3.051917000000003,
@@ -14360,7 +14360,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.3015410000000003,
 						"queryMs": 7.725542000000004,
 						"firstMs": 7.725542000000004,
@@ -14369,7 +14369,7 @@
 						"minQueryMs": 7.638458,
 						"heapMB": 21.128265380859375
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.2979169999999982,
 						"queryMs": 8.292917000000003,
 						"firstMs": 8.292917000000003,
@@ -14490,7 +14490,7 @@
 			},
 			"accent-stripped": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14066700000000765,
 						"queryMs": 2.5747500000000088,
 						"firstMs": 2.5747500000000088,
@@ -14499,7 +14499,7 @@
 						"minQueryMs": 2.5559999999999974,
 						"heapMB": 18.882049560546875
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.15162499999999568,
 						"queryMs": 2.9355000000000047,
 						"firstMs": 2.9355000000000047,
@@ -14618,7 +14618,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.2957499999999982,
 						"queryMs": 7.135249999999999,
 						"firstMs": 7.135249999999999,
@@ -14627,7 +14627,7 @@
 						"minQueryMs": 7.066959000000011,
 						"heapMB": 21.431114196777344
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.32895899999999756,
 						"queryMs": 7.685666999999995,
 						"firstMs": 7.685666999999995,
@@ -14748,7 +14748,7 @@
 			},
 			"miss": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14287500000000364,
 						"queryMs": 4.461167000000003,
 						"firstMs": 4.461167000000003,
@@ -14757,7 +14757,7 @@
 						"minQueryMs": 4.411166000000009,
 						"heapMB": 18.87450408935547
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14620800000000145,
 						"queryMs": 4.466875000000002,
 						"firstMs": 4.466875000000002,
@@ -14876,7 +14876,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.34329200000000526,
 						"queryMs": 19.11745900000001,
 						"firstMs": 19.11745900000001,
@@ -14885,7 +14885,7 @@
 						"minQueryMs": 19.07270799999999,
 						"heapMB": 21.069046020507812
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.2815000000000083,
 						"queryMs": 19.065249999999992,
 						"firstMs": 19.065249999999992,
@@ -15006,7 +15006,7 @@
 			},
 			"batch": {
 				"10000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.14424999999999955,
 						"queryMs": 18.719958999999974,
 						"firstMs": 2.6283340000000095,
@@ -15037,7 +15037,7 @@
 							0.11095900000000825
 						]
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.14204199999998934,
 						"queryMs": 19.19720900000003,
 						"firstMs": 2.9034580000000005,
@@ -15442,7 +15442,7 @@
 					}
 				},
 				"100000": {
-					"krino": {
+					"ekrina": {
 						"indexMs": 0.30170900000000245,
 						"queryMs": 74.89337199999999,
 						"firstMs": 6.99920800000001,
@@ -15473,7 +15473,7 @@
 							0.47150000000002024
 						]
 					},
-					"krino (acronym)": {
+					"ekrina (acronym)": {
 						"indexMs": 0.28666599999999676,
 						"queryMs": 75.064417,
 						"firstMs": 7.140332999999998,

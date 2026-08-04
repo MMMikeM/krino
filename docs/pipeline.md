@@ -3,7 +3,7 @@
 What `createFuzzySearch` builds, what a `search(query)` call does, how many of your records reach each stage, and what each stage costs.
 Companion to [optimisation.md](./optimisation.md) (what moved the numbers) and [measurement.md](./measurement.md) (how the harness came to be wrong).
 
-Counts and costs come from `pnpm --filter=krino-bench exec vitest run cost.test.ts`, over the fourteen single-word probes at 100k, both corpora.
+Counts and costs come from `pnpm --filter=ekrina-bench exec vitest run cost.test.ts`, over the fourteen single-word probes at 100k, both corpora.
 Stage costs are measured by difference, so they overlap slightly.
 
 ## Build

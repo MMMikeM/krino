@@ -1,13 +1,13 @@
 /**
- * Correctness edges: cases krino handles by design that uFuzzy (default config)
- * does not. Not a speed comparison — this documents what krino's extra per-query
+ * Correctness edges: cases ekrina handles by design that uFuzzy (default config)
+ * does not. Not a speed comparison — this documents what ekrina's extra per-query
  * work buys, and pins the behaviours the front-of-ladder pre-filter must preserve
  * (the reason it's an order-independent presence gate, not a subsequence gate,
  * for multi-word queries).
  */
 import uFuzzy from "@leeoniya/ufuzzy";
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch } from "krino";
+import { createFuzzySearch, fuzzyMatch } from "ekrina";
 
 const uf = new uFuzzy(); // defaults: in-order, no diacritic folding
 
@@ -17,9 +17,9 @@ const uFuzzyMatches = (haystack: string[], needle: string): boolean => {
 	return idxs != null && idxs.length > 0;
 };
 
-describe("krino correctness edges over uFuzzy (default config)", () => {
+describe("ekrina correctness edges over uFuzzy (default config)", () => {
 	it("matches query words out of order; uFuzzy is in-order by default", () => {
-		// krino's multi-word tier matches all query words in any order.
+		// ekrina's multi-word tier matches all query words in any order.
 		expect(fuzzyMatch("hello world", "world hello")?.tier).toBe("multi-word");
 		expect(uFuzzyMatches(["hello world"], "world hello")).toBe(false);
 		// Sanity: uFuzzy DOES match the same words in order — so the miss above is

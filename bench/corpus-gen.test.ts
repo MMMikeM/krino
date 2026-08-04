@@ -4,7 +4,7 @@
  * the data cannot drift when faker changes generator internals between versions.
  * Every rank/MRR table in docs/benchmarks.md derives from these sequences —
  * regenerating rewrites history for all of them, so it's gated:
- *   GEN_CORPUS=1 pnpm --filter=krino-bench exec vitest run corpus-gen
+ *   GEN_CORPUS=1 pnpm --filter=ekrina-bench exec vitest run corpus-gen
  * Generation logic is verbatim from the original corpus.ts builders: en corpus
  * from the four ascii generators; mixed replaces every 7th item from fr/pl
  * generators (~5% diacritic density). Single reseed then sequential generation,

@@ -6,16 +6,16 @@ It is written for whoever next changes `bench/`, so they do not repeat it.
 ## The symptom
 
 The publish ritual kept tripping its own contamination guard.
-That guard asserts a physical invariant: `krino (acronym)` runs strictly more code per query than base `krino`, so base measuring slower means the run absorbed GC or thermal debt.
+That guard asserts a physical invariant: `ekrina (acronym)` runs strictly more code per query than base `ekrina`, so base measuring slower means the run absorbed GC or thermal debt.
 It fired repeatedly, sometimes fatally, and the numbers behind it were incoherent — base and acronym would sit 38% apart in one run and 0.5% apart in the next, in either direction.
 
 Individual cells looked like this at 100k:
 
 | cell             | samples |   median | spread (max/min) |   rme |
 | ---------------- | ------: | -------: | ---------------: | ----: |
-| ascii 10k krino  |      20 | 0.293 ms |             214% | 21.4% |
-| ascii 100k krino |      12 | 3.912 ms |            46.8% |  9.5% |
-| mixed 10k krino  |      20 | 0.307 ms |             115% |  8.4% |
+| ascii 10k ekrina  |      20 | 0.293 ms |             214% | 21.4% |
+| ascii 100k ekrina |      12 | 3.912 ms |            46.8% |  9.5% |
+| mixed 10k ekrina  |      20 | 0.307 ms |             115% |  8.4% |
 
 A cell whose own samples span 214% cannot support a claim about a 15% difference between two cells.
 That was true of every published speed number, and nothing in the artifact recorded it, because the stored cell was `{ ms, sd }` and the docs printed `ms`.
@@ -36,7 +36,7 @@ Four smaller faults compounded it, each individually survivable:
 
 - **`warmupIterations: 1`**, plus one calibration probe, is two executions before timing.
   V8 has not tiered up by then, so early samples measure unoptimised code.
-  Raising warmup from 2 to 20 moves krino's ascii 10k median from 0.303 ms to 0.259 ms — the published number was inflated by unoptimised code, not by the algorithm.
+  Raising warmup from 2 to 20 moves ekrina's ascii 10k median from 0.303 ms to 0.259 ms — the published number was inflated by unoptimised code, not by the algorithm.
 - **`gc()` inside the sampling loop.**
   Collecting before each timed region means every sample starts from a fresh heap and pays the allocation and marking that follows.
 - **`mean` as the published estimator**, over as few as five samples.
@@ -60,11 +60,11 @@ Running the same cell two ways, minutes apart on the same machine:
 
 | ascii 10k    | full matrix | scoped to one group |
 | ------------ | ----------: | ------------------: |
-| krino spread |        214% |               28.5% |
-| krino rme    |       21.4% |            **3.0%** |
+| ekrina spread |        214% |               28.5% |
+| ekrina rme    |       21.4% |            **3.0%** |
 | acronym rme  |       12.3% |            **2.7%** |
 
-Seven times better from isolation alone, and the scoped numbers were physically sensible for the first time: krino 0.281 ms against acronym 0.315 ms, acronym slower by 12%, which is the direction the guard exists to assert.
+Seven times better from isolation alone, and the scoped numbers were physically sensible for the first time: ekrina 0.281 ms against acronym 0.315 ms, acronym slower by 12%, which is the direction the guard exists to assert.
 
 Isolating further, to one library per process, drops resident memory from ~1.3 GB to 87–98 MB.
 Cross-process reproducibility over five independent processes is then ±1–2% for the well-behaved libraries — far tighter than the 21% _within_ a single cell of the shared run.
@@ -78,15 +78,15 @@ Measured cold, in a fresh process, with nothing warmed (ascii 10k):
 
 | library          |   build | cold first query |     warm | cold / warm |
 | ---------------- | ------: | ---------------: | -------: | ----------: |
-| krino            |  3.7 ms |          3.25 ms | 0.249 ms |     **13×** |
+| ekrina            |  3.7 ms |          3.25 ms | 0.249 ms |     **13×** |
 | uFuzzy           |  5.2 ms |          2.12 ms | 0.220 ms |         10× |
 | fuzzysort        |  0.1 ms |     **18.43 ms** | 0.212 ms |     **87×** |
 | @nozbe/microfuzz | 12.2 ms |          3.15 ms | 1.145 ms |        2.8× |
 | Fuse.js          |  2.9 ms |         23.14 ms | 18.01 ms |        1.3× |
 
 The first query costs 9–87× the steady-state number the tables published, and it **reorders the field**.
-On steady state fuzzysort, uFuzzy and krino are within 18% of each other.
-Cold, uFuzzy leads at 2.1 ms, krino follows at 3.3, and fuzzysort is last by six times at 18.4, because its lazy prepare-all fires inside the first `go()`.
+On steady state fuzzysort, uFuzzy and ekrina are within 18% of each other.
+Cold, uFuzzy leads at 2.1 ms, ekrina follows at 3.3, and fuzzysort is last by six times at 18.4, because its lazy prepare-all fires inside the first `go()`.
 A reader choosing on the steady-state table alone would be misled about the experience their users actually have.
 
 ## What we now hold to
@@ -115,9 +115,9 @@ The quality results are unaffected: `hits.test.ts` builds one corpus at 10k per 
 ## The calibration blind spot, and the move to processes
 
 The vitest-bench era ended on a simple observation: its calibration probe ran every query once, untimed, to size the sample loop — and that untimed pass silently paid every lazy first-call cost in the suite.
-Krino's 18.5 ms mask build at 100k, fuzzysort's prepare-all, microfuzz's first-search slice: none of them could ever reach a timed sample, so the "total" column published index + one warm query as if it were a cold start.
+Ekrina's 18.5 ms mask build at 100k, fuzzysort's prepare-all, microfuzz's first-search slice: none of them could ever reach a timed sample, so the "total" column published index + one warm query as if it were a cold start.
 Worse, the warm loops themselves sampled hundreds of repeats of a single query, tiering the JIT far past anything a real session reaches; nobody repeats one query three hundred times.
 
 The replacement (bench/run.ts) measures nothing but first calls: a fresh node process per sample, constructor and first answer timed in consecutive windows, and one batch test per corpus — twenty distinct probes through one process — as the only warm-ish number, its warmth earned the way real sessions earn it.
 Five to ten processes per cell suffice because every number under this model is milliseconds-scale; the hundreds-of-samples machinery existed only to resolve steady-state microseconds that no user ever observes.
-Honesty guards moved with it: result counts asserted identical across a cell's processes, variant order rotated per repetition, the krino-vs-acronym physical invariant now fatal to the run, and a drift canary bracketing the whole matrix.
+Honesty guards moved with it: result counts asserted identical across a cell's processes, variant order rotated per repetition, the ekrina-vs-acronym physical invariant now fatal to the run, and a drift canary bracketing the whole matrix.

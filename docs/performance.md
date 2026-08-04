@@ -1,6 +1,6 @@
 # Performance design rationale
 
-Why Krino is fast the way it is: the standing design decisions, the evidence that settled them, the alternatives rejected along the way, and the hazards any future change must respect.
+Why Ekrina is fast the way it is: the standing design decisions, the evidence that settled them, the alternatives rejected along the way, and the hazards any future change must respect.
 Current numbers live in [benchmarks.md](./benchmarks.md) and regenerate with `pnpm bench`; the sequence of changes lives in [CHANGELOG.md](../CHANGELOG.md) and git history.
 The numbers quoted here are decision evidence: each comes from the run that settled its decision, the relative shape is the claim, and none of it is regenerated.
 
@@ -11,30 +11,30 @@ The answer is no, and the reasoning is worth keeping because the pressure to ind
 
 ### Why fast-fuzzy looked fast
 
-On an early combinatorial corpus (`ADJ × NOUN × SUFFIX`), fast-fuzzy benchmarked ~4× faster than Krino while doing typo-tolerant edit-distance matching.
+On an early combinatorial corpus (`ADJ × NOUN × SUFFIX`), fast-fuzzy benchmarked ~4× faster than Ekrina while doing typo-tolerant edit-distance matching.
 The trick is structural, not algorithmic: it inserts every candidate into a trie, walks it with a threshold-pruned DFS, and extends two DP rows along trie edges, so shared prefixes are stored and scored once and most candidates are never scored at all.
 That speed is entirely corpus-dependent, because the pruning only skips subtrees when candidates share prefixes.
 On seeded natural-language faker data (product, company, person and place names) the same library fell to among the slowest in the set.
 "Typo-tolerant" says nothing about speed; the data structure and the corpus do.
 
-### Why a prefix trie fits Krino badly
+### Why a prefix trie fits Ekrina badly
 
-A trie accelerates prefix and exact lookups, which are already Krino's cheapest tiers (`startsWith`, `===`).
+A trie accelerates prefix and exact lookups, which are already Ekrina's cheapest tiers (`startsWith`, `===`).
 The expensive tiers match mid-string and out of order: `boundary` and `contains` sit anywhere in the field, `multi-word` accepts any word order, and `fuzzy` is a subsequence chain scattered across the field.
 A prefix trie helps none of them.
-Worse, threshold pruning needs a single scalar cutoff, and Krino has none: the tier ladder returns every item that matches at any tier, ranked, so there is no "score below X, skip it" to prune on.
+Worse, threshold pruning needs a single scalar cutoff, and Ekrina has none: the tier ladder returns every item that matches at any tier, ranked, so there is no "score below X, skip it" to prune on.
 
 ### What an index would have to be
 
 If scale far beyond the target were ever a goal, the right structures are an inverted token index (turns the multi-word and boundary tiers into posting-list intersections), a trigram index (gates the fuzzy and contains tiers without visiting every item), or a suffix automaton for arbitrary-substring search (powerful but likely overkill).
 They stay unbuilt for four reasons:
 
-- **Bundle size.** Krino is ~5.5 kB gzip; a real index could double that, directly against the "tiny" pitch.
+- **Bundle size.** Ekrina is ~5.5 kB gzip; a real index could double that, directly against the "tiny" pitch.
 - **The API model.** `fuzzyMatch` must stay stateless; that is the point of the primitive-first design, so any index is confined to `createFuzzySearch`.
 - **Build and memory.** Index construction and posting-list storage grow with the corpus, and only pay off when N is large.
 - **Scope.** The scan-level design below carries the target use (command palettes, pickers, autocomplete over lists you already hold) and the published sizes without any of it; [benchmarks.md](./benchmarks.md) holds the standings.
 
-Revisit only if Krino deliberately expands to corpora well past 100k.
+Revisit only if Ekrina deliberately expands to corpora well past 100k.
 
 ## The scan architecture
 

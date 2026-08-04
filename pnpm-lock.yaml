@@ -237,7 +237,7 @@ importers:
 
   bench:
     dependencies:
-      krino:
+      ekrina:
         specifier: workspace:*
         version: link:..
     devDependencies:
