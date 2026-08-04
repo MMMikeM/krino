@@ -32,3 +32,6 @@ Design decisions worth recording, with the measurements that made them:
   No correction (≥ 2.1) can reach a top ten already filled at or below `SCORES.CONTAINS` (2), so the rescue becomes provably invisible work and is skipped.
 - **The fuzzy tier retries its first chunk from up to four admissible placements** and keeps the cheapest assembly, so a query whose first character also opens an earlier word ("towls" hitting the T of "Tasty Silk Towels") is not stranded: 307 → 0 missed assemblies over the ascii bench corpus.
   Later chunks stay leftmost-greedy — reconsidering those is what starts leaking junk.
+- **The searcher prepares nothing up front and rescans survivors while you type.**
+  Construction only allocates (~1 ms for a 100k list); a field is normalised and masked the first time it survives a gate, and the one whole-corpus pass (the rescue's union-and-bigram masks) waits for the first query that needs the relaxed scan, so literal-only sessions never pay it.
+  A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 3.0 → 1.7 → 0.7 ms per keystroke (docs/benchmarks.md, session table).

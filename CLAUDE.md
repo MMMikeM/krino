@@ -23,7 +23,8 @@ There is no aggregate script. The gate is `pnpm lint && pnpm lint:types && pnpm 
 
 ## Benchmarks and published numbers
 
-Every number in README.md, docs/benchmarks.md and docs/performance.md is generated, and `pnpm bench` (`bench/pipeline.ts`) is the only thing that generates them.
+Every number in README.md and docs/benchmarks.md is generated, and `pnpm bench` (`bench/pipeline.ts`) is the only thing that generates them.
+docs/performance.md is the design-rationale record: decision evidence quoted from the runs that settled decisions, never current standings, and nothing in it is generated.
 It measures, writes `bench/results.json`, rewrites every marked table in docs/benchmarks.md, and redraws the Pareto SVGs.
 Never hand-edit a cell inside a `<!-- bench:… -->` region — the next run overwrites it, and `pnpm bench --check` fails in the meantime.
 
