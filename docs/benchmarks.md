@@ -163,15 +163,15 @@ MRR over eighteen scored queries is correspondingly coarse: read differences of 
 <!-- bench:build -->
 | build |   Krino | @nozbe/microfuzz | fast-fuzzy | Fuse.js | uFuzzy (all opts) |
 |-------|--------:|-----------------:|-----------:|--------:|------------------:|
-| 10k   | 0.16 ms |          6.92 ms |   53.82 ms | 1.86 ms |           5.71 ms |
-| 100k  | 0.82 ms |        103.54 ms |  592.58 ms | 7.51 ms |          12.01 ms |
+| 10k   | 0.14 ms |          4.35 ms |   40.03 ms | 1.63 ms |           6.81 ms |
+| 100k  | 0.30 ms |         53.95 ms |  394.48 ms | 6.93 ms |          11.60 ms |
 <!-- bench:end -->
 
 Measured on the mixed corpus (process-cold constructor timings; build cost barely differs between corpora).
 Fuse.js's near-free build is the flip side of its slow queries: its "index" is trivial and the work is deferred to query time.
 fast-fuzzy's trie is the opposite trade: the heaviest build in the set buys its subtree pruning.
 fuzzysort has no constructor at all, so it has no column here — its lazy prepare-all pass lands in its first query's cold cell, where stock usage actually pays it.
-uFuzzy's ~5 ms index cell is a process-cold discovery of its own: `new uFuzzy()` compiles the engine's regex machinery on first construction (a second construction costs 0.03 ms), so "keeps no index" is true per item but not per process — the cell is identical at 10k and 100k, which is the proof it never touches the list.
+uFuzzy's ~6 ms base construction is a process-cold discovery of its own: `new uFuzzy()` compiles the engine's regex machinery on first construction (a second construction costs 0.03 ms), so "keeps no index" is true per item but not per process — the base cell is near-identical at 10k and 100k, which is the proof it never touches the list; the (all opts) column shown here also latinizes the haystack, which is why it grows with the corpus (6.8 → 11.6 ms).
 microfuzz's column is its eager constructor; its lazy first-search slice shows up in the cold cells instead.
 Krino's constructor only allocates — field text is trimmed, normalised and masked the first time an item survives a gate — so a 100k list swap costs about a millisecond, and the first query then carries what construction deferred (its cold cells).
 
@@ -206,12 +206,12 @@ The garbage query `qxzwkv` gets a table of its own instead: it returns 0 everywh
 <!-- bench:probe-long-word -->
 | Library          | rank | matches | index ms | cold ms | total ms | batch ms |
 |------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino            |    1 |      76 |     0.17 |    3.15 |     3.31 |     2.35 |
-| @nozbe/microfuzz |    1 |      76 |     7.03 |    4.73 |    11.66 |     3.89 |
-| fast-fuzzy       |   13 |      82 |    55.32 |   28.26 |    83.65 |    16.78 |
-| Fuse.js          |    1 |      81 |     1.90 |   26.94 |    28.81 |    22.71 |
-| fuzzysort        |   20 |      76 |     0.05 |   12.01 |    12.06 |     2.06 |
-| uFuzzy           |   29 |      76 |     4.88 |    1.71 |     6.55 |     0.49 |
+| Krino            |    1 |      76 |     0.14 |    2.86 |     3.00 |     2.23 |
+| @nozbe/microfuzz |    1 |      76 |     4.28 |    2.30 |     6.54 |     2.13 |
+| fast-fuzzy       |   13 |      82 |    40.28 |   19.00 |    58.88 |    12.19 |
+| Fuse.js          |    1 |      81 |     1.59 |   21.12 |    22.78 |    17.89 |
+| fuzzysort        |   20 |      76 |     0.04 |    7.63 |     7.67 |     1.21 |
+| uFuzzy           |   29 |      76 |     6.21 |    1.36 |     7.60 |     0.48 |
 <!-- bench:end -->
 
 The subsequence libraries agree on the set (76); the typo engines add a handful (81–82). The speed comparison is meaningful because they are returning near enough the same thing.
@@ -222,12 +222,12 @@ Rank is the differentiator: Krino/microfuzz put the source first; fuzzysort and 
 <!-- bench:probe-short-word -->
 | Library          | rank | matches | index ms | cold ms | total ms | batch ms |
 |------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino            |    1 |      19 |     0.16 |    2.96 |     3.13 |     0.73 |
-| @nozbe/microfuzz |    1 |      36 |     6.99 |    4.39 |    11.57 |     4.66 |
-| fast-fuzzy       |    2 |     382 |    55.12 |   31.71 |    87.28 |    22.62 |
-| Fuse.js          |    1 |     375 |     1.88 |   18.43 |    20.40 |    11.70 |
-| fuzzysort        |    2 |      36 |     0.05 |   11.96 |    12.01 |     0.75 |
-| uFuzzy           |    2 |      19 |     4.90 |    1.62 |     6.49 |     0.33 |
+| Krino            |    1 |      19 |     0.15 |    2.61 |     2.75 |     0.77 |
+| @nozbe/microfuzz |    1 |      36 |     4.44 |    2.20 |     6.61 |     2.48 |
+| fast-fuzzy       |    2 |     382 |    42.11 |   19.75 |    61.86 |    11.48 |
+| Fuse.js          |    1 |     375 |     1.65 |   13.15 |    14.80 |    10.63 |
+| fuzzysort        |    2 |      36 |     0.04 |    7.53 |     7.58 |     0.53 |
+| uFuzzy           |    2 |      19 |     6.42 |    1.36 |     7.78 |     0.26 |
 <!-- bench:end -->
 
 A second plain-word probe from elsewhere in the corpus. Krino ranks the source first, as on the long word, and matches uFuzzy's 19-row set — the tightest here — because the one-edit rescue stops once ten literal hits fill the page, so a query this ordinary pays for no corrections.
@@ -237,16 +237,16 @@ A second plain-word probe from elsewhere in the corpus. Krino ranks the source f
 <!-- bench:probe-two-words -->
 | Library          | rank | matches | index ms | cold ms | total ms | batch ms |
 |------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino            |    1 |       5 |     0.16 |    5.46 |     5.62 |     4.49 |
-| @nozbe/microfuzz |    1 |       5 |     6.96 |    5.35 |    12.28 |     2.25 |
-| fast-fuzzy       |    1 |      95 |    54.32 |   27.92 |    82.35 |    16.08 |
-| Fuse.js          |    1 |      95 |     1.96 |   57.69 |    59.46 |    44.55 |
-| fuzzysort        |    1 |       5 |     0.05 |   12.03 |    12.08 |     0.77 |
-| uFuzzy           |    2 |       5 |     4.97 |    1.56 |     6.55 |     0.36 |
+| Krino            |    1 |       5 |     0.14 |    4.27 |     4.41 |     3.46 |
+| @nozbe/microfuzz |    1 |       5 |     4.26 |    2.21 |     6.46 |     1.95 |
+| fast-fuzzy       |    1 |      95 |    38.42 |   17.23 |    56.60 |    10.69 |
+| Fuse.js          |    1 |      95 |     1.69 |   44.71 |    46.36 |    40.36 |
+| fuzzysort        |    1 |       5 |     0.04 |    7.36 |     7.40 |     0.66 |
+| uFuzzy           |    2 |       5 |     6.10 |    1.19 |     7.25 |     0.25 |
 <!-- bench:end -->
 
 Five items contain both words; every subsequence library returns exactly those five.
-The typo engines return 19× that, and Fuse.js takes ~58 ms cold to do it (its extended-search tokenization is the most expensive path here).
+The typo engines return 19× that, and Fuse.js takes ~45 ms cold to do it (its extended-search tokenization is the most expensive path here).
 One caveat on the agreement: the phrase is in corpus order, so it is a contiguous substring of the source: engines with no tokenization at all pass this probe for free.
 The next probe removes that shortcut.
 
@@ -255,13 +255,13 @@ The next probe removes that shortcut.
 <!-- bench:probe-two-words-reversed -->
 | Library           | rank | matches | index ms | cold ms | total ms | batch ms |
 |-------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino             |    1 |       5 |     0.16 |    5.41 |     5.59 |     0.93 |
-| @nozbe/microfuzz  |    1 |       5 |     7.04 |    5.62 |    12.61 |     3.28 |
-| fast-fuzzy        |    5 |      76 |    55.48 |   27.92 |    81.97 |    15.44 |
-| Fuse.js           |    1 |      76 |     1.89 |   56.39 |    58.36 |    44.23 |
-| fuzzysort         |    1 |       5 |     0.05 |   11.99 |    12.04 |     0.51 |
-| uFuzzy            |    — |       0 |     4.92 |    1.16 |     6.05 |     0.27 |
-| uFuzzy (all opts) |    2 |       5 |     6.00 |    4.35 |    10.34 |     0.88 |
+| Krino             |    1 |       5 |     0.14 |    4.30 |     4.45 |     0.76 |
+| @nozbe/microfuzz  |    1 |       5 |     4.37 |    2.10 |     6.50 |     1.70 |
+| fast-fuzzy        |    5 |      76 |    40.34 |   16.54 |    56.65 |     8.39 |
+| Fuse.js           |    1 |      76 |     1.62 |   43.61 |    45.23 |    39.89 |
+| fuzzysort         |    1 |       5 |     0.04 |    7.29 |     7.33 |     0.49 |
+| uFuzzy            |    — |       0 |     6.13 |    0.86 |     6.99 |     0.22 |
+| uFuzzy (all opts) |    2 |       5 |     6.82 |    4.18 |    10.98 |     0.97 |
 <!-- bench:end -->
 
 These are the same two words in the opposite order, so this is the probe that actually isolates tokenized matching.
@@ -273,13 +273,13 @@ The tokenizing engines keep exactly the five items at rank 1; uFuzzy's default (
 <!-- bench:probe-two-words-typo -->
 | Library           | rank | matches | index ms | cold ms | total ms | batch ms |
 |-------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino             |    1 |       5 |     0.19 |    5.22 |     5.40 |     0.43 |
-| @nozbe/microfuzz  |    — |       0 |     7.26 |    5.52 |    12.79 |     3.06 |
-| fast-fuzzy        |    1 |      95 |    59.76 |   29.92 |    89.42 |    12.56 |
-| Fuse.js           |    1 |      95 |     1.91 |   57.74 |    59.59 |    44.26 |
-| fuzzysort         |    — |       0 |     0.06 |   11.73 |    11.78 |     0.40 |
-| uFuzzy            |    — |       0 |     4.99 |    1.15 |     6.09 |     0.22 |
-| uFuzzy (all opts) |    2 |       5 |     5.97 |    3.82 |     9.86 |     2.00 |
+| Krino             |    1 |       5 |     0.14 |    3.97 |     4.11 |     0.43 |
+| @nozbe/microfuzz  |    — |       0 |     4.32 |    2.01 |     6.32 |     2.54 |
+| fast-fuzzy        |    1 |      95 |    36.00 |   17.54 |    53.73 |    10.18 |
+| Fuse.js           |    1 |      95 |     1.62 |   44.85 |    46.53 |    39.79 |
+| fuzzysort         |    — |       0 |     0.04 |    7.01 |     7.05 |     0.39 |
+| uFuzzy            |    — |       0 |     6.15 |    0.84 |     6.99 |     0.21 |
+| uFuzzy (all opts) |    2 |       5 |     6.80 |    3.55 |    10.38 |     2.20 |
 <!-- bench:end -->
 
 The same phrase with one character wrong in the first word.
@@ -292,13 +292,13 @@ The three probes after this one stress the same mechanism from each side — the
 <!-- bench:probe-two-words-typo-second -->
 | Library           | rank | matches | index ms | cold ms | total ms | batch ms |
 |-------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino             |    1 |       5 |     0.17 |    5.27 |     5.44 |     0.32 |
-| @nozbe/microfuzz  |    — |       0 |     7.11 |    4.92 |    12.02 |     3.24 |
-| fast-fuzzy        |    1 |      88 |    57.48 |   29.32 |    85.89 |    12.34 |
-| Fuse.js           |    1 |      88 |     1.92 |   58.75 |    60.75 |    44.10 |
-| fuzzysort         |    — |       0 |     0.05 |   11.56 |    11.62 |     0.24 |
-| uFuzzy            |    — |       0 |     4.92 |    1.17 |     6.11 |     0.20 |
-| uFuzzy (all opts) |    2 |       5 |     6.05 |    3.92 |     9.89 |     1.50 |
+| Krino             |    1 |       5 |     0.15 |    3.96 |     4.11 |     0.32 |
+| @nozbe/microfuzz  |    — |       0 |     4.28 |    1.98 |     6.26 |     1.37 |
+| fast-fuzzy        |    1 |      88 |    42.75 |   17.05 |    60.54 |     8.65 |
+| Fuse.js           |    1 |      88 |     1.67 |   45.99 |    47.62 |    39.96 |
+| fuzzysort         |    — |       0 |     0.04 |    7.13 |     7.17 |     0.41 |
+| uFuzzy            |    — |       0 |     6.34 |    0.83 |     7.16 |     0.18 |
+| uFuzzy (all opts) |    2 |       5 |     6.87 |    3.58 |    10.47 |     1.69 |
 <!-- bench:end -->
 
 The rescue cannot assume which word failed; it has to find it.
@@ -309,14 +309,14 @@ Engines that only tolerate edits near the query's start, or that anchor on the f
 <!-- bench:probe-two-words-typo-reversed -->
 | Library            | rank | matches | index ms | cold ms | total ms | batch ms |
 |--------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino              |    1 |       5 |     0.17 |    5.47 |     5.63 |     0.24 |
-| @nozbe/microfuzz   |    — |       0 |     7.04 |    4.87 |    11.98 |     1.27 |
-| fast-fuzzy         |    — |       0 |    55.46 |   21.62 |    77.86 |    11.41 |
-| Fuse.js            |    — |       0 |     1.96 |   54.66 |    56.71 |    44.78 |
-| Fuse.js (all opts) |    1 |       5 |     1.95 |   27.51 |    29.42 |    17.76 |
-| fuzzysort          |    — |       0 |     0.05 |   11.59 |    11.65 |     0.19 |
-| uFuzzy             |    — |       0 |     4.94 |    1.12 |     6.05 |     0.21 |
-| uFuzzy (all opts)  |    2 |       5 |     6.02 |    4.40 |    10.39 |     0.87 |
+| Krino              |    1 |       5 |     0.15 |    4.18 |     4.33 |     0.33 |
+| @nozbe/microfuzz   |    — |       0 |     4.29 |    1.96 |     6.26 |     1.29 |
+| fast-fuzzy         |    — |       0 |    41.92 |   14.03 |    55.81 |     9.37 |
+| Fuse.js            |    — |       0 |     1.67 |   43.27 |    45.02 |    40.44 |
+| Fuse.js (all opts) |    1 |       5 |     1.66 |   18.51 |    20.25 |    14.24 |
+| fuzzysort          |    — |       0 |     0.04 |    6.98 |     7.02 |     0.41 |
+| uFuzzy             |    — |       0 |     6.09 |    0.85 |     6.95 |     0.21 |
+| uFuzzy (all opts)  |    2 |       5 |     6.84 |    4.18 |    11.02 |     0.94 |
 <!-- bench:end -->
 
 Both hard axes at once: the words are out of corpus order _and_ one of them is mistyped, so a substring engine has nothing to hold on to and an in-order typo engine loses the phrase.
@@ -327,12 +327,12 @@ The corrected phrase must still match through the order-independent multi-word t
 <!-- bench:probe-two-words-double-typo -->
 | Library          | rank | matches | index ms | cold ms | total ms | batch ms |
 |------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino            |    — |       0 |     0.16 |    4.33 |     4.51 |     0.16 |
-| @nozbe/microfuzz |    — |       0 |     7.05 |    5.01 |    12.12 |     1.35 |
-| fast-fuzzy       |    ✗ |      88 |    56.23 |   28.17 |    82.58 |    11.51 |
-| Fuse.js          |    ✗ |      88 |     1.93 |   60.03 |    61.86 |    45.08 |
-| fuzzysort        |    — |       0 |     0.05 |   11.49 |    11.54 |     0.17 |
-| uFuzzy           |    — |       0 |     5.01 |    1.16 |     6.19 |     0.20 |
+| Krino            |    — |       0 |     0.14 |    3.37 |     3.51 |     0.27 |
+| @nozbe/microfuzz |    — |       0 |     4.32 |    2.01 |     6.30 |     1.39 |
+| fast-fuzzy       |    ✗ |      88 |    42.33 |   16.69 |    59.40 |     7.96 |
+| Fuse.js          |    ✗ |      88 |     1.72 |   45.90 |    47.66 |    39.63 |
+| fuzzysort        |    — |       0 |     0.04 |    6.96 |     7.00 |     0.30 |
+| uFuzzy           |    — |       0 |     6.13 |    0.84 |     6.97 |     0.19 |
 <!-- bench:end -->
 
 Two edits in one phrase, so no one-edit rescue can explain it, and like the garbage probe there is no rank column that matters: the honest answer is nothing.
@@ -344,13 +344,13 @@ Krino must return 0 here — anything else means the rescue guessed — while th
 <!-- bench:probe-plural-to-singular -->
 | Library           | rank | matches | index ms | cold ms | total ms | batch ms |
 |-------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino             |    1 |       2 |     0.16 |    8.27 |     8.43 |     1.22 |
-| @nozbe/microfuzz  |    — |       0 |     7.05 |    4.37 |    11.42 |     1.30 |
-| fast-fuzzy        |    1 |      53 |    55.35 |   28.62 |    83.44 |    12.72 |
-| Fuse.js           |    1 |      51 |     1.89 |   31.32 |    33.22 |    23.30 |
-| fuzzysort         |    — |       0 |     0.05 |   11.37 |    11.42 |     0.25 |
-| uFuzzy            |    — |       0 |     5.05 |    1.13 |     6.19 |     0.22 |
-| uFuzzy (all opts) |    1 |       2 |     5.91 |    2.89 |     8.85 |     1.40 |
+| Krino             |    1 |       2 |     0.14 |    6.58 |     6.73 |     1.22 |
+| @nozbe/microfuzz  |    — |       0 |     4.42 |    2.40 |     6.74 |     1.40 |
+| fast-fuzzy        |    1 |      53 |    39.68 |   18.77 |    57.31 |     7.29 |
+| Fuse.js           |    1 |      51 |     1.77 |   25.54 |    27.23 |    21.04 |
+| fuzzysort         |    — |       0 |     0.05 |    7.79 |     7.84 |     0.25 |
+| uFuzzy            |    — |       0 |     6.40 |    0.90 |     7.30 |     0.24 |
+| uFuzzy (all opts) |    1 |       2 |     7.08 |    2.66 |     9.74 |     1.52 |
 <!-- bench:end -->
 
 A trailing `s` the corpus does not hold, which is one deletion and therefore exactly what the one-edit rescue exists for.
@@ -364,12 +364,12 @@ Only the `-s` plural is reachable this way: `-es`, `-ves` and `-ies` are two or 
 <!-- bench:probe-prefix -->
 | Library          | rank | matches | index ms | cold ms | total ms | batch ms |
 |------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino            |    1 |      16 |     0.17 |    8.51 |     8.68 |     1.50 |
-| @nozbe/microfuzz |    1 |       1 |     6.94 |    4.25 |    11.16 |     1.25 |
-| fast-fuzzy       |    1 |     452 |    56.90 |   33.55 |    90.29 |    12.40 |
-| Fuse.js          |    1 |     444 |     1.88 |   18.55 |    20.33 |    11.83 |
-| fuzzysort        |    1 |       1 |     0.05 |   11.65 |    11.70 |     0.20 |
-| uFuzzy           |    1 |       1 |     5.02 |    1.52 |     6.47 |     0.31 |
+| Krino            |    1 |      16 |     0.14 |    6.89 |     7.03 |     1.46 |
+| @nozbe/microfuzz |    1 |       1 |     4.38 |    2.31 |     6.70 |     1.48 |
+| fast-fuzzy       |    1 |     452 |    45.64 |   20.86 |    66.54 |     6.44 |
+| Fuse.js          |    1 |     444 |     1.63 |   13.23 |    14.85 |    10.25 |
+| fuzzysort        |    1 |       1 |     0.05 |    7.38 |     7.43 |     0.23 |
+| uFuzzy           |    1 |       1 |     6.26 |    1.18 |     7.43 |     0.30 |
 <!-- bench:end -->
 
 One item matches this prefix literally, and the pure subsequence engines return exactly it.
@@ -381,12 +381,12 @@ The typo engines are the other end of that trade, ~450 candidates for the same o
 <!-- bench:probe-infix -->
 | Library          | rank | matches | index ms | cold ms | total ms | batch ms |
 |------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino            |    5 |      76 |     0.17 |    3.06 |     3.22 |     0.58 |
-| @nozbe/microfuzz |    5 |      88 |     7.35 |    5.20 |    12.58 |     1.94 |
-| fast-fuzzy       |   14 |     197 |    58.89 |   32.24 |    91.12 |    12.40 |
-| Fuse.js          |    5 |     174 |     1.95 |   18.77 |    20.68 |    11.22 |
-| fuzzysort        |   13 |      88 |     0.06 |   13.16 |    13.22 |     0.81 |
-| uFuzzy           |   58 |      76 |     5.01 |    1.77 |     6.79 |     0.36 |
+| Krino            |    5 |      76 |     0.14 |    2.59 |     2.73 |     0.51 |
+| @nozbe/microfuzz |    5 |      88 |     4.46 |    2.37 |     6.83 |     1.44 |
+| fast-fuzzy       |   14 |     197 |    41.77 |   19.56 |    61.88 |     5.67 |
+| Fuse.js          |    5 |     174 |     1.68 |   12.76 |    14.52 |     9.62 |
+| fuzzysort        |   13 |      88 |     0.04 |    7.78 |     7.82 |     0.59 |
+| uFuzzy           |   58 |      76 |     6.11 |    1.37 |     7.46 |     0.36 |
 <!-- bench:end -->
 
 A mid-word slice of "ergonomic", so nothing can prefix-match: this probe separates contains-anywhere ranking from start-anchored ranking.
@@ -402,13 +402,13 @@ Where a library stops surfacing the source is its effective fuzzy limit.
 <!-- bench:probe-scatter-light -->
 | Library           | rank | matches | index ms | cold ms | total ms | batch ms |
 |-------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino             |    1 |       1 |     0.16 |    7.57 |     7.72 |     0.97 |
-| @nozbe/microfuzz  |    1 |       5 |     6.99 |    4.24 |    11.20 |     1.14 |
-| fast-fuzzy        |    1 |       1 |    54.10 |   29.94 |    83.93 |    11.11 |
-| Fuse.js           |    1 |       1 |     1.94 |   19.27 |    21.21 |    12.10 |
-| fuzzysort         |    1 |       5 |     0.05 |   11.74 |    11.79 |     0.32 |
-| uFuzzy            |    — |       0 |     4.93 |    1.15 |     6.09 |     0.20 |
-| uFuzzy (all opts) |    1 |       1 |     6.07 |    2.23 |     8.33 |     0.81 |
+| Krino             |    1 |       1 |     0.14 |    6.09 |     6.23 |     0.84 |
+| @nozbe/microfuzz  |    1 |       5 |     4.29 |    2.21 |     6.50 |     1.18 |
+| fast-fuzzy        |    1 |       1 |    37.96 |   17.41 |    56.02 |     5.38 |
+| Fuse.js           |    1 |       1 |     1.65 |   15.58 |    17.25 |    10.38 |
+| fuzzysort         |    1 |       5 |     0.04 |    7.44 |     7.49 |     0.30 |
+| uFuzzy            |    — |       0 |     6.07 |    0.84 |     6.92 |     0.21 |
+| uFuzzy (all opts) |    1 |       1 |     6.87 |    1.88 |     8.74 |     0.87 |
 <!-- bench:end -->
 
 **medium (`huuete`):**
@@ -416,12 +416,12 @@ Where a library stops surfacing the source is its effective fuzzy limit.
 <!-- bench:probe-scatter-medium -->
 | Library          | rank | matches | index ms | cold ms | total ms | batch ms |
 |------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino            |    1 |       1 |     0.16 |    8.07 |     8.23 |     0.95 |
-| @nozbe/microfuzz |    1 |       9 |     7.04 |    4.62 |    11.80 |     1.10 |
-| fast-fuzzy       |    1 |      26 |    56.46 |   27.77 |    84.36 |    11.05 |
-| Fuse.js          |    3 |      26 |     1.94 |   18.46 |    20.27 |    11.51 |
-| fuzzysort        |    1 |       9 |     0.05 |   12.25 |    12.30 |     0.39 |
-| uFuzzy           |    — |       0 |     4.91 |    1.13 |     6.10 |     0.20 |
+| Krino            |    1 |       1 |     0.14 |    6.21 |     6.35 |     0.78 |
+| @nozbe/microfuzz |    1 |       9 |     4.29 |    2.21 |     6.49 |     1.20 |
+| fast-fuzzy       |    1 |      26 |    39.09 |   17.97 |    57.06 |     5.60 |
+| Fuse.js          |    3 |      26 |     1.68 |   13.85 |    15.51 |     9.85 |
+| fuzzysort        |    1 |       9 |     0.04 |    7.50 |     7.55 |     0.34 |
+| uFuzzy           |    — |       0 |     6.10 |    0.85 |     6.93 |     0.20 |
 <!-- bench:end -->
 
 **heavy (`hget`):**
@@ -429,12 +429,12 @@ Where a library stops surfacing the source is its effective fuzzy limit.
 <!-- bench:probe-scatter-heavy -->
 | Library          | rank | matches | index ms | cold ms | total ms | batch ms |
 |------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino            |    — |       0 |     0.19 |    2.62 |     2.81 |     0.41 |
-| @nozbe/microfuzz |   21 |      67 |     7.06 |    4.45 |    11.55 |     1.16 |
-| fast-fuzzy       |    ✗ |      24 |    57.38 |   32.01 |    88.88 |     9.90 |
-| Fuse.js          |    ✗ |      24 |     1.86 |   13.90 |    15.78 |     7.28 |
-| fuzzysort        |    1 |      67 |     0.05 |   12.53 |    12.59 |     0.51 |
-| uFuzzy           |    — |       0 |     5.04 |    1.18 |     6.26 |     0.24 |
+| Krino            |    — |       0 |     0.14 |    2.40 |     2.55 |     0.35 |
+| @nozbe/microfuzz |   21 |      67 |     4.24 |    2.18 |     6.38 |     1.31 |
+| fast-fuzzy       |    ✗ |      24 |    39.83 |   18.47 |    59.35 |     5.04 |
+| Fuse.js          |    ✗ |      24 |     1.64 |   10.00 |    11.69 |     6.30 |
+| fuzzysort        |    1 |      67 |     0.04 |    7.57 |     7.61 |     0.38 |
+| uFuzzy           |    — |       0 |     6.14 |    0.89 |     7.02 |     0.26 |
 <!-- bench:end -->
 
 The gradient locates each engine's limit.
@@ -448,13 +448,13 @@ uFuzzy's default tolerates no intra-word gaps at all, 0 at every level.
 <!-- bench:probe-transposition -->
 | Library           | rank | matches | index ms | cold ms | total ms | batch ms |
 |-------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino             |    1 |       1 |     0.17 |    7.67 |     7.84 |     0.58 |
-| @nozbe/microfuzz  |    ✗ |       2 |     7.10 |    4.52 |    11.75 |     1.12 |
-| fast-fuzzy        |    1 |       6 |    55.12 |   31.41 |    86.49 |    10.58 |
-| Fuse.js           |    1 |       6 |     2.01 |   25.59 |    27.53 |    16.36 |
-| fuzzysort         |    ✗ |       2 |     0.05 |   11.91 |    12.00 |     0.24 |
-| uFuzzy            |    — |       0 |     4.81 |    1.12 |     5.92 |     0.20 |
-| uFuzzy (all opts) |    1 |       1 |     6.15 |    2.42 |     8.62 |     0.90 |
+| Krino             |    1 |       1 |     0.15 |    5.89 |     6.05 |     0.60 |
+| @nozbe/microfuzz  |    ✗ |       2 |     4.25 |    2.24 |     6.51 |     1.25 |
+| fast-fuzzy        |    1 |       6 |    41.65 |   18.99 |    61.05 |     5.81 |
+| Fuse.js           |    1 |       6 |     1.68 |   18.37 |    20.13 |    14.02 |
+| fuzzysort         |    ✗ |       2 |     0.04 |    7.48 |     7.52 |     0.23 |
+| uFuzzy            |    — |       0 |     6.10 |    0.84 |     6.94 |     0.19 |
+| uFuzzy (all opts) |    1 |       1 |     6.82 |    2.02 |     8.84 |     0.99 |
 <!-- bench:end -->
 
 The fourth typo probe degrades the same source word along a different axis: two adjacent characters swapped (`huguette` → `hugeutte`), same character count, wrong order.
@@ -469,13 +469,13 @@ Multi-error edits (two or more) remain the edit-distance engines' territory, and
 <!-- bench:probe-insertion -->
 | Library           | rank | matches | index ms | cold ms | total ms | batch ms |
 |-------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino             |    1 |       1 |     0.18 |    7.56 |     7.73 |     0.53 |
-| @nozbe/microfuzz  |    — |       0 |     7.01 |    3.94 |    10.83 |     1.40 |
-| fast-fuzzy        |    1 |       1 |    55.68 |   29.37 |    85.52 |    10.43 |
-| Fuse.js           |    1 |       1 |     1.88 |   27.24 |    29.18 |    16.92 |
-| fuzzysort         |    — |       0 |     0.05 |   11.58 |    11.63 |     0.21 |
-| uFuzzy            |    — |       0 |     4.87 |    1.12 |     5.95 |     0.21 |
-| uFuzzy (all opts) |    1 |       1 |     5.96 |    2.49 |     8.52 |     1.03 |
+| Krino             |    1 |       1 |     0.14 |    5.87 |     6.01 |     0.51 |
+| @nozbe/microfuzz  |    — |       0 |     4.42 |    2.18 |     6.60 |     1.27 |
+| fast-fuzzy        |    1 |       1 |    40.65 |   17.36 |    57.34 |     5.63 |
+| Fuse.js           |    1 |       1 |     1.60 |   20.05 |    21.76 |    14.31 |
+| fuzzysort         |    — |       0 |     0.04 |    7.22 |     7.26 |     0.21 |
+| uFuzzy            |    — |       0 |     6.14 |    0.84 |     6.98 |     0.18 |
+| uFuzzy (all opts) |    1 |       1 |     6.93 |    2.14 |     9.08 |     1.07 |
 <!-- bench:end -->
 
 A doubled keystroke (`huguette` → `hugueette`), one character too many.
@@ -488,13 +488,13 @@ Krino gets there by dropping each character of the query in turn and rerunning t
 <!-- bench:probe-substitution -->
 | Library           | rank | matches | index ms | cold ms | total ms | batch ms |
 |-------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino             |    1 |       1 |     0.16 |    7.00 |     7.16 |     0.44 |
-| @nozbe/microfuzz  |    — |       0 |     7.17 |    3.85 |    11.23 |     1.10 |
-| fast-fuzzy        |    1 |       1 |    56.93 |   31.38 |    87.41 |    10.62 |
-| Fuse.js           |    1 |       1 |     1.95 |   26.85 |    28.83 |    16.82 |
-| fuzzysort         |    — |       0 |     0.05 |   11.72 |    11.78 |     0.17 |
-| uFuzzy            |    — |       0 |     4.95 |    1.15 |     6.11 |     0.19 |
-| uFuzzy (all opts) |    1 |       1 |     6.12 |    2.32 |     8.40 |     0.91 |
+| Krino             |    1 |       1 |     0.15 |    5.69 |     5.83 |     0.39 |
+| @nozbe/microfuzz  |    — |       0 |     4.26 |    2.13 |     6.35 |     1.07 |
+| fast-fuzzy        |    1 |       1 |    40.44 |   18.40 |    58.24 |     5.66 |
+| Fuse.js           |    1 |       1 |     1.77 |   20.84 |    22.61 |    14.59 |
+| fuzzysort         |    — |       0 |     0.04 |    7.47 |     7.51 |     0.18 |
+| uFuzzy            |    — |       0 |     6.14 |    0.84 |     6.98 |     0.18 |
+| uFuzzy (all opts) |    1 |       1 |     6.91 |    2.02 |     8.94 |     0.95 |
 <!-- bench:end -->
 
 One wrong character, and deliberately one the source does not contain anywhere (`e` → `x`).
@@ -508,13 +508,13 @@ Same outcome as the insertion probe. The three subsequence engines return 0, the
 <!-- bench:probe-acronym -->
 | Library          | rank | matches | index ms | cold ms | total ms | batch ms |
 |------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino            |    2 |       7 |     0.17 |    2.98 |     3.17 |     0.52 |
-| Krino (acronym)  |    1 |       8 |     0.17 |    3.31 |     3.48 |     0.54 |
-| @nozbe/microfuzz |    2 |     133 |     7.02 |    4.84 |    12.04 |     1.39 |
-| fast-fuzzy       |    ✗ |      28 |    55.36 |   32.40 |    87.76 |    10.08 |
-| Fuse.js          |    ✗ |      28 |     1.93 |   14.07 |    15.97 |     7.20 |
-| fuzzysort        |    2 |     133 |     0.05 |   12.99 |    13.04 |     1.02 |
-| uFuzzy           |    — |       0 |     4.93 |    1.21 |     6.17 |     0.24 |
+| Krino            |    2 |       7 |     0.15 |    2.75 |     2.90 |     0.45 |
+| Krino (acronym)  |    1 |       8 |     0.14 |    3.05 |     3.20 |     0.48 |
+| @nozbe/microfuzz |    2 |     133 |     4.27 |    2.39 |     6.65 |     1.40 |
+| fast-fuzzy       |    ✗ |      28 |    41.70 |   18.56 |    60.09 |     5.15 |
+| Fuse.js          |    ✗ |      28 |     1.73 |   10.25 |    11.98 |     6.46 |
+| fuzzysort        |    2 |     133 |     0.04 |    8.00 |     8.05 |     0.76 |
+| uFuzzy           |    — |       0 |     6.33 |    0.90 |     7.23 |     0.25 |
 <!-- bench:end -->
 
 `rsaw` is the initials of "Rath, Streich and Witting".
@@ -527,13 +527,13 @@ Tier semantics: apostrophes are word-internal (`People's` contributes one initia
 <!-- bench:probe-accent-stripped -->
 | Library           | rank | matches | index ms | cold ms | total ms | batch ms |
 |-------------------|-----:|--------:|---------:|--------:|---------:|---------:|
-| Krino             |    2 |       7 |     0.17 |    2.98 |     3.15 |     0.46 |
-| @nozbe/microfuzz  |    2 |      70 |     7.44 |    4.58 |    12.15 |     1.08 |
-| fast-fuzzy        |   33 |      82 |    56.76 |   30.90 |    87.92 |     9.64 |
-| Fuse.js           |    1 |      74 |     1.97 |   12.47 |    14.35 |     7.35 |
-| fuzzysort         |    2 |      70 |     0.06 |   12.69 |    12.75 |     0.54 |
-| uFuzzy            |    — |       0 |     4.95 |    1.22 |     6.12 |     0.23 |
-| uFuzzy (all opts) |    3 |       4 |     6.04 |    1.82 |     7.88 |     0.42 |
+| Krino             |    2 |       7 |     0.14 |    2.57 |     2.72 |     0.39 |
+| @nozbe/microfuzz  |    2 |      70 |     4.28 |    2.05 |     6.41 |     1.07 |
+| fast-fuzzy        |   33 |      82 |    40.10 |   18.97 |    59.07 |     4.93 |
+| Fuse.js           |    1 |      74 |     1.64 |    8.68 |    10.32 |     6.52 |
+| fuzzysort         |    2 |      70 |     0.04 |    7.60 |     7.64 |     0.37 |
+| uFuzzy            |    — |       0 |     6.15 |    0.88 |     7.05 |     0.25 |
+| uFuzzy (all opts) |    3 |       4 |     6.84 |    1.46 |     8.29 |     0.41 |
 <!-- bench:end -->
 
 `kepa` targets items containing "Kępa".
@@ -545,19 +545,19 @@ fast-fuzzy's matches come from edit distance rather than folding, which is why t
 <!-- bench:probe-miss -->
 | Library          | matches | cold ms | vs `ergonomic` |
 |------------------|--------:|--------:|---------------:|
-| Krino            |       0 |   5.729 |           182% |
-| @nozbe/microfuzz |       0 |   3.791 |            80% |
-| fast-fuzzy       |       0 |  25.605 |            91% |
-| Fuse.js          |       0 |  16.721 |            62% |
-| fuzzysort        |       0 |  11.289 |            94% |
-| uFuzzy           |       0 |   1.157 |            68% |
+| Krino            |       0 |   4.461 |           156% |
+| @nozbe/microfuzz |       0 |   1.836 |            80% |
+| fast-fuzzy       |       0 |  16.063 |            85% |
+| Fuse.js          |       0 |  12.149 |            58% |
+| fuzzysort        |       0 |   7.058 |            93% |
+| uFuzzy           |       0 |   0.824 |            61% |
 <!-- bench:end -->
 
 No rank column: every library correctly returns nothing, which is the only right answer.
 What separates them is the price of that answer, shown against each library's own cost for the long-word probe (a query that does match), so the column reads as "what fraction of a real query does a hopeless one cost you".
-Process-cold, this probe inverted: Krino's miss costs _more_ than its hit (182%, the only ratio above 100% in the table), and the reason is diligence, not waste.
+Process-cold, this probe inverted: Krino's miss costs _more_ than its hit (156%, the only ratio above 100% in the table), and the reason is diligence, not waste.
 A hopeless six-character query is _rescuable_, so before saying "no results" Krino tries harder: the literal pass comes up empty, and rather than fail it builds the union and bigram masks and attempts every one-edit correction of the query — the same second pass that takes every typo probe above at rank 1 with a single row.
-The engines with cheap misses are cheap because they never tried; uFuzzy's 1.2 ms refusal and Krino's 5.7 ms one bought different amounts of certainty that nothing was there.
+The engines with cheap misses are cheap because they never tried; uFuzzy's 0.8 ms refusal and Krino's 4.5 ms one bought different amounts of certainty that nothing was there.
 The bill is also once per searcher, not per miss: the masks the garbage query builds are the ones every later rescue reuses, which is why the batch column absorbs it — a session's first thin query pays it and the other nineteen ride it.
 (The old warm harness showed the opposite ratio, 3%, because the masks were pre-paid; both numbers are true, and the cold one is what a fresh searcher feels.)
 
@@ -576,20 +576,20 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 <!-- bench:scorecard-mixed -->
 | Library                     |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------------|-----:|---------:|--------:|---------:|------------:|
-| Krino (acronym)             | 0.87 |     0.16 |    5.63 |    21.50 |        0.92 |
-| Krino                       | 0.84 |     0.16 |    5.46 |    21.06 |        0.90 |
-| Fuse.js (all opts)          | 0.81 |     1.87 |   31.96 |   443.68 |       20.84 |
-| Fuse.js                     | 0.75 |     1.86 |   31.69 |   474.24 |       22.77 |
-| fast-fuzzy                  | 0.59 |    53.82 |   29.50 |   282.10 |       12.58 |
-| fast-fuzzy (all opts)       | 0.59 |    53.44 |   29.71 |   272.52 |       11.97 |
-| uFuzzy (all opts)           | 0.52 |     5.71 |    2.70 |    21.75 |        0.98 |
-| @nozbe/microfuzz            | 0.46 |     6.92 |    4.65 |    42.36 |        1.88 |
-| @nozbe/microfuzz (all opts) | 0.46 |     6.85 |    4.71 |    43.73 |        1.98 |
-| fuzzysort                   | 0.42 |     0.05 |   11.96 |    21.95 |        0.50 |
-| fuzzy                       | 0.35 |     0.05 |    2.51 |    44.81 |        2.11 |
-| fuzzy (all opts)            | 0.35 |     0.05 |    2.64 |    46.37 |        2.18 |
-| match-sorter                | 0.32 |     0.05 |    7.37 |    79.82 |        3.51 |
-| uFuzzy                      | 0.11 |     4.81 |    1.28 |     6.64 |        0.25 |
+| Krino (acronym)             | 0.87 |     0.14 |    4.52 |    19.20 |        0.81 |
+| Krino                       | 0.84 |     0.14 |    4.38 |    18.72 |        0.81 |
+| Fuse.js (all opts)          | 0.81 |     1.67 |   22.90 |   360.87 |       17.11 |
+| Fuse.js                     | 0.75 |     1.63 |   24.20 |   417.29 |       20.21 |
+| fast-fuzzy                  | 0.59 |    40.03 |   17.96 |   169.35 |        7.41 |
+| fast-fuzzy (all opts)       | 0.59 |    37.01 |   18.05 |   164.72 |        7.22 |
+| uFuzzy (all opts)           | 0.52 |     6.81 |    2.38 |    22.55 |        1.04 |
+| @nozbe/microfuzz            | 0.46 |     4.35 |    2.16 |    32.18 |        1.50 |
+| @nozbe/microfuzz (all opts) | 0.46 |     4.24 |    2.11 |    32.60 |        1.51 |
+| fuzzysort                   | 0.42 |     0.04 |    7.41 |    15.88 |        0.42 |
+| fuzzy                       | 0.35 |     0.04 |    2.60 |    41.34 |        1.92 |
+| fuzzy (all opts)            | 0.35 |     0.04 |    2.73 |    44.61 |        2.09 |
+| match-sorter                | 0.32 |     0.04 |    7.35 |    71.16 |        3.03 |
+| uFuzzy                      | 0.11 |     6.20 |    0.96 |     6.04 |        0.24 |
 <!-- bench:end -->
 
 **ascii corpus** (its own query set over its own corpus, down to its own accent probe, `cote` from "Côte d'Ivoire", which the en locale emits; MRRs therefore aren't comparable across corpora):
@@ -597,26 +597,26 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 <!-- bench:scorecard-ascii -->
 | Library                     |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------------|-----:|---------:|--------:|---------:|------------:|
-| Krino (acronym)             | 0.82 |     0.17 |    5.92 |    26.59 |        1.20 |
-| Krino                       | 0.79 |     0.19 |    5.86 |    24.84 |        1.14 |
-| Fuse.js (all opts)          | 0.69 |     1.82 |   30.94 |   430.73 |       20.15 |
-| Fuse.js                     | 0.64 |     1.85 |   29.76 |   420.09 |       19.98 |
-| @nozbe/microfuzz            | 0.52 |     6.66 |    4.77 |    42.17 |        1.88 |
-| @nozbe/microfuzz (all opts) | 0.52 |     6.51 |    4.77 |    41.32 |        1.86 |
-| fuzzy                       | 0.39 |     0.05 |    2.36 |    45.01 |        2.12 |
-| fuzzy (all opts)            | 0.39 |     0.05 |    2.49 |    46.88 |        2.21 |
-| fast-fuzzy                  | 0.39 |    54.79 |   29.83 |   300.22 |       13.46 |
-| fast-fuzzy (all opts)       | 0.39 |    55.13 |   30.04 |   322.59 |       14.66 |
-| uFuzzy (all opts)           | 0.39 |     5.74 |    2.44 |    18.73 |        0.83 |
-| match-sorter                | 0.29 |     0.05 |    6.83 |    78.37 |        3.42 |
-| fuzzysort                   | 0.28 |     0.05 |   11.58 |    26.23 |        0.74 |
-| uFuzzy                      | 0.08 |     4.92 |    1.32 |     6.70 |        0.26 |
+| Krino (acronym)             | 0.82 |     0.15 |    4.82 |    23.05 |        1.03 |
+| Krino                       | 0.79 |     0.14 |    4.65 |    22.14 |        1.00 |
+| Fuse.js (all opts)          | 0.69 |     1.73 |   21.87 |   369.88 |       17.44 |
+| Fuse.js                     | 0.64 |     1.70 |   22.56 |   392.24 |       18.81 |
+| @nozbe/microfuzz            | 0.52 |     4.03 |    2.20 |    34.13 |        1.60 |
+| @nozbe/microfuzz (all opts) | 0.52 |     4.04 |    2.14 |    32.64 |        1.52 |
+| fuzzy                       | 0.39 |     0.04 |    2.42 |    41.89 |        1.95 |
+| fuzzy (all opts)            | 0.39 |     0.05 |    2.51 |    44.09 |        2.06 |
+| fast-fuzzy                  | 0.39 |    40.53 |   18.44 |   168.21 |        7.49 |
+| fast-fuzzy (all opts)       | 0.39 |    37.04 |   18.65 |   177.74 |        7.91 |
+| uFuzzy (all opts)           | 0.39 |     6.73 |    2.13 |    19.97 |        0.91 |
+| match-sorter                | 0.29 |     0.04 |    6.85 |    69.99 |        2.97 |
+| fuzzysort                   | 0.28 |     0.04 |    7.11 |    17.50 |        0.52 |
+| uFuzzy                      | 0.08 |     6.19 |    0.97 |     6.20 |        0.25 |
 <!-- bench:end -->
 
 Result-set size is _not_ a scorecard column: in a ranked UI any result list slices to the top N, so a large return costs a picker nothing (see "The corpus and the twenty probes").
 The per-query tables above keep the raw counts for the two places size does matter: filter-style UIs that show every match, and telling whether an MRR came from a selective matcher or from ranking a huge candidate set.
 _Krino (acronym) tops both corpora outright_ (0.87 mixed / 0.82 ascii), with base Krino (0.84 / 0.79) also clear of every other configuration; the nearest non-Krino row is Fuse.js (all opts) at 0.81 / 0.69.
-The phrase-typo probes are what opened the gap: Krino takes all three at rank 1 with exactly the five true rows, where Fuse's base configuration loses the reversed one outright and its all-opts row arrives with ~90-row lists at ~30 ms cold against Krino's ~6.
+The phrase-typo probes are what opened the gap: Krino takes all three at rank 1 with exactly the five true rows, where Fuse's base configuration loses the reversed one outright and its all-opts row arrives with ~90-row lists at ~19–46 ms cold against Krino's ~4.
 On structured queries Krino returns a median of _7_ rows where Fuse ships ~90.
 Base Krino leads its parent by 38 points on mixed (0.84 vs 0.46): the one-edit tiers take all three single-edit typo probes and all three phrase-typo probes at rank 1, where the subsequence engines return nothing at all on most of them.
 Rank inside junk does not score, so refusal at the heavy scatter grade is cheap (microfuzz's rank-21-in-67-junk-rows on `hget` earns 0 either way; see "the fuzzy limit").
@@ -628,15 +628,15 @@ The scorecard's cost columns are exactly what the Pareto charts draw, one per wo
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./pareto-query-dark.svg">
-  <img alt="Mixed-corpus accuracy (MRR) vs. per-query cost across a twenty-query session, log scale, as a Pareto frontier. The frontier runs uFuzzy, fuzzysort, Krino, Krino (acronym): Krino (acronym) tops MRR at 0.87 at 0.95 ms per query, and everything above 0.5 MRR that isn't Krino, including Fuse.js (all opts) at 0.81 and ~21 ms, is dominated." src="./pareto-query-light.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. per-query cost across a twenty-query session, log scale, as a Pareto frontier. The frontier runs uFuzzy, fuzzysort, Krino, Krino (acronym): Krino (acronym) tops MRR at 0.87 at 0.81 ms per query, and everything above 0.5 MRR that isn't Krino, including Fuse.js (all opts) at 0.81 and ~17 ms, is dominated." src="./pareto-query-light.svg">
 </picture>
 
 Its x-axis is the batch's per-query cost — what a query costs once the searcher has answered nineteen real ones — and its frontier runs uFuzzy → fuzzysort → Krino → Krino (acronym).
-The cheap end belongs to the bare-output engines and their MRR says why (0.11 and 0.42); nothing above 0.5 MRR comes within 10% of Krino's 0.94 ms, and everything typo-tolerant is 14–24× dearer.
+The cheap end belongs to the bare-output engines and their MRR says why (0.11 and 0.42); nothing above 0.5 MRR comes within 25% of Krino's 0.81 ms, and everything typo-tolerant is 9–25× dearer.
 
 **Backend one-shot workload** (a fresh process pays constructor + first answer): the chart lives in the README's Comparison section, deliberately the less flattering of the two there.
 Its frontier runs `fuzzy` → Krino → Krino (acronym): a no-index substring scan at 0.35 MRR owns the cheap end, and every other configuration — uFuzzy included, once its constructor-and-first-call reality is measured rather than amortised — is dominated.
-This is the ledger where Krino's lazy preparation presents its bill: the first answer carries the raw-gate scan and, on typo-shaped queries, the mask build (~5.5 ms at 10k against a 0.16 ms constructor), and the batch's `first` vs `rest` split shows the whole bill paid by query one.
+This is the ledger where Krino's lazy preparation presents its bill: the first answer carries the raw-gate scan and, on typo-shaped queries, the mask build (~4.4 ms at 10k against a 0.14 ms constructor), and the batch's `first` vs `rest` split shows the whole bill paid by query one.
 
 _Both charts read the scorecard above out of [`bench/results.json`](../bench/results.json) ([`pareto.ts`](./pareto.ts)), so they cannot disagree with it; `pnpm bench` redraws them._
 
@@ -664,21 +664,21 @@ Krino leads its own table; the rest are alphabetical, so each library's base and
 <!-- bench:speed-ascii -->
 | Library                     |     index | cold query |     total | total rel |
 |-----------------------------|----------:|-----------:|----------:|----------:|
-| **Krino**                   |   0.86 ms |   23.25 ms |  24.11 ms |  **100%** |
-| Krino (acronym)             |   0.87 ms |   23.75 ms |  24.58 ms |      102% |
-| @nozbe/microfuzz            | 104.17 ms |   24.14 ms | 125.49 ms |      521% |
-| @nozbe/microfuzz (all opts) | 102.15 ms |   24.16 ms | 125.57 ms |      521% |
-| fast-fuzzy                  | 572.06 ms |  110.83 ms | 692.88 ms |     2874% |
-| fast-fuzzy (all opts)       | 580.02 ms |  112.28 ms | 693.79 ms |     2878% |
-| Fuse.js                     |   7.46 ms |  223.13 ms | 230.70 ms |      957% |
-| Fuse.js (all opts)          |   7.54 ms |  225.72 ms | 233.26 ms |      968% |
-| fuzzy                       |   0.05 ms |   24.58 ms |  24.64 ms |      102% |
-| fuzzy (all opts)            |   0.05 ms |   25.80 ms |  25.85 ms |      107% |
-| fuzzysort                   |   0.05 ms |  123.92 ms | 123.98 ms |      514% |
-| match-sorter                |   0.05 ms |   41.53 ms |  41.58 ms |      172% |
-| uFuzzy                      |   4.88 ms |    3.37 ms |   8.28 ms |       34% |
-| uFuzzy (all opts)           |  11.24 ms |    4.87 ms |  16.31 ms |       68% |
-| _all libraries (geomean)_   |   3.59 ms |   37.49 ms |  72.32 ms |      300% |
+| **Krino**                   |   0.33 ms |   17.81 ms |  18.12 ms |  **100%** |
+| Krino (acronym)             |   0.32 ms |   18.13 ms |  18.46 ms |      102% |
+| @nozbe/microfuzz            |  45.76 ms |   29.93 ms |  78.66 ms |      434% |
+| @nozbe/microfuzz (all opts) |  45.54 ms |   29.12 ms |  75.44 ms |      416% |
+| fast-fuzzy                  | 388.07 ms |   76.94 ms | 464.28 ms |     2562% |
+| fast-fuzzy (all opts)       | 356.86 ms |   79.10 ms | 451.41 ms |     2491% |
+| Fuse.js                     |   7.01 ms |  195.34 ms | 202.50 ms |     1117% |
+| Fuse.js (all opts)          |   7.02 ms |  180.91 ms | 188.10 ms |     1038% |
+| fuzzy                       |   0.05 ms |   18.91 ms |  18.96 ms |      105% |
+| fuzzy (all opts)            |   0.05 ms |   20.14 ms |  20.19 ms |      111% |
+| fuzzysort                   |   0.04 ms |   69.62 ms |  69.66 ms |      384% |
+| match-sorter                |   0.04 ms |   32.83 ms |  32.87 ms |      181% |
+| uFuzzy                      |   6.01 ms |    3.03 ms |   9.29 ms |       51% |
+| uFuzzy (all opts)           |  10.78 ms |    4.81 ms |  15.65 ms |       86% |
+| _all libraries (geomean)_   |   2.51 ms |   31.03 ms |  54.46 ms |      301% |
 <!-- bench:end -->
 
 **The session batch** (one process: a warmup match, then the twenty probes once each):
@@ -686,37 +686,37 @@ Krino leads its own table; the rest are alphabetical, so each library's base and
 <!-- bench:batch-ascii -->
 | Library                     | batch/query | batch total | batch rel |
 |-----------------------------|------------:|------------:|----------:|
-| **Krino**                   |     4.60 ms |    97.36 ms |  **100%** |
-| Krino (acronym)             |     5.10 ms |   108.11 ms |      111% |
-| @nozbe/microfuzz            |    21.60 ms |   454.49 ms |      467% |
-| @nozbe/microfuzz (all opts) |    21.93 ms |   460.25 ms |      473% |
-| fast-fuzzy                  |    89.56 ms |  1917.01 ms |     1969% |
-| fast-fuzzy (all opts)       |    91.18 ms |  1924.99 ms |     1977% |
-| Fuse.js                     |   200.14 ms |  4140.09 ms |     4252% |
-| Fuse.js (all opts)          |   197.21 ms |  4141.36 ms |     4254% |
-| fuzzy                       |    17.66 ms |   378.76 ms |      389% |
-| fuzzy (all opts)            |    18.59 ms |   397.71 ms |      408% |
-| fuzzysort                   |     5.71 ms |   232.81 ms |      239% |
-| match-sorter                |    27.31 ms |   592.21 ms |      608% |
-| uFuzzy                      |     2.08 ms |    45.49 ms |       47% |
-| uFuzzy (all opts)           |     3.09 ms |    66.14 ms |       68% |
-| _all libraries (geomean)_   |    19.53 ms |   435.06 ms |      447% |
+| **Krino**                   |     3.88 ms |    83.25 ms |  **100%** |
+| Krino (acronym)             |     4.06 ms |    87.30 ms |      105% |
+| @nozbe/microfuzz            |    11.81 ms |   272.01 ms |      327% |
+| @nozbe/microfuzz (all opts) |    12.03 ms |   268.20 ms |      322% |
+| fast-fuzzy                  |    58.95 ms |  1250.94 ms |     1503% |
+| fast-fuzzy (all opts)       |    58.70 ms |  1243.29 ms |     1493% |
+| Fuse.js                     |   186.13 ms |  3848.22 ms |     4623% |
+| Fuse.js (all opts)          |   172.60 ms |  3614.87 ms |     4342% |
+| fuzzy                       |    18.39 ms |   389.53 ms |      468% |
+| fuzzy (all opts)            |    19.63 ms |   414.80 ms |      498% |
+| fuzzysort                   |     4.68 ms |   159.81 ms |      192% |
+| match-sorter                |    25.89 ms |   557.99 ms |      670% |
+| uFuzzy                      |     2.10 ms |    45.51 ms |       55% |
+| uFuzzy (all opts)           |     3.46 ms |    73.38 ms |       88% |
+| _all libraries (geomean)_   |    16.10 ms |   357.27 ms |      429% |
 <!-- bench:end -->
 
 ### mixed corpus
 
 <!-- bench:speed-mixed -->
-| Library                     |     index | cold query |     total | total rel |
-|-----------------------------|----------:|-----------:|----------:|----------:|
-| **Krino**                   |   0.82 ms |   23.55 ms |  24.39 ms |  **100%** |
-| Krino (acronym)             |   0.83 ms |   23.79 ms |  24.62 ms |      101% |
-| @nozbe/microfuzz            | 103.54 ms |   25.73 ms | 129.14 ms |      530% |
-| @nozbe/microfuzz (all opts) | 102.06 ms |   25.73 ms | 129.02 ms |      529% |
-| Fuse.js (all opts)          |   7.59 ms |  226.02 ms | 233.50 ms |      957% |
-| fuzzysort                   |   0.05 ms |  128.57 ms | 128.63 ms |      527% |
-| match-sorter                |   0.05 ms |   49.40 ms |  49.45 ms |      203% |
-| uFuzzy (all opts)           |  12.01 ms |    5.22 ms |  17.32 ms |       71% |
-| _all libraries (geomean)_   |   2.53 ms |   35.94 ms |  63.29 ms |      260% |
+| Library                     |    index | cold query |     total | total rel |
+|-----------------------------|---------:|-----------:|----------:|----------:|
+| **Krino**                   |  0.30 ms |   17.13 ms |  17.44 ms |  **100%** |
+| Krino (acronym)             |  0.29 ms |   17.27 ms |  17.59 ms |      101% |
+| @nozbe/microfuzz            | 53.95 ms |   32.33 ms |  82.75 ms |      474% |
+| @nozbe/microfuzz (all opts) | 48.08 ms |   31.60 ms |  80.97 ms |      464% |
+| Fuse.js (all opts)          |  7.06 ms |  182.80 ms | 189.97 ms |     1089% |
+| fuzzysort                   |  0.05 ms |   76.82 ms |  76.87 ms |      441% |
+| match-sorter                |  0.04 ms |   39.10 ms |  39.15 ms |      224% |
+| uFuzzy (all opts)           | 11.60 ms |    5.09 ms |  16.73 ms |       96% |
+| _all libraries (geomean)_   |  1.56 ms |   30.96 ms |  45.89 ms |      263% |
 <!-- bench:end -->
 
 **The session batch** (one process: a warmup match, then the twenty probes once each):
@@ -724,20 +724,20 @@ Krino leads its own table; the rest are alphabetical, so each library's base and
 <!-- bench:batch-mixed -->
 | Library                     | batch/query | batch total | batch rel |
 |-----------------------------|------------:|------------:|----------:|
-| **Krino**                   |     3.92 ms |    85.36 ms |  **100%** |
-| Krino (acronym)             |     4.01 ms |    87.61 ms |      103% |
-| @nozbe/microfuzz            |    14.63 ms |   318.77 ms |      373% |
-| @nozbe/microfuzz (all opts) |    14.99 ms |   326.36 ms |      382% |
-| Fuse.js (all opts)          |   199.28 ms |  4194.28 ms |     4914% |
-| fuzzysort                   |     4.46 ms |   221.33 ms |      259% |
-| match-sorter                |    32.56 ms |   706.02 ms |      827% |
-| uFuzzy (all opts)           |     3.35 ms |    71.93 ms |       84% |
-| _all libraries (geomean)_   |    11.63 ms |   278.96 ms |      327% |
+| **Krino**                   |     3.39 ms |    74.89 ms |  **100%** |
+| Krino (acronym)             |     3.40 ms |    75.06 ms |      100% |
+| @nozbe/microfuzz            |    13.20 ms |   295.96 ms |      395% |
+| @nozbe/microfuzz (all opts) |    12.98 ms |   294.00 ms |      393% |
+| Fuse.js (all opts)          |   169.97 ms |  3553.26 ms |     4744% |
+| fuzzysort                   |     3.67 ms |   151.16 ms |      202% |
+| match-sorter                |    29.07 ms |   625.58 ms |      835% |
+| uFuzzy (all opts)           |     3.71 ms |    78.66 ms |      105% |
+| _all libraries (geomean)_   |    10.36 ms |   244.87 ms |      327% |
 <!-- bench:end -->
 
-The acronym configuration runs strictly _more_ code per query (an extra tier, plus the one-edit rescues on candidates that reach it); its 104% cell is that price plus load swing.
+The acronym configuration runs strictly _more_ code per query (an extra tier, plus the one-edit rescues on candidates that reach it); its 100–105% cells are that price plus load swing.
 Read sub-15% differences as statistical ties, the tie band from here on, and larger ones as real.
-Folding uFuzzy is far outside the tie band on this corpus: 0.78 ms for Krino to uFuzzy's 2.63 (337%).
+Folding uFuzzy sits just inside the tie band on this corpus: 3.39 ms for Krino to uFuzzy's 3.71 (109%).
 
 Configurations that can't fold diacritics are omitted rather than flagged. A non-folding row on this corpus is timing a different, easier task (it silently misses accented matches), and we already _know_ it fails: on the accent-probe query `kepa` (from "Kępa…") at 10k, base uFuzzy finds _0_ matches where its folding (all opts) config finds 4 and Krino 8 ([`bench/hits.test.ts`](../bench/hits.test.ts)).
 Omitted: uFuzzy and fuse.js base configs (their (all opts) rows fold and stay), and fast-fuzzy and fuzzy entirely; they have no folding option at all.
@@ -747,10 +747,10 @@ Omitted: uFuzzy and fuse.js base configs (their (all opts) rows fold and stay), 
 Every cell is process-cold, so read the columns as three different workloads, not three qualities of one number.
 The **batch** column is the honest headline: one process, twenty distinct queries, and the amortisation each design promises either shows up or doesn't.
 Krino's batch is carried by its architecture — a staged reject path (a per-item union of char-class bitmasks, then a native regex gate) cuts 90–100% of items before any ladder work, and the lazy preparation is paid once, by the first typo-shaped query, for the whole session.
-_uFuzzy wins the raw batch at 100k_ (46% of Krino bare, 68–84% folding) and its `batch/query` is the cheapest in the set; its MRR (0.08–0.11 bare, 0.39–0.52 folding) is what that buys.
-Krino's batch beats everything else — 2.7× its parent microfuzz, 2.5× fuzzysort, ~6× match-sorter, ~20× fast-fuzzy, ~42× Fuse.js on mixed — while topping both scorecards outright.
-The **cold query** column is where Krino's laziness presents its bill: ~23 ms mean at 100k, most of it the rescue's union-and-bigram mask build, paid once per searcher and visible per probe kind in the 10k tables (typo probes pay it, literal probes pay the ~4 ms raw gate).
-An eager-index engine inverts the shape: fast-fuzzy's first answer is cheap only because its constructor already spent 370–585 ms.
+_uFuzzy wins the raw batch at 100k on ascii_ (55% of Krino bare, 88% folding) and its bare `batch/query` is the cheapest in the set; on mixed its folding configuration lands inside the tie band (105%), and its MRR (0.08–0.11 bare, 0.39–0.52 folding) is what the price buys.
+Krino's batch beats everything else — ~4× its parent microfuzz, 2× fuzzysort, ~8× match-sorter, ~15× fast-fuzzy (ascii; it can't fold), ~47× Fuse.js on mixed — while topping both scorecards outright.
+The **cold query** column is where Krino's laziness presents its bill: ~17 ms mean at 100k, most of it the rescue's union-and-bigram mask build, paid once per searcher and visible per probe kind in the 10k tables (typo probes pay it, literal probes pay the ~4 ms raw gate).
+An eager-index engine inverts the shape: fast-fuzzy's first answer is cheap only because its constructor already spent ~360–390 ms.
 The **index** column plus the first answer is the one-shot ledger, and there `fuzzy`'s bare substring scan is the only thing cheaper than Krino at any quality level.
 Cross-_type_ speed isn't apples-to-apples: **typo-tolerant** libs (Fuse.js, fast-fuzzy) do far more work per query, and non-folding configurations are omitted from the mixed table entirely (they would be timing a different task).
 **fast-fuzzy is corpus-sensitive**: its trie rewards shared-prefix data but this natural-language corpus prunes less, dropping it among the slowest (on a combinatorial word-grid it measured far better; corpus shape moves these numbers a lot).
@@ -765,16 +765,16 @@ Each step is timed at its correct cache state (the untimed reset replays the pre
 <!-- bench:session -->
 | Library            |  `gra` | `grad` | `grady` | session |
 |--------------------|-------:|-------:|--------:|--------:|
-| Krino              |   4.09 |   1.71 |    0.67 |    6.47 |
-| @nozbe/microfuzz   |  31.93 |  27.94 |   27.76 |   87.63 |
-| fuzzysort          |  13.56 |   9.24 |    3.19 |   25.98 |
-| uFuzzy (all opts)  |   4.85 |   2.60 |    2.68 |   10.13 |
-| Fuse.js (all opts) | 148.45 | 128.52 |  173.68 |  450.65 |
+| Krino              |   3.05 |   1.71 |    0.70 |    5.46 |
+| @nozbe/microfuzz   |  43.43 |  35.83 |   36.04 |  115.30 |
+| fuzzysort          |   7.82 |   4.75 |    3.05 |   15.62 |
+| uFuzzy (all opts)  |   4.65 |   2.37 |    2.51 |    9.53 |
+| Fuse.js (all opts) | 117.35 | 107.44 |  144.00 |  368.79 |
 <!-- bench:end -->
 
-Krino's per-keystroke cost falls _6×_ across the word (4.09 → 1.71 → 0.67) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that pays.
-Krino takes every step of the session, the wide opener included (4.09 vs uFuzzy's 4.85), and the session total by 1.6× (6.47 vs 10.13) — while returning tiers and ranges against uFuzzy's bare index array, at 0.52 MRR to Krino's 0.84.
-microfuzz stays flat at ~26–33 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
+Krino's per-keystroke cost falls _over 4×_ across the word (3.05 → 1.71 → 0.70) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that pays.
+Krino takes every step of the session, the wide opener included (3.05 vs uFuzzy's 4.65), and the session total by 1.7× (5.46 vs 9.53) — while returning tiers and ranges against uFuzzy's bare index array, at 0.52 MRR to Krino's 0.84.
+microfuzz stays flat at ~36–43 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
 Unlike the scorecard, this table is a single process rather than a median of five, so read its cells with the tie band in mind.
 All rows assume a warm process: one-time costs (Krino's mask build, fuzzysort's lazy target prep) are paid at load, not on keystroke one; the cold cells above price them.
 Measured by [`bench/session.test.ts`](../bench/session.test.ts).
@@ -790,14 +790,14 @@ The probe: the document is the mixed corpus joined with spaces and sliced to gra
 <!-- bench:longtext -->
 | doc chars | junk rate | present hits | miss ms |
 |----------:|----------:|-------------:|--------:|
-|        64 |        0% |          8/8 |   0.007 |
-|       128 |        0% |        15/15 |   0.008 |
-|       256 |        0% |        20/20 |   0.011 |
-|       512 |        0% |        20/20 |   0.012 |
-|      1024 |        0% |        20/20 |   0.027 |
+|        64 |        0% |          8/8 |   0.006 |
+|       128 |        0% |        15/15 |   0.007 |
+|       256 |        0% |        20/20 |   0.008 |
+|       512 |        0% |        20/20 |   0.010 |
+|      1024 |        0% |        20/20 |   0.026 |
 |      2048 |        0% |        20/20 |   0.044 |
-|      4096 |        0% |        20/20 |   0.077 |
-|      8192 |        0% |        20/20 |   0.144 |
+|      4096 |        0% |        20/20 |   0.080 |
+|      8192 |        0% |        20/20 |   0.147 |
 |     16384 |        0% |        20/20 |   0.288 |
 <!-- bench:end -->
 
@@ -813,20 +813,20 @@ Everything above condenses to one recommendation: _pick Krino for list matching_
 Three things carry the claim, each measured in its own section:
 
 - **Quality**: Krino (acronym) tops the scorecard on both corpora outright (0.87 mixed / 0.82 ascii), with the smallest result sets of the subsequence engines (median 7 rows on structured queries where Fuse.js ships ~90); the phrase-typo probes are what pushed the lead past the tie band.
-- **Cost, measured cold**: the cheapest twenty-query session of anything above 0.5 MRR at both sizes (batch 20.9 ms at mixed 10k, ~1 ms per query after the first; 2.5–42× under every typo-tolerant or tiered alternative), a near-zero constructor, ~5.5 kB gzip, zero deps. The honest asterisk is the first call: Krino's lazy preparation lands its whole bill on query one (~5.5 ms at 10k, ~23 ms at 100k), and a workload that only ever asks one question of one searcher should read the one-shot ledger, where bare `fuzzy` is cheaper.
+- **Cost, measured cold**: the cheapest twenty-query session of anything above 0.5 MRR at both sizes (batch 18.7 ms at mixed 10k, ~0.8 ms per query after the first; ~4–47× under every typo-tolerant or tiered alternative), a near-zero constructor, ~5.5 kB gzip, zero deps. The honest asterisk is the first call: Krino's lazy preparation lands its whole bill on query one (~4.4 ms at 10k, ~17 ms at 100k), and a workload that only ever asks one question of one searcher should read the one-shot ledger, where bare `fuzzy` is cheaper.
 - **Long text**: the density floor holds `fuzzyMatch` junk at 0% at every measured document length — phrase probes included — so the same engine covers documents, not just labels.
 
 The carve-outs:
 
 - **Typo tolerance beyond a single edit.** The one-edit tiers rescue every single-character typo (transposition, insertion, deletion and substitution) at rank 1 with a single row — inside phrases too, where the failing word is corrected alone — but _two or more_ edits in one query still need real edit distance, and Krino deliberately refuses both deep scatter ("the fuzzy limit") and the double-typo phrase.
-  If user-typed queries over messy data must match through those, Fuse.js (Bitap) or fast-fuzzy (edit distance) is the right tool; the scorecard prices what that buys and costs: 0.81/0.59 MRR on mixed, ~13–23 ms per cold query, ~90–450-row result sets.
-- **Raw throughput when a bare index array is enough.** uFuzzy wins the 100k batch outright (46% of Krino bare, 68–84% with folding) and owns the cheapest per-query and miss cells at every size.
+  If user-typed queries over messy data must match through those, Fuse.js (Bitap) or fast-fuzzy (edit distance) is the right tool; the scorecard prices what that buys and costs: 0.81/0.59 MRR on mixed, ~18–24 ms per cold query, ~90–450-row result sets.
+- **Raw throughput when a bare index array is enough.** uFuzzy wins the 100k ascii batch outright (55% of Krino bare, 88% with folding; on mixed its folding config only ties) and owns the cheapest bare per-query and miss cells at every size.
   It costs most of the match quality to get there — 0.08–0.11 MRR bare, 0.39–0.52 folded, against Krino's 0.79–0.87 — and no ranges, tiers, or per-field config. A real trade, priced in full above.
 
 The rest of the field is dominated on these benchmarks:
 
-- **@nozbe/microfuzz**: Krino's parent; same subsequence approach, ~2.7× the batch at 100k, 2–17× larger result sets, no tier output. Its 0.46 mixed MRR sits 38 points under base Krino: it returns nothing at all on the insertion, substitution and phrase-typo probes.
-- **fuzzysort**: the cheapest per-query cost after uFuzzy, but its prepare-all pass lands an 11–12 ms first call (124 ms at 100k) that stock usage pays inside the first `go()`, and prefix-biased ranking sinks plain-word and infix ranks (20th on `ergonomic`, 13th on `gonom`).
+- **@nozbe/microfuzz**: Krino's parent; same subsequence approach, ~4× the batch at 100k, 2–17× larger result sets, no tier output. Its 0.46 mixed MRR sits 38 points under base Krino: it returns nothing at all on the insertion, substitution and phrase-typo probes.
+- **fuzzysort**: the cheapest per-query cost after uFuzzy, but its prepare-all pass lands a ~7 ms first call (77 ms at 100k) that stock usage pays inside the first `go()`, and prefix-biased ranking sinks plain-word and infix ranks (20th on `ergonomic`, 13th on `gonom`).
 - **match-sorter**: tiered ranking but no ranges and no multi-word; never places best on any probe, 0.29–0.32 MRR at mid-pack speed.
 - **fuzzy**: substring-only and order-sensitive; 0 matches on the reversed phrase, no folding, no ranges.
-- **fast-fuzzy**: the heaviest build (~370 ms at 100k) and slowest queries on these corpora; its trie rewards shared-prefix data, which natural-language corpora don't provide.
+- **fast-fuzzy**: the heaviest build (~390 ms at 100k) and slowest queries on these corpora; its trie rewards shared-prefix data, which natural-language corpora don't provide.
