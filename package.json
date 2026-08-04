@@ -28,7 +28,6 @@
 		"CHANGELOG.md"
 	],
 	"type": "module",
-	"packageManager": "pnpm@11.18.0",
 	"sideEffects": false,
 	"main": "./dist/index.cjs",
 	"types": "./dist/index.d.mts",
@@ -74,5 +73,6 @@
 	},
 	"engines": {
 		"node": ">=18"
-	}
+	},
+	"packageManager": "pnpm@11.18.0"
 }
